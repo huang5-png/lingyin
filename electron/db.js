@@ -7,6 +7,7 @@ let dbPath = ''
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
+  const tmpPath = dbPath + '.tmp'
 
   const defaultData = {
     works: [],
@@ -16,6 +17,14 @@ async function initDB() {
   }
 
   try {
+    if (fs.existsSync(tmpPath)) {
+      try {
+        fs.unlinkSync(tmpPath)
+      } catch (e) {
+        console.warn('Failed to remove stale tmp file:', e.message)
+      }
+    }
+
     if (fs.existsSync(dbPath)) {
       const content = fs.readFileSync(dbPath, 'utf-8')
       dbData = JSON.parse(content)
@@ -33,7 +42,10 @@ async function initDB() {
 
 function saveDB() {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    const tmpPath = dbPath + '.tmp'
+    const data = JSON.stringify(dbData, null, 2)
+    fs.writeFileSync(tmpPath, data, 'utf-8')
+    fs.renameSync(tmpPath, dbPath)
   } catch (e) {
     console.error('Save DB error:', e)
   }
