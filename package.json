@@ -1,0 +1,76 @@
+{
+  "name": "lingyin",
+  "version": "1.0.0",
+  "description": "聆音 - 沉浸式 ASMR 音声播放器",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "dev": "concurrently -k \"npm:dev:vite\" \"npm:dev:electron\"",
+    "build:vite": "vite build",
+    "build:electron": "electron-builder",
+    "build": "npm run build:vite && npm run build:electron",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "asmr",
+    "player",
+    "dlsite"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.18.1",
+    "cheerio": "^1.0.0-rc.12",
+    "music-metadata": "^11.13.0",
+    "wavesurfer.js": "^7.8.11"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.35.2",
+    "vite": "^5.4.11",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.lingyin.app",
+    "productName": "聆音",
+    "artifactName": "${productName} ${version} ${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [],
+    "compression": "maximum",
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "sign": null,
+      "artifactName": "${productName} ${version} 便携版.${ext}"
+    },
+    "electronLanguages": [
+      "zh-CN",
+      "en-US"
+    ],
+    "removePackageScripts": true,
+    "removePackageKeywords": true
+  }
+}

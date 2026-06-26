@@ -1,0 +1,1037 @@
+import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle, useRef } from 'react'
+import './DiscoverView.css'
+
+const ADVANCED_COMMANDS = [
+  { cmd: '$tag:', desc: '搜索标签', icon: '🏷️' },
+  { cmd: '$tagw:', desc: '包含低愿力标签', icon: '🏷️' },
+  { cmd: '$circle:', desc: '搜索社团', icon: '🎪' },
+  { cmd: '$va:', desc: '搜索声优', icon: '🎤' },
+  { cmd: '$duration:', desc: '筛选作品时长（大于）', icon: '⏱️' },
+  { cmd: '$rate:', desc: '筛选评分（大于）', icon: '⭐' },
+  { cmd: '$price:', desc: '筛选价格（大于）', icon: '💰' },
+  { cmd: '$sell:', desc: '筛选销量（大于）', icon: '📊' },
+  { cmd: '$age:', desc: '筛选年龄分级', icon: '🔞' },
+  { cmd: '$lang:', desc: '筛选语言', icon: '🌐' },
+  { cmd: '$-tag:', desc: '排除标签', icon: '🚫' },
+  { cmd: '$-tagw:', desc: '排除低愿力标签', icon: '🚫' },
+  { cmd: '$-duration:', desc: '筛选作品时长（小于）', icon: '⏱️' },
+  { cmd: '$-circle:', desc: '排除社团', icon: '🚫' },
+  { cmd: '$-va:', desc: '排除声优', icon: '🚫' },
+]
+
+const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
+  const [works, setWorks] = useState([])
+  const [allTags, setAllTags] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [tagsLoading, setTagsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(20)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [activeTags, setActiveTags] = useState([])
+  const [excludeTags, setExcludeTags] = useState([])
+  const [activeVas, setActiveVas] = useState([])
+  const [excludeVas, setExcludeVas] = useState([])
+  const [activeCircles, setActiveCircles] = useState([])
+  const [excludeCircles, setExcludeCircles] = useState([])
+  const [minDuration, setMinDuration] = useState('')
+  const [maxDuration, setMaxDuration] = useState('')
+  const [minRate, setMinRate] = useState('')
+  const [maxRate, setMaxRate] = useState('')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [ageRating, setAgeRating] = useState('')
+  const [language, setLanguage] = useState('')
+  const [sortBy, setSortBy] = useState('create_date')
+  const [sortOrder, setSortOrder] = useState('desc')
+  const [hasSubtitle, setHasSubtitle] = useState(false)
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+  const [showTagPicker, setShowTagPicker] = useState(false)
+  const [tagPickerMode, setTagPickerMode] = useState('include')
+  const [tagSearch, setTagSearch] = useState('')
+  const [visibleTagCount, setVisibleTagCount] = useState(50)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestionIndex, setSuggestionIndex] = useState(-1)
+  const [activeFilterTab, setActiveFilterTab] = useState('tags')
+  const [showBackToTop, setShowBackToTop] = useState(false)
+  const searchInputRef = useRef(null)
+  const suggestionsRef = useRef(null)
+  const tagListRef = useRef(null)
+  const contentRef = useRef(null)
+
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const tags = await window.electronAPI.asmrOneGetTags()
+        setAllTags(tags || [])
+      } catch (e) {
+        console.error('Failed to fetch tags:', e)
+      } finally {
+        setTagsLoading(false)
+      }
+    }
+    fetchTags()
+  }, [])
+
+  const buildSearchQuery = useCallback(() => {
+    const parts = []
+    
+    activeTags.forEach(tag => {
+      parts.push(`$tag:${tag}$`)
+    })
+    excludeTags.forEach(tag => {
+      parts.push(`$-tag:${tag}$`)
+    })
+    
+    activeVas.forEach(va => {
+      parts.push(`$va:${va}$`)
+    })
+    excludeVas.forEach(va => {
+      parts.push(`$-va:${va}$`)
+    })
+    
+    activeCircles.forEach(circle => {
+      parts.push(`$circle:${circle}$`)
+    })
+    excludeCircles.forEach(circle => {
+      parts.push(`$-circle:${circle}$`)
+    })
+    
+    if (minDuration) {
+      parts.push(`$duration:${minDuration}$`)
+    }
+    if (maxDuration) {
+      parts.push(`$-duration:${maxDuration}$`)
+    }
+    
+    if (minRate) {
+      parts.push(`$rate:${minRate}$`)
+    }
+    
+    if (minPrice) {
+      parts.push(`$price:${minPrice}$`)
+    }
+    
+    if (ageRating) {
+      parts.push(`$age:${ageRating}$`)
+    }
+    
+    if (language) {
+      parts.push(`$lang:${language}$`)
+    }
+    
+    if (searchKeyword.trim()) {
+      parts.push(searchKeyword.trim())
+    }
+    
+    return parts.join(' ')
+  }, [activeTags, excludeTags, activeVas, excludeVas, activeCircles, excludeCircles, 
+       minDuration, maxDuration, minRate, minPrice, ageRating, language, searchKeyword])
+
+  const fetchWorks = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const keyword = buildSearchQuery()
+      const data = await window.electronAPI.asmrOneGetWorks({
+        page,
+        pageSize,
+        order: sortBy,
+        sort: sortOrder,
+        subtitle: hasSubtitle ? 1 : 0,
+        keyword
+      })
+      setWorks(data.works || [])
+    } catch (e) {
+      console.error('Failed to fetch works:', e)
+      setError('加载失败，请检查网络连接')
+    } finally {
+      setLoading(false)
+    }
+  }, [page, pageSize, buildSearchQuery, sortBy, sortOrder, hasSubtitle])
+
+  useEffect(() => {
+    fetchWorks()
+  }, [fetchWorks])
+
+  const suggestions = useMemo(() => {
+    const keyword = searchKeyword.trim()
+    
+    if (keyword.startsWith('$')) {
+      const filtered = ADVANCED_COMMANDS.filter(c => 
+        c.cmd.toLowerCase().includes(keyword.toLowerCase())
+      )
+      return filtered.length > 0 ? [{ type: 'advanced', items: filtered }] : []
+    }
+
+    if (!keyword) {
+      const hotTags = [...allTags]
+        .filter(t => t.name && t.work_count)
+        .sort((a, b) => (b.work_count || 0) - (a.work_count || 0))
+        .slice(0, 10)
+        .map(t => ({ name: t.name, count: t.work_count || 0 }))
+      return hotTags.length > 0 ? [{ type: 'hot', items: hotTags }] : []
+    }
+
+    const tagMatches = allTags
+      .filter(t => t.name && t.name.toLowerCase().includes(keyword.toLowerCase()))
+      .sort((a, b) => (b.work_count || 0) - (a.work_count || 0))
+      .slice(0, 10)
+      .map(t => ({ name: t.name, count: t.work_count || 0 }))
+
+    return tagMatches.length > 0 ? [{ type: 'tag', items: tagMatches }] : []
+  }, [searchKeyword, allTags])
+
+  const totalSuggestions = useMemo(() => {
+    return suggestions.reduce((sum, group) => sum + group.items.length, 0)
+  }, [suggestions])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        searchInputRef.current && 
+        !searchInputRef.current.contains(e.target) &&
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(e.target)
+      ) {
+        setShowSuggestions(false)
+        setSuggestionIndex(-1)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    if (showSuggestions && suggestionIndex >= 0) {
+      return
+    }
+    setShowSuggestions(false)
+    setPage(1)
+  }
+
+  const toggleTag = useCallback((tagName) => {
+    setActiveTags(prev => {
+      if (prev.includes(tagName)) {
+        return prev.filter(t => t !== tagName)
+      }
+      return [...prev, tagName]
+    })
+    setPage(1)
+  }, [])
+
+  const toggleVa = (vaName) => {
+    setActiveVas(prev => {
+      if (prev.includes(vaName)) {
+        return prev.filter(v => v !== vaName)
+      }
+      return [...prev, vaName]
+    })
+    setPage(1)
+  }
+
+  const toggleExcludeTag = (tagName) => {
+    setExcludeTags(prev => {
+      if (prev.includes(tagName)) {
+        return prev.filter(t => t !== tagName)
+      }
+      return [...prev, tagName]
+    })
+    setPage(1)
+  }
+
+  const toggleExcludeVa = (vaName) => {
+    setExcludeVas(prev => {
+      if (prev.includes(vaName)) {
+        return prev.filter(v => v !== vaName)
+      }
+      return [...prev, vaName]
+    })
+    setPage(1)
+  }
+
+  const toggleCircle = (circleName) => {
+    setActiveCircles(prev => {
+      if (prev.includes(circleName)) {
+        return prev.filter(c => c !== circleName)
+      }
+      return [...prev, circleName]
+    })
+    setPage(1)
+  }
+
+  const toggleExcludeCircle = (circleName) => {
+    setExcludeCircles(prev => {
+      if (prev.includes(circleName)) {
+        return prev.filter(c => c !== circleName)
+      }
+      return [...prev, circleName]
+    })
+    setPage(1)
+  }
+
+  const handleTagPickerSelect = (tagName) => {
+    if (tagPickerMode === 'include') {
+      toggleTag(tagName)
+    } else {
+      toggleExcludeTag(tagName)
+    }
+  }
+
+  const insertSuggestion = useCallback((item, type) => {
+    if (type === 'advanced') {
+      setSearchKeyword(item.cmd)
+      setShowSuggestions(false)
+      setSuggestionIndex(-1)
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus()
+        }
+      }, 0)
+    } else if (type === 'tag' || type === 'hot') {
+      toggleTag(item.name)
+      setSearchKeyword('')
+      setShowSuggestions(false)
+      setSuggestionIndex(-1)
+    }
+  }, [toggleTag])
+
+  const handleKeyDown = useCallback((e) => {
+    if (!showSuggestions || totalSuggestions === 0) return
+
+    let flatIndex = 0
+    const flatItems = []
+    suggestions.forEach(group => {
+      group.items.forEach(item => {
+        flatItems.push({ item, type: group.type, index: flatIndex })
+        flatIndex++
+      })
+    })
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSuggestionIndex(prev => 
+        prev < totalSuggestions - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSuggestionIndex(prev => 
+        prev > 0 ? prev - 1 : totalSuggestions - 1
+      )
+    } else if (e.key === 'Enter' && suggestionIndex >= 0) {
+      e.preventDefault()
+      const selected = flatItems[suggestionIndex]
+      if (selected) {
+        insertSuggestion(selected.item, selected.type)
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      setSuggestionIndex(-1)
+    }
+  }, [showSuggestions, totalSuggestions, suggestions, suggestionIndex, insertSuggestion])
+
+  const clearAllFilters = () => {
+    setActiveTags([])
+    setExcludeTags([])
+    setActiveVas([])
+    setExcludeVas([])
+    setActiveCircles([])
+    setExcludeCircles([])
+    setMinDuration('')
+    setMaxDuration('')
+    setMinRate('')
+    setMaxRate('')
+    setMinPrice('')
+    setMaxPrice('')
+    setAgeRating('')
+    setLanguage('')
+    setSearchKeyword('')
+    setHasSubtitle(false)
+    setPage(1)
+  }
+
+  const hasActiveFilters = activeTags.length > 0 || activeVas.length > 0 || 
+    excludeTags.length > 0 || excludeVas.length > 0 ||
+    activeCircles.length > 0 || excludeCircles.length > 0 ||
+    minDuration || maxDuration || minRate || minPrice ||
+    ageRating || language || hasSubtitle
+
+  const activeFilterCount = activeTags.length + excludeTags.length + 
+    activeVas.length + excludeVas.length +
+    activeCircles.length + excludeCircles.length +
+    (minDuration ? 1 : 0) + (maxDuration ? 1 : 0) +
+    (minRate ? 1 : 0) + (minPrice ? 1 : 0) +
+    (ageRating ? 1 : 0) + (language ? 1 : 0) +
+    (hasSubtitle ? 1 : 0)
+
+  useImperativeHandle(ref, () => ({
+    toggleTag,
+    toggleVa,
+    clearAllFilters,
+  }))
+
+  const filteredTags = useMemo(() => {
+    if (!tagSearch.trim()) {
+      return [...allTags]
+        .filter(t => t.name && t.work_count)
+        .sort((a, b) => (b.work_count || 0) - (a.work_count || 0))
+    }
+    return allTags.filter(t =>
+      t.name && t.name.toLowerCase().includes(tagSearch.toLowerCase())
+    )
+  }, [allTags, tagSearch])
+
+  const visibleTags = useMemo(() => {
+    return filteredTags.slice(0, visibleTagCount)
+  }, [filteredTags, visibleTagCount])
+
+  const handleTagScroll = useCallback((e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      if (visibleTagCount < filteredTags.length) {
+        setVisibleTagCount(prev => Math.min(prev + 50, filteredTags.length))
+      }
+    }
+  }, [visibleTagCount, filteredTags.length])
+
+  useEffect(() => {
+    setVisibleTagCount(50)
+    if (tagListRef.current) {
+      tagListRef.current.scrollTop = 0
+    }
+  }, [tagSearch, showTagPicker])
+
+  const handleVaClick = (vaName, e) => {
+    e.stopPropagation()
+    toggleVa(vaName)
+  }
+
+  const handleTagClick = (tagName, e) => {
+    e.stopPropagation()
+    toggleTag(tagName)
+  }
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return ''
+    const hours = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    if (hours > 0) {
+      return `${hours}h${mins}m`
+    }
+    return `${mins}m`
+  }
+
+  const openOnAsmrOne = (work, e) => {
+    if (onSelectWork) {
+      onSelectWork(work, e)
+    } else {
+      window.electronAPI.openExternal(`https://asmr.one/work/${work.id}`)
+    }
+  }
+
+  const scrollToTop = () => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleContentScroll = () => {
+    if (contentRef.current) {
+      setShowBackToTop(contentRef.current.scrollTop > 300)
+    }
+  }
+
+  return (
+    <div className="discover-view">
+      <div className="discover-view-header">
+        <div className="discover-header">
+          <h1 className="discover-title">发现</h1>
+          <p className="discover-subtitle">探索 asmr.one 上的优质作品</p>
+        </div>
+
+        <div className="discover-filters">
+        <div className="search-box-wrapper">
+          <form className="search-box" onSubmit={handleSearch}>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="搜索标签、作品、RJ号..."
+              value={searchKeyword}
+              onChange={(e) => { setSearchKeyword(e.target.value); setShowSuggestions(true); setSuggestionIndex(-1) }}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={handleKeyDown}
+            />
+            <button type="submit">🔍</button>
+          </form>
+          {showSuggestions && totalSuggestions > 0 && (
+            <div className="search-suggestions" ref={suggestionsRef}>
+              {suggestions.map((group, groupIdx) => (
+                <div key={groupIdx} className="suggestion-group">
+                  <div className="suggestion-group-title">
+                    {group.type === 'advanced' && '⚡ 高级搜索命令'}
+                    {group.type === 'tag' && '🏷️ 匹配标签（点击添加筛选）'}
+                    {group.type === 'hot' && '🔥 热门标签'}
+                  </div>
+                  <div className="suggestion-list">
+                    {group.items.map((item, itemIdx) => {
+                      let flatIdx = 0
+                      for (let i = 0; i < groupIdx; i++) {
+                        flatIdx += suggestions[i].items.length
+                      }
+                      flatIdx += itemIdx
+                      const isActive = flatIdx === suggestionIndex
+                      
+                      return (
+                        <div
+                          key={itemIdx}
+                          className={`suggestion-item ${isActive ? 'active' : ''}`}
+                          onMouseEnter={() => setSuggestionIndex(flatIdx)}
+                          onClick={() => insertSuggestion(item, group.type)}
+                        >
+                          {group.type === 'advanced' ? (
+                            <>
+                              <span className="suggestion-icon">{item.icon}</span>
+                              <span className="suggestion-cmd">{item.cmd}</span>
+                              <span className="suggestion-desc">{item.desc}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="suggestion-icon">🏷️</span>
+                              <span className="suggestion-name">{item.name}</span>
+                              {item.count > 0 && <span className="suggestion-count">{item.count} 作品</span>}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="filter-options">
+          <button 
+            className={`advanced-filter-btn ${showAdvancedFilter ? 'active' : ''}`} 
+            onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+          >
+            ⚡ 高级筛选
+            {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
+          </button>
+          <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1) }}>
+            <option value="create_date">最新收录</option>
+            <option value="release">发售日期</option>
+            <option value="dl_count">下载量</option>
+            <option value="rate_average_2dp">评分</option>
+            <option value="price">价格</option>
+          </select>
+          <select value={sortOrder} onChange={(e) => { setSortOrder(e.target.value); setPage(1) }}>
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={hasSubtitle}
+              onChange={(e) => { setHasSubtitle(e.target.checked); setPage(1) }}
+            />
+            带字幕
+          </label>
+        </div>
+      </div>
+
+      {showAdvancedFilter && (
+        <div className="advanced-filter-panel">
+          <div className="filter-tabs">
+            <button 
+              className={`filter-tab ${activeFilterTab === 'tags' ? 'active' : ''}`}
+              onClick={() => setActiveFilterTab('tags')}
+            >
+              🏷️ 标签
+            </button>
+            <button 
+              className={`filter-tab ${activeFilterTab === 'vas' ? 'active' : ''}`}
+              onClick={() => setActiveFilterTab('vas')}
+            >
+              🎤 声优
+            </button>
+            <button 
+              className={`filter-tab ${activeFilterTab === 'circles' ? 'active' : ''}`}
+              onClick={() => setActiveFilterTab('circles')}
+            >
+              🎪 社团
+            </button>
+            <button 
+              className={`filter-tab ${activeFilterTab === 'numeric' ? 'active' : ''}`}
+              onClick={() => setActiveFilterTab('numeric')}
+            >
+              📊 数值
+            </button>
+            <button 
+              className={`filter-tab ${activeFilterTab === 'other' ? 'active' : ''}`}
+              onClick={() => setActiveFilterTab('other')}
+            >
+              🌐 其他
+            </button>
+          </div>
+
+          <div className="filter-content">
+            {activeFilterTab === 'tags' && (
+              <div className="filter-section">
+                <div className="filter-row">
+                  <div className="filter-col">
+                    <label className="filter-label">包含标签</label>
+                    <div className="filter-tags-list">
+                      {activeTags.length === 0 ? (
+                        <span className="filter-empty">未选择</span>
+                      ) : (
+                        activeTags.map(tag => (
+                          <span key={tag} className="filter-chip include" onClick={() => toggleTag(tag)}>
+                            {tag} ✕
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <button 
+                      className="filter-add-btn"
+                      onClick={() => { setTagPickerMode('include'); setShowTagPicker(true); }}
+                    >
+                      + 添加标签
+                    </button>
+                  </div>
+                  <div className="filter-col">
+                    <label className="filter-label">排除标签</label>
+                    <div className="filter-tags-list">
+                      {excludeTags.length === 0 ? (
+                        <span className="filter-empty">未选择</span>
+                      ) : (
+                        excludeTags.map(tag => (
+                          <span key={tag} className="filter-chip exclude" onClick={() => toggleExcludeTag(tag)}>
+                            {tag} ✕
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <button 
+                      className="filter-add-btn"
+                      onClick={() => { setTagPickerMode('exclude'); setShowTagPicker(true); }}
+                    >
+                      + 添加排除
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFilterTab === 'vas' && (
+              <div className="filter-section">
+                <div className="filter-row">
+                  <div className="filter-col">
+                    <label className="filter-label">包含声优</label>
+                    <div className="filter-tags-list">
+                      {activeVas.length === 0 ? (
+                        <span className="filter-empty">未选择</span>
+                      ) : (
+                        activeVas.map(va => (
+                          <span key={va} className="filter-chip include" onClick={() => toggleVa(va)}>
+                            {va} ✕
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <div className="filter-input-row">
+                      <input
+                        type="text"
+                        placeholder="输入声优名..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            toggleVa(e.target.value.trim())
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      <span className="filter-hint">回车添加</span>
+                    </div>
+                  </div>
+                  <div className="filter-col">
+                    <label className="filter-label">排除声优</label>
+                    <div className="filter-tags-list">
+                      {excludeVas.length === 0 ? (
+                        <span className="filter-empty">未选择</span>
+                      ) : (
+                        excludeVas.map(va => (
+                          <span key={va} className="filter-chip exclude" onClick={() => toggleExcludeVa(va)}>
+                            {va} ✕
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <div className="filter-input-row">
+                      <input
+                        type="text"
+                        placeholder="输入声优名..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            toggleExcludeVa(e.target.value.trim())
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      <span className="filter-hint">回车添加</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFilterTab === 'circles' && (
+              <div className="filter-section">
+                <div className="filter-row">
+                  <div className="filter-col">
+                    <label className="filter-label">包含社团</label>
+                    <div className="filter-tags-list">
+                      {activeCircles.length === 0 ? (
+                        <span className="filter-empty">未选择</span>
+                      ) : (
+                        activeCircles.map(circle => (
+                          <span key={circle} className="filter-chip include" onClick={() => toggleCircle(circle)}>
+                            {circle} ✕
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <div className="filter-input-row">
+                      <input
+                        type="text"
+                        placeholder="输入社团名..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            toggleCircle(e.target.value.trim())
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      <span className="filter-hint">回车添加</span>
+                    </div>
+                  </div>
+                  <div className="filter-col">
+                    <label className="filter-label">排除社团</label>
+                    <div className="filter-tags-list">
+                      {excludeCircles.length === 0 ? (
+                        <span className="filter-empty">未选择</span>
+                      ) : (
+                        excludeCircles.map(circle => (
+                          <span key={circle} className="filter-chip exclude" onClick={() => toggleExcludeCircle(circle)}>
+                            {circle} ✕
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <div className="filter-input-row">
+                      <input
+                        type="text"
+                        placeholder="输入社团名..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            toggleExcludeCircle(e.target.value.trim())
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                      <span className="filter-hint">回车添加</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFilterTab === 'numeric' && (
+              <div className="filter-section">
+                <div className="filter-row">
+                  <div className="filter-col">
+                    <label className="filter-label">作品时长（分钟）</label>
+                    <div className="filter-range">
+                      <input
+                        type="number"
+                        placeholder="最短"
+                        value={minDuration}
+                        onChange={(e) => { setMinDuration(e.target.value); setPage(1) }}
+                      />
+                      <span className="range-sep">—</span>
+                      <input
+                        type="number"
+                        placeholder="最长"
+                        value={maxDuration}
+                        onChange={(e) => { setMaxDuration(e.target.value); setPage(1) }}
+                      />
+                    </div>
+                  </div>
+                  <div className="filter-col">
+                    <label className="filter-label">评分（0-5）</label>
+                    <div className="filter-range">
+                      <input
+                        type="number"
+                        placeholder="最低"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        value={minRate}
+                        onChange={(e) => { setMinRate(e.target.value); setPage(1) }}
+                      />
+                      <span className="range-sep">+</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="filter-row">
+                  <div className="filter-col">
+                    <label className="filter-label">价格（日元）</label>
+                    <div className="filter-range">
+                      <input
+                        type="number"
+                        placeholder="最低"
+                        value={minPrice}
+                        onChange={(e) => { setMinPrice(e.target.value); setPage(1) }}
+                      />
+                      <span className="range-sep">+</span>
+                    </div>
+                  </div>
+                  <div className="filter-col">
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFilterTab === 'other' && (
+              <div className="filter-section">
+                <div className="filter-row">
+                  <div className="filter-col">
+                    <label className="filter-label">年龄分级</label>
+                    <select 
+                      value={ageRating}
+                      onChange={(e) => { setAgeRating(e.target.value); setPage(1) }}
+                    >
+                      <option value="">全部</option>
+                      <option value="general">全年龄</option>
+                      <option value="r15">R15</option>
+                      <option value="r18">R18</option>
+                    </select>
+                  </div>
+                  <div className="filter-col">
+                    <label className="filter-label">语言</label>
+                    <select 
+                      value={language}
+                      onChange={(e) => { setLanguage(e.target.value); setPage(1) }}
+                    >
+                      <option value="">全部</option>
+                      <option value="zh">中文</option>
+                      <option value="ja">日文</option>
+                      <option value="en">英文</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="filter-footer">
+            <button className="filter-clear-btn" onClick={clearAllFilters}>
+              清除全部筛选
+            </button>
+            <button 
+              className="filter-apply-btn"
+              onClick={() => { setShowAdvancedFilter(false); setPage(1); }}
+            >
+              应用筛选
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showTagPicker && (
+        <div className="tag-picker">
+          <div className="tag-picker-header">
+            <span>{tagPickerMode === 'include' ? '选择包含标签' : '选择排除标签'}</span>
+            <div className="tag-picker-actions">
+              <span className="tag-count-text">共 {allTags.length} 个标签</span>
+              <button className="close-btn" onClick={() => setShowTagPicker(false)}>✕</button>
+            </div>
+          </div>
+          <div className="tag-picker-search">
+            <input
+              type="text"
+              placeholder="搜索标签名称..."
+              value={tagSearch}
+              onChange={(e) => setTagSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="tag-picker-list" ref={tagListRef} onScroll={handleTagScroll}>
+            {tagsLoading ? (
+              <p className="tag-picker-loading">加载中...</p>
+            ) : visibleTags.length === 0 ? (
+              <p className="tag-picker-empty">没有找到匹配的标签</p>
+            ) : (
+              <>
+                {visibleTags.map(tag => {
+                  const isActive = tagPickerMode === 'include' 
+                    ? activeTags.includes(tag.name) 
+                    : excludeTags.includes(tag.name)
+                  return (
+                    <button
+                      key={tag.id}
+                      className={`tag-item ${isActive ? 'active' : ''}`}
+                      onClick={() => handleTagPickerSelect(tag.name)}
+                    >
+                      <span className="tag-item-name">{tag.name}</span>
+                      {tag.work_count > 0 && (
+                        <span className="tag-item-count">{tag.work_count}</span>
+                      )}
+                    </button>
+                  )
+                })}
+                {visibleTagCount < filteredTags.length && (
+                  <div className="tag-picker-more">
+                    向下滚动加载更多（{filteredTags.length - visibleTagCount} 个）
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {hasActiveFilters && (
+        <div className="active-filters">
+          <span className="filters-label">已选筛选：</span>
+          <div className="filters-tags">
+            {activeTags.map(tag => (
+              <span key={tag} className="filter-tag" onClick={() => toggleTag(tag)}>
+                🏷️ {tag} ✕
+              </span>
+            ))}
+            {activeVas.map(va => (
+              <span key={va} className="filter-tag va" onClick={() => toggleVa(va)}>
+                🎤 {va} ✕
+              </span>
+            ))}
+          </div>
+          <button className="clear-all-btn" onClick={clearAllFilters}>清除全部</button>
+        </div>
+      )}
+      </div>
+
+      <div className="discover-view-content" ref={contentRef} onScroll={handleContentScroll}>
+      {loading && (
+        <div className="discover-loading">
+          <div className="loading-spinner" />
+          <p>加载中...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="discover-error">
+          <p>{error}</p>
+          <button onClick={fetchWorks}>重试</button>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <>
+          <div className="discover-grid">
+            {works.map((work) => (
+              <div
+                key={work.id}
+                className={`discover-work-card ${selectedWorkId === `online_${work.id}` ? 'selected' : ''}`}
+                onClick={(e) => openOnAsmrOne(work, e)}
+              >
+                <div className="discover-card-cover">
+                  {work.mainCoverUrl ? (
+                    <img src={work.mainCoverUrl} alt={work.title} loading="lazy" data-work-cover data-work-id={`online_${work.id}`} />
+                  ) : (
+                    <div className="cover-placeholder">🎵</div>
+                  )}
+                  {work.has_subtitle && (
+                    <div className="subtitle-badge">字幕</div>
+                  )}
+                  <div className="duration-badge">{formatDuration(work.duration)}</div>
+                </div>
+                <div className="discover-card-info">
+                  <h3 className="discover-card-title">{work.title}</h3>
+                  <p className="discover-card-circle">{work.name}</p>
+                  <div className="discover-card-meta">
+                    {work.vas && work.vas.length > 0 && (
+                      <div className="discover-card-vas">
+                        {work.vas.map((va, i) => (
+                          <span
+                            key={i}
+                            className={`va-tag ${activeVas.includes(va.name) ? 'active' : ''}`}
+                            onClick={(e) => handleVaClick(va.name, e)}
+                            title="点击筛选此CV"
+                          >
+                            {va.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {work.tags && work.tags.length > 0 && (
+                      <div className="discover-card-tags">
+                        {work.tags.map((tag, i) => (
+                          <span
+                            key={i}
+                            className={`work-tag ${activeTags.includes(tag.name) ? 'active' : ''}`}
+                            onClick={(e) => handleTagClick(tag.name, e)}
+                            title="点击筛选此标签"
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="discover-card-stats">
+                      {work.rate_average_2dp > 0 && (
+                        <span className="rating">⭐ {work.rate_average_2dp}</span>
+                      )}
+                      <span className="price">¥{work.price}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="discover-pagination">
+            <button
+              className="page-btn"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              上一页
+            </button>
+            <span className="page-info">第 {page} 页</span>
+            <button
+              className="page-btn"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={works.length < pageSize}
+            >
+              下一页
+            </button>
+          </div>
+        </>
+      )}
+      </div>
+
+      <button
+        className={`back-to-top ${showBackToTop ? 'visible' : ''}`}
+        onClick={scrollToTop}
+        title="回到顶部"
+      >
+        ↑
+      </button>
+    </div>
+  )
+})
+
+DiscoverView.displayName = 'DiscoverView'
+
+export default DiscoverView

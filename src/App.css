@@ -1,0 +1,570 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.title-bar {
+  height: 32px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 0 12px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  user-select: none;
+  position: relative;
+  z-index: 100;
+  background: transparent;
+}
+
+.title-bar .title-bar-text {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.window-btn {
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.window-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.close-btn:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.title-bar button,
+.title-bar a,
+.left-nav-bar .nav-item,
+.sidebar-wrapper .sidebar-header button,
+.discover-sidebar .discover-header button {
+  -webkit-app-region: no-drag;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  padding: 0 var(--spacing-card) var(--spacing-card) var(--spacing-card);
+  gap: var(--spacing-card);
+  overflow: hidden;
+  position: relative;
+}
+
+.left-nav-bar {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 0;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  position: relative;
+  z-index: 5;
+}
+
+.nav-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-item {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-tertiary);
+}
+
+.nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.nav-item.active {
+  background: var(--accent-gradient-soft);
+  color: var(--accent-primary);
+}
+
+.nav-item svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+}
+
+.main-content {
+  flex: 1 1 600px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 500px;
+  gap: var(--spacing-card);
+  position: relative;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  gap: var(--spacing-card);
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+  min-height: 200px;
+}
+
+.sidebar-wrapper {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.work-detail-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-card);
+  overflow: hidden;
+  min-width: 280px;
+  position: relative;
+}
+
+.work-detail-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.track-list-card {
+  flex: 1;
+  min-height: 120px;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.right-tab-wrapper {
+  width: 300px;
+  flex-shrink: 0;
+  min-width: 240px;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.player-bar {
+  flex-shrink: 0;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+
+.immersive-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-index-immersive);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: fadeIn 0.3s var(--transition-ease-out);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.immersive-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(100px) brightness(0.25) saturate(0.8);
+  transform: scale(1.3);
+  opacity: 0.6;
+}
+
+.immersive-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  max-width: 80%;
+  animation: scaleIn 0.4s var(--transition-ease-out);
+  transform: translateY(-4%);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.immersive-cover {
+  width: 280px;
+  height: 280px;
+  border-radius: var(--radius-xl);
+  object-fit: cover;
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  border: 1px solid var(--border-soft);
+}
+
+.immersive-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  letter-spacing: 0.02em;
+}
+
+.immersive-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: -16px;
+  letter-spacing: 0.03em;
+}
+
+.immersive-lyrics {
+  position: absolute;
+  bottom: 12%;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  padding: 0 8%;
+  animation: fadeInUp 0.5s var(--transition-ease-out);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.immersive-lyrics-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 32px;
+  background: rgba(10, 10, 15, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.immersive-lyric-line {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  text-align: center;
+  opacity: 0.45;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  letter-spacing: 0.02em;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transform: scale(0.98);
+}
+
+.immersive-lyric-line.active {
+  font-size: 26px;
+  font-weight: 600;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 1;
+  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  transform: scale(1);
+}
+
+.immersive-hint {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.flip-cover {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+  will-change: transform, border-radius, box-shadow, opacity;
+  transition: transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-radius 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 200ms ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform-origin: top left;
+  opacity: 1;
+  background: var(--bg-tertiary);
+}
+
+.flip-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.flip-cover.animating {
+  transform: translate(var(--translate-x), var(--translate-y)) scale(var(--scale-x), var(--scale-y));
+  border-radius: var(--end-border-radius) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 30px rgba(139, 92, 246, 0.15);
+}
+
+.discover-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+.library-layout {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.library-main {
+  flex: 1 1 100%;
+  min-width: 320px;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: flex-basis var(--transition-normal);
+}
+
+.library-layout.has-detail .library-main {
+  flex: 1 1 32%;
+  min-width: 260px;
+}
+
+.library-layout > .main-content {
+  flex: 1.5 1 60%;
+  min-width: 420px;
+}
+
+.discover-layout {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.discover-main {
+  flex: 1 1 100%;
+  min-width: 320px;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: flex-basis var(--transition-normal);
+}
+
+.discover-layout.has-detail .discover-main {
+  flex: 1 1 32%;
+  min-width: 260px;
+}
+
+.discover-detail-content {
+  flex: 1.5 1 60%;
+  min-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-card);
+  overflow: hidden;
+}
+
+.discover-work-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  position: relative;
+}
+
+.discover-right-tab {
+  width: 260px;
+  min-width: 220px;
+}
+
+.detail-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(10px);
+}
+
+.detail-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.flip-cover.fading-out {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.cover-target-hidden {
+  opacity: 0 !important;
+}
