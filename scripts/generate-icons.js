@@ -3,7 +3,7 @@ const path = require('path');
 const sharp = require('sharp');
 
 const buildDir = path.join(__dirname, '..', 'build');
-const sourceImage = path.join(__dirname, '..', 'IMG_20260625_215759.png');
+const sourceImage = path.join(__dirname, '..', 'build', '软件图标.png');
 
 const sizes = [16, 32, 48, 64, 128, 256, 512];
 

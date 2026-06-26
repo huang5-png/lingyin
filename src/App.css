@@ -207,7 +207,7 @@
 
 .right-tab-wrapper {
   width: 300px;
-  flex-shrink: 0;
+  flex-shrink: 1;
   min-width: 240px;
   background: var(--card-bg);
   backdrop-filter: blur(20px) saturate(150%);
@@ -457,7 +457,7 @@
 }
 
 .library-main {
-  flex: 1 1 100%;
+  flex: 1 1 40%;
   min-width: 320px;
   background: var(--card-bg);
   backdrop-filter: blur(20px) saturate(150%);
