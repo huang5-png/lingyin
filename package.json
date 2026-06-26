@@ -56,7 +56,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "zip",
           "arch": [
             "x64"
           ]
@@ -64,6 +64,7 @@
       ],
       "icon": "build/icon.ico",
       "sign": null,
+      "signAndEditExecutable": false,
       "artifactName": "${productName} ${version} 便携版.${ext}"
     },
     "electronLanguages": [
