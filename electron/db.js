@@ -4,6 +4,9 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let writeQueue = []
+let isWriting = false
+let pendingWrite = false
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -21,7 +24,7 @@ async function initDB() {
       dbData = JSON.parse(content)
     } else {
       dbData = defaultData
-      saveDB()
+      await saveDBAsync()
     }
   } catch (e) {
     console.error('Init DB error:', e)
@@ -31,11 +34,38 @@ async function initDB() {
   return dbData
 }
 
+async function saveDBAsync() {
+  return new Promise((resolve) => {
+    writeQueue.push(resolve)
+    processWriteQueue()
+  })
+}
+
+function processWriteQueue() {
+  if (isWriting || writeQueue.length === 0) return
+
+  isWriting = true
+  const resolvers = [...writeQueue]
+  writeQueue = []
+
+  const dataToWrite = JSON.stringify(dbData, null, 2)
+
+  fs.writeFile(dbPath, dataToWrite, 'utf-8', (err) => {
+    if (err) {
+      console.error('Save DB error:', err)
+    }
+    isWriting = false
+    resolvers.forEach(r => r())
+    if (writeQueue.length > 0) {
+      processWriteQueue()
+    }
+  })
+}
+
 function saveDB() {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
-  } catch (e) {
-    console.error('Save DB error:', e)
+  pendingWrite = true
+  if (!isWriting) {
+    saveDBAsync()
   }
 }
 
@@ -55,7 +85,7 @@ async function addWork(work) {
   work.createdAt = Date.now()
   work.updatedAt = Date.now()
   dbData.works.push(work)
-  saveDB()
+  await saveDBAsync()
   return work
 }
 
@@ -63,7 +93,7 @@ async function updateWork(id, data) {
   const work = dbData.works.find((w) => w.id === id)
   if (work) {
     Object.assign(work, data, { updatedAt: Date.now() })
-    saveDB()
+    await saveDBAsync()
     return work
   }
   return null
@@ -73,7 +103,7 @@ async function deleteWork(id) {
   const index = dbData.works.findIndex((w) => w.id === id)
   if (index > -1) {
     dbData.works.splice(index, 1)
-    saveDB()
+    await saveDBAsync()
     return true
   }
   return false
@@ -90,7 +120,7 @@ async function saveProgress(workId, audioFile, progress) {
     ...progress,
     lastPlayed: Date.now(),
   }
-  saveDB()
+  await saveDBAsync()
   return true
 }
 
@@ -101,11 +131,15 @@ async function getSubtitle(workId, audioFile) {
 
 async function saveSubtitle(workId, audioFile, subtitleData) {
   const key = `${workId}::${audioFile}`
-  dbData.subtitles[key] = {
-    ...subtitleData,
-    savedAt: Date.now(),
+  if (subtitleData === null) {
+    delete dbData.subtitles[key]
+  } else {
+    dbData.subtitles[key] = {
+      ...subtitleData,
+      savedAt: Date.now(),
+    }
   }
-  saveDB()
+  await saveDBAsync()
   return true
 }
 
@@ -115,7 +149,7 @@ async function getSettings() {
 
 async function saveSettings(settings) {
   dbData.settings = { ...dbData.settings, ...settings }
-  saveDB()
+  await saveDBAsync()
   return dbData.settings
 }
 
@@ -132,4 +166,5 @@ module.exports = {
   saveSubtitle,
   getSettings,
   saveSettings,
+  saveDBAsync,
 }
