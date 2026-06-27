@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useRef } from 'react'
 import './DiscoverView.css'
 
 const ADVANCED_COMMANDS = [
@@ -19,10 +19,94 @@ const ADVANCED_COMMANDS = [
   { cmd: '$-va:', desc: '排除声优', icon: '🚫' },
 ]
 
+const formatDuration = (seconds) => {
+  if (!seconds) return ''
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) {
+    return `${hours}h${mins}m`
+  }
+  return `${mins}m`
+}
+
+const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWork, onVaClick, onTagClick }) => {
+  return (
+    <div
+      className={`discover-work-card ${selectedWorkId === `online_${work.id}` ? 'selected' : ''}`}
+      onClick={(e) => {
+        if (onSelectWork) {
+          onSelectWork(work, e)
+        } else {
+          window.electronAPI.openExternal(`https://asmr.one/work/${work.id}`)
+        }
+      }}
+    >
+      <div className="discover-card-cover">
+        {work.mainCoverUrl ? (
+          <img src={work.mainCoverUrl} alt={work.title} loading="lazy" data-work-cover data-work-id={`online_${work.id}`} />
+        ) : (
+          <div className="cover-placeholder">
+            <img src="/icons/icon-music-note.png" alt="" className="cover-placeholder-icon" />
+          </div>
+        )}
+        {work.has_subtitle && (
+          <div className="subtitle-badge">字幕</div>
+        )}
+        <div className="duration-badge">{formatDuration(work.duration)}</div>
+      </div>
+      <div className="discover-card-info">
+        <h3 className="discover-card-title">{work.title}</h3>
+        <p className="discover-card-circle">{work.name}</p>
+        <div className="discover-card-meta">
+          {work.vas && work.vas.length > 0 && (
+            <div className="discover-card-vas">
+              {work.vas.map((va, i) => (
+                <span
+                  key={i}
+                  className={`va-tag ${activeVas.includes(va.name) ? 'active' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); onVaClick(va.name, e) }}
+                  title="点击筛选此CV"
+                >
+                  {va.name}
+                </span>
+              ))}
+            </div>
+          )}
+          {work.tags && work.tags.length > 0 && (
+            <div className="discover-card-tags">
+              {work.tags.map((tag, i) => (
+                <span
+                  key={i}
+                  className={`work-tag ${activeTags.includes(tag.name) ? 'active' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); onTagClick(tag.name, e) }}
+                  title="点击筛选此标签"
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="discover-card-stats">
+            {work.rate_average_2dp > 0 && (
+              <span className="rating">
+                <img src="/icons/icon-star.png" alt="" className="star-icon" />
+                {work.rate_average_2dp}
+              </span>
+            )}
+            <span className="price">¥{work.price}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})
+WorkCard.displayName = 'WorkCard'
+
 const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
   const [works, setWorks] = useState([])
   const [allTags, setAllTags] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isFetching, setIsFetching] = useState(false)
   const [tagsLoading, setTagsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
@@ -58,6 +142,8 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
   const suggestionsRef = useRef(null)
   const tagListRef = useRef(null)
   const contentRef = useRef(null)
+  const buildSearchQueryRef = useRef(null)
+  const debounceTimerRef = useRef(null)
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -128,13 +214,20 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
   }, [activeTags, excludeTags, activeVas, excludeVas, activeCircles, excludeCircles, 
        minDuration, maxDuration, minRate, minPrice, ageRating, language, searchKeyword])
 
+  // Keep buildSearchQuery ref in sync (breaks dependency chain from fetchWorks)
+  buildSearchQueryRef.current = buildSearchQuery
+
+  const pageRef = useRef(page)
+  useEffect(() => { pageRef.current = page }, [page])
+
   const fetchWorks = useCallback(async () => {
-    setLoading(true)
+    if (works.length === 0) setLoading(true)
+    setIsFetching(true)
     setError(null)
     try {
-      const keyword = buildSearchQuery()
+      const keyword = buildSearchQueryRef.current ? buildSearchQueryRef.current() : ''
       const data = await window.electronAPI.asmrOneGetWorks({
-        page,
+        page: pageRef.current,
         pageSize,
         order: sortBy,
         sort: sortOrder,
@@ -144,15 +237,27 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
       setWorks(data.works || [])
     } catch (e) {
       console.error('Failed to fetch works:', e)
-      setError('加载失败，请检查网络连接')
+      if (works.length === 0) setError('加载失败，请检查网络连接')
     } finally {
       setLoading(false)
+      setIsFetching(false)
     }
-  }, [page, pageSize, buildSearchQuery, sortBy, sortOrder, hasSubtitle])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSize, sortBy, sortOrder, hasSubtitle])
 
+  // Unified debounced fetch: any dependency change (page, sort, filter, keyword)
+  // triggers a debounced fetchWorks to prevent API spam
   useEffect(() => {
-    fetchWorks()
-  }, [fetchWorks])
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => fetchWorks(), 150)
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
+  }, [page, pageSize, sortBy, sortOrder, hasSubtitle, 
+      activeTags, excludeTags, activeVas, excludeVas,
+      activeCircles, excludeCircles,
+      minDuration, maxDuration, minRate, maxRate, minPrice, maxPrice,
+      ageRating, language, searchKeyword])
 
   const suggestions = useMemo(() => {
     const keyword = searchKeyword.trim()
@@ -401,34 +506,6 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
       tagListRef.current.scrollTop = 0
     }
   }, [tagSearch, showTagPicker])
-
-  const handleVaClick = (vaName, e) => {
-    e.stopPropagation()
-    toggleVa(vaName)
-  }
-
-  const handleTagClick = (tagName, e) => {
-    e.stopPropagation()
-    toggleTag(tagName)
-  }
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return ''
-    const hours = Math.floor(seconds / 3600)
-    const mins = Math.floor((seconds % 3600) / 60)
-    if (hours > 0) {
-      return `${hours}h${mins}m`
-    }
-    return `${mins}m`
-  }
-
-  const openOnAsmrOne = (work, e) => {
-    if (onSelectWork) {
-      onSelectWork(work, e)
-    } else {
-      window.electronAPI.openExternal(`https://asmr.one/work/${work.id}`)
-    }
-  }
 
   const scrollToTop = () => {
     if (contentRef.current) {
@@ -929,74 +1006,33 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
         </div>
       )}
 
-      {error && (
+      {!loading && error && works.length === 0 && (
         <div className="discover-error">
           <p>{error}</p>
           <button onClick={fetchWorks}>重试</button>
         </div>
       )}
 
-      {!loading && !error && (
+      {(works.length > 0 || (!loading && !error)) && (
         <>
+          {isFetching && (
+            <div className="discover-fetching-bar">
+              <div className="fetching-spinner" />
+              <span>正在刷新...</span>
+            </div>
+          )}
           <div className="discover-grid">
             {works.map((work) => (
-              <div
+              <WorkCard
                 key={work.id}
-                className={`discover-work-card ${selectedWorkId === `online_${work.id}` ? 'selected' : ''}`}
-                onClick={(e) => openOnAsmrOne(work, e)}
-              >
-                <div className="discover-card-cover">
-                  {work.mainCoverUrl ? (
-                    <img src={work.mainCoverUrl} alt={work.title} loading="lazy" data-work-cover data-work-id={`online_${work.id}`} />
-                  ) : (
-                    <div className="cover-placeholder">🎵</div>
-                  )}
-                  {work.has_subtitle && (
-                    <div className="subtitle-badge">字幕</div>
-                  )}
-                  <div className="duration-badge">{formatDuration(work.duration)}</div>
-                </div>
-                <div className="discover-card-info">
-                  <h3 className="discover-card-title">{work.title}</h3>
-                  <p className="discover-card-circle">{work.name}</p>
-                  <div className="discover-card-meta">
-                    {work.vas && work.vas.length > 0 && (
-                      <div className="discover-card-vas">
-                        {work.vas.map((va, i) => (
-                          <span
-                            key={i}
-                            className={`va-tag ${activeVas.includes(va.name) ? 'active' : ''}`}
-                            onClick={(e) => handleVaClick(va.name, e)}
-                            title="点击筛选此CV"
-                          >
-                            {va.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {work.tags && work.tags.length > 0 && (
-                      <div className="discover-card-tags">
-                        {work.tags.map((tag, i) => (
-                          <span
-                            key={i}
-                            className={`work-tag ${activeTags.includes(tag.name) ? 'active' : ''}`}
-                            onClick={(e) => handleTagClick(tag.name, e)}
-                            title="点击筛选此标签"
-                          >
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="discover-card-stats">
-                      {work.rate_average_2dp > 0 && (
-                        <span className="rating">⭐ {work.rate_average_2dp}</span>
-                      )}
-                      <span className="price">¥{work.price}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                work={work}
+                selectedWorkId={selectedWorkId}
+                activeTags={activeTags}
+                activeVas={activeVas}
+                onSelectWork={onSelectWork}
+                onVaClick={toggleVa}
+                onTagClick={toggleTag}
+              />
             ))}
           </div>
 

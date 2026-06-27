@@ -499,6 +499,27 @@
   color: var(--text-tertiary);
 }
 
+.discover-fetching-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.fetching-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
 .loading-spinner {
   width: 40px;
   height: 40px;
@@ -596,6 +617,17 @@
   justify-content: center;
   font-size: 40px;
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+.discover-card-cover .cover-placeholder-icon {
+  width: 40px;
+  height: 40px;
+  max-width: 35%;
+  max-height: 35%;
+  opacity: 0.35;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .subtitle-badge {

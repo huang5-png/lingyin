@@ -1,17 +1,86 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import './WorkDetail.css'
+import { buildDirectoryTree } from '@/utils/scanner'
 
-export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, activeCV, activeTag }) {
+export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, activeCV, activeTag, onDownload, onReloadTracks }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
+  const [currentDirPath, setCurrentDirPath] = useState(null)
   const coverImgRef = useRef(null)
+
+  useEffect(() => {
+    setCurrentDirPath(null)
+  }, [work?.id])
+
+  const directoryTree = useMemo(() => {
+    if (!work || !audioFiles || audioFiles.length === 0) return null
+    return buildDirectoryTree(audioFiles, work.folderPath || work.title || '')
+  }, [work, audioFiles])
+
+  const currentDir = useMemo(() => {
+    if (!directoryTree) return null
+    if (!currentDirPath) return directoryTree
+    
+    const parts = currentDirPath.split(/[\\/]/).filter(Boolean)
+    let node = directoryTree
+    for (const part of parts) {
+      const child = node.children.find(c => c.isDirectory && c.name === part)
+      if (child) {
+        node = child
+      } else {
+        return directoryTree
+      }
+    }
+    return node
+  }, [directoryTree, currentDirPath])
+
+  const breadcrumbs = useMemo(() => {
+    if (!currentDirPath || !work) return []
+    const parts = currentDirPath.split(/[\\/]/).filter(Boolean)
+    const result = []
+    let currentPath = ''
+    for (const part of parts) {
+      currentPath = currentPath ? currentPath + '/' + part : part
+      result.push({ name: part, path: currentPath })
+    }
+    return result
+  }, [currentDirPath, work])
+
+  const handleEnterFolder = (folder) => {
+    setCurrentDirPath((prev) => (prev ? `${prev}/${folder.name}` : folder.name))
+  }
+
+  const handleGoBack = () => {
+    if (!currentDirPath) return
+    const parts = currentDirPath.split(/[\\/]/).filter(Boolean)
+    parts.pop()
+    setCurrentDirPath(parts.length === 0 ? null : parts.join('/'))
+  }
+
+  const handleBreadcrumbClick = (index) => {
+    if (index === -1) {
+      setCurrentDirPath(null)
+    } else {
+      setCurrentDirPath(breadcrumbs[index].path)
+    }
+  }
+
+  const handlePlayAll = () => {
+    if (!currentDir || currentDir.children.length === 0) return
+    const firstAudio = currentDir.children.find(c => !c.isDirectory)
+    if (firstAudio) {
+      onSelectAudio(firstAudio)
+    }
+  }
 
   if (!work) {
     return (
       <div className="work-detail empty">
         <div className="empty-state">
           <div className="empty-icon-wrapper">
-            <div className="empty-icon">🎵</div>
+            <div className="empty-icon">
+              <img src="/icons/icon-music-note.png" alt="" className="cover-placeholder-icon" />
+            </div>
           </div>
           <h2>选择一个作品开始播放</h2>
           <p>从左侧列表选择作品，或添加新文件夹</p>
@@ -19,6 +88,9 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
       </div>
     )
   }
+
+  const isLoadingTracks = work._loadingTracks
+  const hasTracksError = work._tracksError
 
   const handleEdit = () => {
     setEditData({
@@ -78,7 +150,9 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             {work.cover ? (
               <img ref={coverImgRef} src={work.cover} alt="" />
             ) : (
-              <div className="cover-placeholder">🎵</div>
+              <div className="cover-placeholder">
+                <img src="/icons/icon-music-note.png" alt="" className="cover-placeholder-icon" />
+              </div>
             )}
           </div>
           <div className="work-info-main">
@@ -93,7 +167,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
               </div>
             )}
             <div className="work-meta-row">
-              {work.rating > 0 && <span className="rating">⭐ {work.rating.toFixed(2)}</span>}
+              {work.rating > 0 && <span className="rating"><img src="/icons/icon-star.png" alt="" className="star-icon" /> {work.rating.toFixed(2)}</span>}
               {work.circle && <span className="circle">社团: {work.circle}</span>}
             </div>
             {work.cvs && work.cvs.length > 0 && (
@@ -125,7 +199,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             )}
             <div className="work-actions">
               <button className="action-btn primary" onClick={handleEdit}>
-                ✏️ 编辑元数据
+                <img src="/icons/icon-settings.png" alt="" className="btn-icon" /> 编辑元数据
               </button>
               <button className="action-btn" onClick={onRefreshMetadata}>
                 🔄 重新刮削
@@ -133,6 +207,11 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
               <button className="action-btn" onClick={onRefreshSubtitles}>
                 📝 刷新字幕
               </button>
+              {work.isOnline && onDownload && (
+              <button className="action-btn download" onClick={onDownload}>
+                <img src="/icons/icon-download.png" alt="" className="btn-icon" /> 下载
+              </button>
+              )}
             </div>
           </div>
         </div>
@@ -140,32 +219,96 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
 
       <div className="audio-list-section">
         <div className="section-header">
-          <h2 className="section-title">曲目列表</h2>
-          <span className="section-count">{audioFiles.length} 首</span>
+          <div className="section-title-row">
+            <h2 className="section-title">曲目列表</h2>
+            <div className="breadcrumb-nav">
+              <span className="breadcrumb-item" onClick={() => handleBreadcrumbClick(-1)}>
+                📁 根目录
+              </span>
+              {breadcrumbs.map((crumb, idx) => (
+                <span key={idx} className="breadcrumb-sep">/</span>
+              ))}
+              {breadcrumbs.map((crumb, idx) => (
+                <span
+                  key={idx}
+                  className={`breadcrumb-item ${idx === breadcrumbs.length - 1 ? 'active' : ''}`}
+                  onClick={() => handleBreadcrumbClick(idx)}
+                >
+                  {crumb.name}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="section-header-right">
+            <span className="section-count">
+              {isLoadingTracks ? '加载中...' : hasTracksError ? '加载失败' : `${audioFiles.length} 首`}
+            </span>
+            {hasTracksError && onReloadTracks && (
+              <button className="retry-btn" onClick={onReloadTracks}>
+                重试
+              </button>
+            )}
+            {currentDirPath && (
+              <button className="back-btn" onClick={handleGoBack}>
+                ← 返回上一级
+              </button>
+            )}
+          </div>
         </div>
         <div className="audio-list">
-          {audioFiles.map((audio, idx) => (
-            <div
-              key={audio.path}
-              className={`audio-item ${currentAudio?.path === audio.path ? 'playing' : ''}`}
-              onClick={() => onSelectAudio(audio)}
-            >
-              <div className="audio-indicator" />
-              <span className="audio-index">
-                {currentAudio?.path === audio.path ? (
-                  <span className="playing-icon">
-                    <span className="bar bar-1" />
-                    <span className="bar bar-2" />
-                    <span className="bar bar-3" />
-                  </span>
-                ) : (
-                  idx + 1
-                )}
-              </span>
-              <span className="audio-name">{audio.displayName || audio.name}</span>
-              {audio.duration && <span className="audio-duration">{formatDuration(audio.duration)}</span>}
+          {isLoadingTracks ? (
+            <div className="tracks-loading">
+              <div className="loading-spinner" />
+              <span>正在加载曲目列表...</span>
             </div>
-          ))}
+          ) : hasTracksError ? (
+            <div className="tracks-error">
+              <span>曲目列表加载失败</span>
+              {onReloadTracks && (
+                <button className="retry-btn-large" onClick={onReloadTracks}>
+                  点击重试
+                </button>
+              )}
+            </div>
+          ) : (
+            currentDir?.children.map((item, idx) => (
+              item.isDirectory ? (
+                <div
+                  key={item.path}
+                  className="audio-item folder-item"
+                  onClick={() => handleEnterFolder(item)}
+                >
+                  <div className="audio-indicator" />
+                  <span className="audio-index">
+                    <span className="folder-icon">📁</span>
+                  </span>
+                  <span className="audio-name">{item.name}</span>
+                  <span className="audio-duration">{item.audioCount} 首</span>
+                </div>
+              ) : (
+                <div
+                  key={item.path}
+                  className={`audio-item ${currentAudio?.path === item.path ? 'playing' : ''}`}
+                  onClick={() => onSelectAudio(item)}
+                >
+                  <div className="audio-indicator" />
+                  <span className="audio-index">
+                    {currentAudio?.path === item.path ? (
+                      <span className="playing-icon">
+                        <span className="bar bar-1" />
+                        <span className="bar bar-2" />
+                        <span className="bar bar-3" />
+                      </span>
+                    ) : (
+                      idx + 1
+                    )}
+                  </span>
+                  <span className="audio-name">{item.name}</span>
+                  {item.duration && <span className="audio-duration">{formatDuration(item.duration)}</span>}
+                </div>
+              )
+            ))
+          )}
         </div>
       </div>
       </div>

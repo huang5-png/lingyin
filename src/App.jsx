@@ -7,6 +7,9 @@ import SettingsModal from './components/SettingsModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import RightTabBar from './components/RightTabBar'
 import DiscoverView from './components/DiscoverView'
+import UsageReport from './components/UsageReport'
+import DownloadView from './components/DownloadView'
+import DownloadModal from './components/DownloadModal'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import './App.css'
@@ -56,6 +59,7 @@ export default function App() {
   const [subtitleOptions, setSubtitleOptions] = useState([])
   const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(-1)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [isImmersive, setIsImmersive] = useState(false)
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
@@ -70,24 +74,54 @@ export default function App() {
   const playerRef = useRef(null)
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
+  const lastHistoryTimeRef = useRef(0)
   const flipRafRef = useRef(null)
   const flipTimeoutRef = useRef(null)
   const flipWorkIdRef = useRef(null)
+  const loadingWorkIdRef = useRef(null)
 
   const currentCueIndex = useMemo(() => {
     return findCurrentCue(currentCues, currentTime)
   }, [currentCues, currentTime])
 
+  const immersiveLyricRef = useRef(null)
+
   const immersiveLyricCues = useMemo(() => {
-    if (currentCues.length === 0) return []
-    const start = Math.max(0, currentCueIndex - 2)
-    const end = Math.min(currentCues.length, currentCueIndex + 3)
-    return currentCues.slice(start, end).map((cue, idx) => ({
+    return currentCues.map((cue, idx) => ({
       ...cue,
-      realIndex: start + idx,
-      isActive: start + idx === currentCueIndex,
+      realIndex: idx,
+      isActive: idx === currentCueIndex,
     }))
   }, [currentCues, currentCueIndex])
+
+  useEffect(() => {
+    if (!isImmersive) return
+    const activeEl = immersiveLyricRef.current?.querySelector(`.immersive-lyric-line.active`)
+    if (activeEl && immersiveLyricRef.current) {
+      const container = immersiveLyricRef.current
+      const offsetTop = activeEl.offsetTop - container.offsetTop
+      const targetScroll = offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2
+      container.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth',
+      })
+    }
+  }, [currentCueIndex, isImmersive])
+
+  const handleCloseImmersive = useCallback(() => {
+    setIsImmersive(false)
+  }, [])
+
+  useEffect(() => {
+    if (!isImmersive) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsImmersive(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isImmersive])
 
   const zoomRef = useRef(1)
 
@@ -160,6 +194,51 @@ export default function App() {
     return true
   })
 
+  const fetchDlsiteMetadataAsync = useCallback(async (workId, folderName, rjCode) => {
+    try {
+      let detail = null
+      let searchResults = []
+
+      if (rjCode) {
+        try {
+          detail = await window.electronAPI.dlsiteGetDetail(rjCode)
+        } catch (e) {
+          console.warn('DLsite 详情获取失败，尝试搜索:', e.message)
+        }
+      }
+
+      if (!detail) {
+        try {
+          searchResults = await window.electronAPI.dlsiteSearch(folderName)
+        } catch (e) {
+          console.warn('DLsite 搜索失败:', e.message)
+        }
+      }
+
+      const updates = {}
+      if (detail) {
+        Object.assign(updates, detail)
+      } else if (searchResults.length > 0) {
+        const first = searchResults[0]
+        updates.cover = first.cover
+        updates.title = first.title || folderName
+        if (!rjCode && first.rjCode) {
+          updates.rjCode = first.rjCode
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const updated = await window.electronAPI.dbUpdateWork(workId, updates)
+        if (updated) {
+          setWorks((prev) => prev.map((w) => (w.id === updated.id ? updated : w)))
+          setSelectedWork((prev) => (prev && prev.id === updated.id ? updated : prev))
+        }
+      }
+    } catch (e) {
+      console.error('异步获取 DLsite 元数据失败:', e)
+    }
+  }, [])
+
   const handleAddFolder = async () => {
     try {
       const folderPath = await window.electronAPI.openDirectory()
@@ -174,7 +253,7 @@ export default function App() {
       const folderName = scanResult.folderName
       const rjCode = extractRJCode(folderName)
 
-      let metadata = {
+      const metadata = {
         id: folderPath,
         folderPath,
         folderName,
@@ -189,36 +268,11 @@ export default function App() {
         description: '',
       }
 
-      if (rjCode) {
-        try {
-          const detail = await window.electronAPI.dlsiteGetDetail(rjCode)
-          if (detail) {
-            metadata = { ...metadata, ...detail }
-          }
-        } catch (e) {
-          console.error('Failed to fetch DLsite detail:', e)
-        }
-      }
-
-      if (!metadata.cover) {
-        try {
-          const searchResults = await window.electronAPI.dlsiteSearch(folderName)
-          if (searchResults.length > 0) {
-            const first = searchResults[0]
-            metadata.cover = first.cover
-            metadata.title = first.title || metadata.title
-            if (!metadata.rjCode && first.rjCode) {
-              metadata.rjCode = first.rjCode
-            }
-          }
-        } catch (e) {
-          console.error('Failed to search DLsite:', e)
-        }
-      }
-
       const savedWork = await window.electronAPI.dbAddWork(metadata)
       setWorks((prev) => [...prev, savedWork])
       setSelectedWork(savedWork)
+
+      fetchDlsiteMetadataAsync(savedWork.id, folderName, rjCode)
     } catch (e) {
       console.error('Failed to add folder:', e)
       alert('添加文件夹失败：' + e.message)
@@ -250,7 +304,7 @@ export default function App() {
         const folderName = result.folderName
         const rjCode = extractRJCode(folderName)
 
-        let metadata = {
+        const metadata = {
           id: result.folderPath,
           folderPath: result.folderPath,
           folderName,
@@ -265,43 +319,18 @@ export default function App() {
           description: '',
         }
 
-        if (rjCode) {
-          try {
-            const detail = await window.electronAPI.dlsiteGetDetail(rjCode)
-            if (detail) {
-              metadata = { ...metadata, ...detail }
-            }
-          } catch (e) {
-            console.error('Failed to fetch DLsite detail:', e)
-          }
-        }
-
-        if (!metadata.cover) {
-          try {
-            const searchResults = await window.electronAPI.dlsiteSearch(folderName)
-            if (searchResults.length > 0) {
-              const first = searchResults[0]
-              metadata.cover = first.cover
-              metadata.title = first.title || metadata.title
-              if (!metadata.rjCode && first.rjCode) {
-                metadata.rjCode = first.rjCode
-              }
-            }
-          } catch (e) {
-            console.error('Failed to search DLsite:', e)
-          }
-        }
-
         const savedWork = await window.electronAPI.dbAddWork(metadata)
         newWorks.push(savedWork)
         addedCount++
+
+        fetchDlsiteMetadataAsync(savedWork.id, folderName, rjCode)
       }
 
       if (newWorks.length > 0) {
         setWorks((prev) => [...prev, ...newWorks])
       }
 
-      alert(`媒体库扫描完成！\n共找到 ${scanResults.length} 个作品文件夹\n成功添加 ${addedCount} 个新作品\n${scanResults.length - addedCount} 个已存在，已跳过`)
+      alert(`媒体库扫描完成！\n共找到 ${scanResults.length} 个作品文件夹\n成功添加 ${addedCount} 个新作品\n${scanResults.length - addedCount} 个已存在，已跳过\n\n元数据正在后台获取，请稍候...`)
     } catch (e) {
       console.error('Failed to add media library:', e)
       alert('添加媒体库失败：' + e.message)
@@ -322,6 +351,7 @@ export default function App() {
       }
 
       setFlipState({ phase: 'idle', src: '', startRect: null, endRect: null, startBorderRadius: 0, endBorderRadius: 0 })
+      loadingWorkIdRef.current = null
 
       let startRect = null
       let startBorderRadius = 0
@@ -375,11 +405,29 @@ export default function App() {
 
   const extractAudiosFromTracks = useCallback((tracks, folderPath = '') => {
     const audios = []
-    for (const track of tracks) {
+    if (!tracks) return audios
+    
+    let trackList = tracks
+    if (!Array.isArray(tracks)) {
+      if (tracks.tracks && Array.isArray(tracks.tracks)) {
+        trackList = tracks.tracks
+      } else if (tracks.data && Array.isArray(tracks.data)) {
+        trackList = tracks.data
+      } else if (tracks.list && Array.isArray(tracks.list)) {
+        trackList = tracks.list
+      } else {
+        return audios
+      }
+    }
+    
+    for (const track of trackList) {
+      if (!track) continue
+      
       if (track.type === 'folder' && track.children) {
         const childAudios = extractAudiosFromTracks(track.children, folderPath ? `${folderPath}/${track.title}` : track.title)
         audios.push(...childAudios)
       } else if (track.type === 'audio') {
+        const relPath = folderPath ? `${folderPath}/${track.title}` : track.title
         audios.push({
           name: track.title,
           path: track.mediaStreamUrl,
@@ -387,6 +435,8 @@ export default function App() {
           duration: track.duration,
           size: track.size,
           folder: folderPath,
+          relativePath: relPath,
+          displayName: relPath.replace(/\//g, ' / '),
         })
       }
     }
@@ -404,8 +454,6 @@ export default function App() {
           cancelAnimationFrame(flipRafRef.current)
           flipRafRef.current = null
         }
-
-        setFlipState({ phase: 'idle', src: '', startRect: null, endRect: null, startBorderRadius: 0, endBorderRadius: 0 })
 
         let startRect = null
         let startBorderRadius = 0
@@ -431,41 +479,37 @@ export default function App() {
             width: rect.width,
             height: rect.height,
           }
-          flipWorkIdRef.current = `online_${workSummary.id}`
-        } else {
-          flipWorkIdRef.current = null
         }
+        // Always track which work was clicked (used for stale-response guard)
+        flipWorkIdRef.current = `online_${workSummary.id}`
+        loadingWorkIdRef.current = workSummary.id
 
-        const [workInfo, tracks] = await Promise.all([
-          window.electronAPI.asmrOneGetWorkInfo(workSummary.id),
-          window.electronAPI.asmrOneGetTracks(workSummary.id),
-        ])
+        const clickedWorkId = workSummary.id
 
-        const audioFiles = extractAudiosFromTracks(tracks)
-
-        const work = {
-          id: `online_${workInfo.id}`,
-          rjCode: workInfo.source_id,
-          title: workInfo.title,
-          folderName: workInfo.title,
-          circle: workInfo.name,
-          cover: workInfo.mainCoverUrl,
-          thumbnailCover: workInfo.thumbnailCoverUrl,
-          samCover: workInfo.samCoverUrl,
-          cvs: workInfo.vas?.map((v) => v.name) || [],
-          tags: workInfo.tags?.map((t) => t.name) || [],
-          price: workInfo.price,
-          rate: workInfo.rate_average_2dp,
-          dlCount: workInfo.dl_count,
-          releaseDate: workInfo.release,
-          nsfw: workInfo.nsfw,
-          sourceUrl: workInfo.source_url,
+        // Show the full work from search result data immediately (no API wait)
+        const searchWork = {
+          id: `online_${clickedWorkId}`,
+          rjCode: workSummary.source_id || '',
+          title: workSummary.title || '',
+          folderName: workSummary.title || '',
+          circle: workSummary.name || '',
+          cover: workSummary.mainCoverUrl || workSummary.thumbnailCoverUrl || '',
+          thumbnailCover: workSummary.thumbnailCoverUrl || '',
+          samCover: workSummary.samCoverUrl || '',
+          cvs: workSummary.vas?.map((v) => v.name) || [],
+          tags: workSummary.tags?.map((t) => t.name) || [],
+          price: workSummary.price || 0,
+          rate: workSummary.rate_average_2dp || 0,
+          dlCount: workSummary.dl_count || 0,
+          releaseDate: workSummary.release || '',
+          nsfw: workSummary.nsfw || false,
+          sourceUrl: workSummary.source_url || '',
           isOnline: true,
-          onlineId: workInfo.id,
+          onlineId: workSummary.id,
+          _loadingTracks: true,
         }
-
-        setSelectedWork(work)
-        setAudioFiles(audioFiles)
+        setSelectedWork(searchWork)
+        setAudioFiles([])
         setCurrentAudio(null)
         setCurrentCues([])
         setCurrentTime(0)
@@ -474,23 +518,88 @@ export default function App() {
         setSubtitleOptions([])
         setSelectedSubtitleIndex(-1)
 
+        // Start FLIP animation after the detail panel is committed to the DOM
         if (startRect) {
-          setFlipState({
-            phase: 'ready',
-            src: work.cover,
-            startRect,
-            endRect: null,
-            startBorderRadius,
-            endBorderRadius: 0,
-          })
+          flipTimeoutRef.current = setTimeout(() => {
+            setFlipState({
+              phase: 'ready',
+              src: searchWork.cover,
+              startRect,
+              endRect: null,
+              startBorderRadius,
+              endBorderRadius: 0,
+            })
+          }, 100)
         }
+
+        // Fetch tracks in background (essential for playback)
+        // Also fetch workInfo in background for additional metadata (RJ code etc.)
+        const [workInfo, tracks] = await Promise.all([
+          window.electronAPI.asmrOneGetWorkInfo(clickedWorkId).catch(() => null),
+          window.electronAPI.asmrOneGetTracks(clickedWorkId),
+        ])
+
+        // Guard: if user clicked another work while API was loading, discard stale result
+        if (String(clickedWorkId) !== String(loadingWorkIdRef.current)) return
+
+        const audioFiles = extractAudiosFromTracks(tracks)
+        console.log('[调试] tracks原始数据:', tracks)
+        console.log('[调试] 提取出的音频文件:', audioFiles.length, '个')
+        const rjCode = workInfo?.source_id || searchWork.rjCode
+
+        // Build the enriched work object
+        const fullWork = {
+          id: `online_${(workInfo || workSummary).id}`,
+          rjCode,
+          title: workInfo?.title || searchWork.title,
+          folderName: workInfo?.title || searchWork.folderName,
+          circle: workInfo?.name || searchWork.circle,
+          cover: workInfo?.mainCoverUrl || searchWork.cover,
+          thumbnailCover: workInfo?.thumbnailCoverUrl || searchWork.thumbnailCover,
+          samCover: workInfo?.samCoverUrl || searchWork.samCover,
+          cvs: workInfo?.vas?.map((v) => v.name) || searchWork.cvs,
+          tags: workInfo?.tags?.map((t) => t.name) || searchWork.tags,
+          price: workInfo?.price ?? searchWork.price,
+          rate: workInfo?.rate_average_2dp ?? searchWork.rate,
+          dlCount: workInfo?.dl_count ?? searchWork.dlCount,
+          releaseDate: workInfo?.release || searchWork.releaseDate,
+          nsfw: workInfo?.nsfw ?? searchWork.nsfw,
+          sourceUrl: workInfo?.source_url || searchWork.sourceUrl,
+          isOnline: true,
+          onlineId: (workInfo || workSummary).id,
+          _loadingTracks: false,
+        }
+
+        setSelectedWork(fullWork)
+        setAudioFiles(audioFiles)
       } catch (e) {
-        console.error('Failed to load online work:', e)
-        alert('加载作品失败：' + (e.message || '未知错误'))
+        console.error('Failed to load online work tracks:', e)
+        setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: true } : prev)
       }
     },
     [extractAudiosFromTracks],
   )
+
+  const handleReloadOnlineTracks = useCallback(async () => {
+    if (!selectedWork?.isOnline || !selectedWork?.onlineId) return
+    const workId = selectedWork.onlineId
+    loadingWorkIdRef.current = workId
+    console.log('[调试] 重新加载曲目，workId:', workId)
+    setSelectedWork(prev => prev ? { ...prev, _loadingTracks: true, _tracksError: false } : prev)
+    try {
+      const tracks = await window.electronAPI.asmrOneGetTracks(workId)
+      if (String(workId) !== String(loadingWorkIdRef.current)) return
+      console.log('[调试] 重试 tracks原始数据:', tracks)
+      const audioFiles = extractAudiosFromTracks(tracks)
+      console.log('[调试] 重试 提取出的音频文件:', audioFiles.length, '个')
+      setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: false } : prev)
+      setAudioFiles(audioFiles)
+    } catch (e) {
+      console.error('Failed to reload online work tracks:', e)
+      if (String(workId) !== String(loadingWorkIdRef.current)) return
+      setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: true } : prev)
+    }
+  }, [selectedWork, extractAudiosFromTracks])
 
   useEffect(() => {
     if (flipState.phase !== 'ready') return
@@ -601,6 +710,10 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     if (selectedWork) {
+      // 在线作品不需要扫描本地文件夹
+      if (selectedWork.isOnline) {
+        return
+      }
       scanFolder(selectedWork.folderPath).then(async (r) => {
         if (cancelled) return
         const filesWithDuration = await Promise.all(
@@ -747,14 +860,29 @@ export default function App() {
     (time) => {
       setCurrentTime(time)
 
-      if (selectedWork && currentAudio && time > 0 && !currentAudio.isOnline) {
+      if (selectedWork && currentAudio && time > 0) {
         const now = Date.now()
-        if (now - lastSaveTimeRef.current > 5000) {
+        if (!currentAudio.isOnline && now - lastSaveTimeRef.current > 5000) {
           lastSaveTimeRef.current = now
           window.electronAPI.dbSaveProgress(selectedWork.id, currentAudio.path, {
             currentTime: time,
             duration: duration,
           })
+        }
+        // Record listening history every 60 seconds (both online & local)
+        if (now - lastHistoryTimeRef.current > 60000) {
+          lastHistoryTimeRef.current = now
+          window.electronAPI.dbAppendHistory?.({
+            ts: now,
+            workId: selectedWork.id,
+            audioFile: currentAudio.path || currentAudio.name || '',
+            seconds: 60,
+            title: selectedWork.title || selectedWork.folderName || '',
+            cover: selectedWork.cover || '',
+            circle: selectedWork.circle || '',
+            cvs: selectedWork.cvs || [],
+            tags: selectedWork.tags || [],
+          }).catch(() => {})
         }
       }
     },
@@ -1144,6 +1272,30 @@ export default function App() {
                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
               </svg>
             </div>
+            <div
+              className={`nav-item ${currentView === 'annual-report' ? 'active' : ''}`}
+              title="使用报告"
+              onClick={() => setCurrentView('annual-report')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+                <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+              </svg>
+            </div>
+            <div
+              className={`nav-item ${currentView === 'download' ? 'active' : ''}`}
+              title="下载管理"
+              onClick={() => setCurrentView('download')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </div>
             <div className="nav-item" title="播放列表">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6" />
@@ -1286,6 +1438,8 @@ export default function App() {
                     }}
                     activeCV={''}
                     activeTag={''}
+                    onDownload={() => setShowDownloadModal(true)}
+                    onReloadTracks={handleReloadOnlineTracks}
                   />
                 </div>
                 <div className="right-tab-wrapper discover-right-tab">
@@ -1326,11 +1480,29 @@ export default function App() {
         </div>
       )}
 
+      {currentView === 'annual-report' && (
+        <div className="report-view">
+          <UsageReport />
+        </div>
+      )}
+
+      {currentView === 'download' && (
+        <div className="download-view-wrapper">
+          <DownloadView />
+        </div>
+      )}
+
       </div>
 
       {isImmersive && selectedWork && (
-        <div className="immersive-overlay" onClick={() => setIsImmersive(false)}>
+        <div className="immersive-overlay">
           <div className="immersive-bg" style={{ backgroundImage: `url(${selectedWork.cover})` }} />
+          <button className="immersive-close-btn" onClick={handleCloseImmersive} title="关闭 (ESC)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
           <div className="immersive-content">
             <img src={selectedWork.cover} alt="" className="immersive-cover" />
             <div className="immersive-title">{selectedWork.title || selectedWork.folderName}</div>
@@ -1338,12 +1510,12 @@ export default function App() {
           </div>
           {immersiveLyricCues.length > 0 && (
             <div className="immersive-lyrics">
-              <div className="immersive-lyrics-container">
+              <div className="immersive-lyrics-container" ref={immersiveLyricRef}>
                 {immersiveLyricCues.map((cue) => (
                   <div
                     key={cue.realIndex}
                     className={`immersive-lyric-line ${cue.isActive ? 'active' : ''}`}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={() => playerRef.current?.seekTo(cue.time)}
                   >
                     {cue.text.split('\n').map((line, lineIdx) => (
                       <div key={lineIdx}>{line}</div>
@@ -1353,7 +1525,7 @@ export default function App() {
               </div>
             </div>
           )}
-          <div className="immersive-hint">点击任意位置退出</div>
+          <div className="immersive-hint">按 ESC 或点击右上角关闭</div>
         </div>
       )}
 
@@ -1383,6 +1555,13 @@ export default function App() {
         onSave={handleSaveSettings}
         currentSettings={settings}
       />
+
+      {showDownloadModal && selectedWork && selectedWork.isOnline && (
+        <DownloadModal
+          work={selectedWork}
+          onClose={() => setShowDownloadModal(false)}
+        />
+      )}
       </div>
     </ErrorBoundary>
   )

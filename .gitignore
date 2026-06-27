@@ -31,8 +31,16 @@ npm-debug.log*
 # TRAE IDE
 .trae/
 
+# WorkBuddy workspace (assistant working data, not project source)
+.workbuddy/
+
 # Database (user data)
 db.json
 
 # Misc
 *.bat
+upload-release.js
+
+# Build outputs
+dist-release/
+release-build/

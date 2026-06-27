@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbSaveSubtitle: (workId, audioFile, subtitleData) => ipcRenderer.invoke('db:saveSubtitle', workId, audioFile, subtitleData),
   dbGetSettings: () => ipcRenderer.invoke('db:getSettings'),
   dbSaveSettings: (settings) => ipcRenderer.invoke('db:saveSettings', settings),
+  dbAppendHistory: (entry) => ipcRenderer.invoke('db:appendHistory', entry),
+  dbGetUsageStats: (opts) => ipcRenderer.invoke('db:getUsageStats', opts),
+  dbGetAllHistory: () => ipcRenderer.invoke('db:getAllHistory'),
   logInfo: (message, ...args) => ipcRenderer.invoke('log:info', message, ...args),
   logWarn: (message, ...args) => ipcRenderer.invoke('log:warn', message, ...args),
   logError: (message, ...args) => ipcRenderer.invoke('log:error', message, ...args),
@@ -36,6 +39,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   asmrOneGetWorkInfo: (workId) => ipcRenderer.invoke('asmrOne:getWorkInfo', workId),
   asmrOneGetTracks: (workId) => ipcRenderer.invoke('asmrOne:getTracks', workId),
   asmrOneGetTags: () => ipcRenderer.invoke('asmrOne:getTags'),
+  asmrOneDownloadFile: (opts) => ipcRenderer.invoke('asmrOne:downloadFile', opts),
+  asmrOneCancelDownload: () => ipcRenderer.invoke('asmrOne:cancelDownload'),
+  selectDownloadDir: () => ipcRenderer.invoke('dialog:selectDownloadDir'),
+  onDownloadProgress: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('download:progress', handler)
+    return () => ipcRenderer.removeListener('download:progress', handler)
+  },
+  downloadAddTask: (data) => ipcRenderer.invoke('download:addTask', data),
+  downloadGetState: () => ipcRenderer.invoke('download:getState'),
+  downloadCancelTask: (taskId) => ipcRenderer.invoke('download:cancelTask', taskId),
+  downloadRemoveTask: (taskId) => ipcRenderer.invoke('download:removeTask', taskId),
+  downloadClearCompleted: () => ipcRenderer.invoke('download:clearCompleted'),
+  onDownloadState: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('download:state', handler)
+    return () => ipcRenderer.removeListener('download:state', handler)
+  },
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
   windowClose: () => ipcRenderer.invoke('window:close'),

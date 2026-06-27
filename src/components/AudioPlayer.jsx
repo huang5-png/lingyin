@@ -150,6 +150,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           normalize: true,
           hideScrollbar: true,
           barAlign: 'center',
+          backend: 'MediaElement',
         })
 
         wavesurferRef.current = ws

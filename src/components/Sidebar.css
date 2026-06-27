@@ -571,8 +571,62 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+.cover-placeholder-icon {
+  width: 40px;
+  height: 40px;
+  max-width: 35%;
+  max-height: 35%;
+  opacity: 0.4;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.settings-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.65;
+  object-fit: contain;
+  display: block;
+}
+
+.settings-btn-icon:hover .settings-icon {
+  opacity: 1;
+}
+
+.star-icon {
+  width: 12px;
+  height: 12px;
+  vertical-align: middle;
+  display: inline-block;
+  object-fit: contain;
+}
+
+.work-rating .star-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.work-cover-placeholder {
+  width: 44px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.work-cover-placeholder .cover-placeholder-icon {
+  width: 22px;
+  height: 22px;
+  opacity: 0.45;
 }
 
 .card-overlay {
@@ -598,6 +652,15 @@
   font-weight: 600;
   color: #fbbf24;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-rating .star-icon {
+  width: 12px;
+  height: 12px;
+  filter: brightness(0) saturate(100%) invert(87%) sepia(57%) saturate(632%) hue-rotate(353deg) brightness(101%) contrast(101%);
 }
 
 .card-info {
@@ -692,6 +755,10 @@
   padding: 8px;
 }
 
+.work-list.list-view[style*="--row-min-height"] .work-item.row {
+  min-height: var(--row-min-height, auto);
+}
+
 .work-item.row {
   display: flex;
   gap: 10px;
@@ -780,6 +847,38 @@
   flex-wrap: wrap;
 }
 
+.work-item.row .work-circle-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  opacity: 0.8;
+}
+
+.work-item.row .work-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+  max-height: 80px;
+  overflow: hidden;
+}
+
+.work-item.row .work-tag-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tag-text);
+  background: var(--tag-bg);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--tag-border);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
 .work-item.row .work-cv {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -796,6 +895,11 @@
   align-items: center;
   gap: 2px;
   font-size: var(--font-size-xs);
+}
+
+.work-item.row .work-rating .star-icon {
+  width: 11px;
+  height: 11px;
 }
 
 .work-item.row .work-delete-btn {

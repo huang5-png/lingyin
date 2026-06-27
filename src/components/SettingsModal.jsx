@@ -154,6 +154,28 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
           </div>
         </div>
       </div>
+      <div className="settings-section">
+        <div className="settings-section-title">网络</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">代理地址</div>
+            <div className="setting-desc">
+              在线音声请求使用的代理，如 http://127.0.0.1:7897
+              <br />
+              留空则使用系统环境变量或直连
+            </div>
+          </div>
+          <div className="setting-control">
+            <input
+              type="text"
+              className="settings-input"
+              placeholder="http://127.0.0.1:7897"
+              value={settings.proxyUrl || ''}
+              onChange={(e) => setSettings((p) => ({ ...p, proxyUrl: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 

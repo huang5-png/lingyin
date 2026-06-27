@@ -544,3 +544,24 @@
 .about-dot {
   color: var(--text-tertiary);
 }
+
+.settings-input {
+  width: 220px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.settings-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+}
+
+.settings-input::placeholder {
+  color: var(--text-tertiary);
+}

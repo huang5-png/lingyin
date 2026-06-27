@@ -13,6 +13,7 @@ async function initDB() {
     progress: {},
     subtitles: {},
     settings: {},
+    history: [],
   }
 
   try {
@@ -119,6 +120,171 @@ async function saveSettings(settings) {
   return dbData.settings
 }
 
+// ===== Listening history =====
+// Each entry: { ts, workId, audioFile, seconds, title, cover, circle, cvs:[], tags:[] }
+async function appendHistory(entry) {
+  if (!dbData.history) dbData.history = []
+  dbData.history.push({
+    ts: entry.ts || Date.now(),
+    workId: entry.workId || null,
+    audioFile: entry.audioFile || '',
+    seconds: Math.max(0, Math.min(3600, Number(entry.seconds) || 0)),
+    title: entry.title || '',
+    cover: entry.cover || '',
+    circle: entry.circle || '',
+    cvs: Array.isArray(entry.cvs) ? entry.cvs : [],
+    tags: Array.isArray(entry.tags) ? entry.tags : [],
+  })
+  // Cap history size to avoid unbounded growth (keep last 20000 entries)
+  if (dbData.history.length > 20000) {
+    dbData.history = dbData.history.slice(-20000)
+  }
+  saveDB()
+  return true
+}
+
+function startOfRange(range, refDate) {
+  const d = refDate ? new Date(refDate) : new Date()
+  const start = new Date(d)
+  if (range === 'day') {
+    start.setHours(0, 0, 0, 0)
+  } else if (range === 'month') {
+    start.setDate(1)
+    start.setHours(0, 0, 0, 0)
+  } else if (range === 'year') {
+    start.setMonth(0, 1)
+    start.setHours(0, 0, 0, 0)
+  } else {
+    start.setHours(0, 0, 0, 0)
+  }
+  return start.getTime()
+}
+
+function endOfRange(range, refDate) {
+  const d = refDate ? new Date(refDate) : new Date()
+  const end = new Date(d)
+  if (range === 'day') {
+    end.setHours(23, 59, 59, 999)
+  } else if (range === 'month') {
+    end.setMonth(end.getMonth() + 1, 0)
+    end.setHours(23, 59, 59, 999)
+  } else if (range === 'year') {
+    end.setMonth(11, 31)
+    end.setHours(23, 59, 59, 999)
+  } else {
+    end.setHours(23, 59, 59, 999)
+  }
+  return end.getTime()
+}
+
+// Aggregate usage stats for a given range
+async function getUsageStats(opts = {}) {
+  const range = opts.range || 'month'
+  const refDate = opts.date || null
+  const startTs = startOfRange(range, refDate)
+  const endTs = endOfRange(range, refDate)
+
+  const history = (dbData.history || []).filter((h) => h.ts >= startTs && h.ts <= endTs)
+
+  const totalSeconds = history.reduce((s, h) => s + (h.seconds || 0), 0)
+  const playCount = history.length
+
+  const workMap = new Map()
+  const tagMap = new Map()
+  const circleMap = new Map()
+  const cvMap = new Map()
+
+  for (const h of history) {
+    const secs = h.seconds || 0
+    if (h.workId) {
+      const w = workMap.get(h.workId) || { id: h.workId, title: h.title, cover: h.cover, seconds: 0, count: 0 }
+      w.seconds += secs
+      w.count += 1
+      workMap.set(h.workId, w)
+    }
+    if (h.circle) {
+      const c = circleMap.get(h.circle) || { name: h.circle, seconds: 0, count: 0 }
+      c.seconds += secs
+      c.count += 1
+      circleMap.set(h.circle, c)
+    }
+    for (const cv of h.cvs || []) {
+      const c = cvMap.get(cv) || { name: cv, seconds: 0, count: 0 }
+      c.seconds += secs
+      c.count += 1
+      cvMap.set(cv, c)
+    }
+    for (const tag of h.tags || []) {
+      const t = tagMap.get(tag) || { name: tag, seconds: 0, count: 0 }
+      t.seconds += secs
+      t.count += 1
+      tagMap.set(tag, t)
+    }
+  }
+
+  const sortBySeconds = (a, b) => b.seconds - a.seconds
+  const workRanking = [...workMap.values()].sort(sortBySeconds).slice(0, 10)
+  const tagRanking = [...tagMap.values()].sort(sortBySeconds).slice(0, 10)
+  const circleRanking = [...circleMap.values()].sort(sortBySeconds).slice(0, 10)
+  const cvRanking = [...cvMap.values()].sort(sortBySeconds).slice(0, 10)
+
+  // Build timeline buckets
+  // day -> 24 hourly buckets
+  // month -> days of month
+  // year -> 12 monthly buckets
+  let timeline = []
+  if (range === 'day') {
+    for (let i = 0; i < 24; i++) {
+      timeline.push({ label: `${i}:00`, seconds: 0 })
+    }
+    for (const h of history) {
+      const hr = new Date(h.ts).getHours()
+      timeline[hr].seconds += h.seconds || 0
+    }
+  } else if (range === 'month') {
+    const ref = refDate ? new Date(refDate) : new Date()
+    const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate()
+    for (let i = 1; i <= daysInMonth; i++) {
+      timeline.push({ label: `${i}`, seconds: 0 })
+    }
+    for (const h of history) {
+      const d = new Date(h.ts)
+      const day = d.getDate()
+      if (day >= 1 && day <= daysInMonth) timeline[day - 1].seconds += h.seconds || 0
+    }
+  } else {
+    const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
+    for (let i = 0; i < 12; i++) {
+      timeline.push({ label: monthNames[i], seconds: 0 })
+    }
+    for (const h of history) {
+      const m = new Date(h.ts).getMonth()
+      timeline[m].seconds += h.seconds || 0
+    }
+  }
+
+  return {
+    range,
+    startTs,
+    endTs,
+    totalSeconds,
+    playCount,
+    uniqueWorks: workMap.size,
+    uniqueCircles: circleMap.size,
+    uniqueCVs: cvMap.size,
+    uniqueTags: tagMap.size,
+    workRanking,
+    tagRanking,
+    circleRanking,
+    cvRanking,
+    timeline,
+  }
+}
+
+async function getAllHistory() {
+  return dbData.history || []
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -132,4 +298,7 @@ module.exports = {
   saveSubtitle,
   getSettings,
   saveSettings,
+  appendHistory,
+  getUsageStats,
+  getAllHistory,
 }

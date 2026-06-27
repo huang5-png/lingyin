@@ -1,10 +1,16 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const http = require('http')
+const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings } = require('./db')
-const { searchDLsite, getWorkDetail, extractRJCode } = require('./dlsite')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory } = require('./db')
+const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const logger = require('./logger')
+
+// 创建 keep-alive agent，复用连接，减少 ECONNRESET
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 })
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 })
 
 let parseFile = null
 async function getParseFile() {
@@ -44,9 +50,22 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
+    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
+
+  // 快捷键：Ctrl+Shift+I 切换开发者工具
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+      if (mainWindow.webContents.isDevToolsOpened()) {
+        mainWindow.webContents.closeDevTools()
+      } else {
+        mainWindow.webContents.openDevTools()
+      }
+      event.preventDefault()
+    }
+  })
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -171,6 +190,7 @@ ipcMain.handle('path:join', async (_, ...parts) => {
 })
 
 ipcMain.handle('path:basename', async (_, p) => {
+  if (!p) return ''
   return path.basename(p)
 })
 
@@ -228,6 +248,18 @@ ipcMain.handle('db:getSettings', async () => {
 
 ipcMain.handle('db:saveSettings', async (_, settings) => {
   return saveSettings(settings)
+})
+
+ipcMain.handle('db:appendHistory', async (_, entry) => {
+  return appendHistory(entry)
+})
+
+ipcMain.handle('db:getUsageStats', async (_, opts) => {
+  return getUsageStats(opts)
+})
+
+ipcMain.handle('db:getAllHistory', async () => {
+  return getAllHistory()
 })
 
 ipcMain.handle('log:info', async (_, message, ...args) => {
@@ -292,15 +324,110 @@ ipcMain.handle('window:isMaximized', () => {
 
 const ASMR_ONE_API_BASE = 'https://api.asmr-200.com/api'
 
-const asmrOneAxiosConfig = {
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Referer': 'https://asmr.one/',
-    'Origin': 'https://asmr.one',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-  },
-  timeout: 15000,
+const asmrOneHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Referer': 'https://asmr.one/',
+  'Origin': 'https://asmr.one',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+}
+
+// 获取代理配置
+async function getProxyConfig() {
+  try {
+    const settings = await getSettings()
+    // 优先用用户设置的代理
+    if (settings.proxyUrl) {
+      return parseProxyUrl(settings.proxyUrl)
+    }
+    // 其次用环境变量
+    const envProxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy
+    if (envProxy) {
+      return parseProxyUrl(envProxy)
+    }
+  } catch (e) {
+    logger.warn('获取代理配置失败:', e.message)
+  }
+  return null
+}
+
+function parseProxyUrl(url) {
+  try {
+    // 支持格式: http://127.0.0.1:7897, socks5://127.0.0.1:7890, 127.0.0.1:7897
+    let host = url
+    let port = 7890
+    let protocol = 'http'
+    
+    if (url.startsWith('http://')) {
+      protocol = 'http'
+      url = url.slice(7)
+    } else if (url.startsWith('https://')) {
+      protocol = 'https'
+      url = url.slice(8)
+    } else if (url.startsWith('socks5://')) {
+      protocol = 'socks5'
+      url = url.slice(9)
+    }
+    
+    const parts = url.split(':')
+    if (parts.length >= 2) {
+      host = parts[0]
+      port = parseInt(parts[1], 10)
+    } else {
+      host = url
+    }
+    
+    return { host, port, protocol }
+  } catch (e) {
+    return null
+  }
+}
+
+setProxyHelpers(getProxyConfig, parseProxyUrl)
+
+async function asmrOneGet(url, retries = 5) {
+  const proxy = await getProxyConfig()
+  let lastError = null
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const axiosConfig = {
+        headers: asmrOneHeaders,
+        timeout: 15000,
+      }
+      if (proxy) {
+        if (proxy.protocol === 'socks5') {
+          // socks5 需要用 socks-proxy-agent，暂时不支持，提示用户用 http 代理
+          logger.warn('Socks5 代理暂不支持，请使用 HTTP 代理')
+        } else {
+          axiosConfig.proxy = {
+            host: proxy.host,
+            port: proxy.port,
+            protocol: proxy.protocol,
+          }
+          logger.info('使用代理:', `${proxy.protocol}://${proxy.host}:${proxy.port}`)
+        }
+      }
+      const res = await axios.get(url, axiosConfig)
+      return res
+    } catch (e) {
+      lastError = e
+      const isRetryable = e.code === 'ECONNRESET' || 
+                         e.code === 'ECONNREFUSED' ||
+                         e.code === 'ETIMEDOUT' ||
+                         e.code === 'ECONNABORTED' ||
+                         e.code === 'ERR_NETWORK' ||
+                         e.code === 'EPIPE' ||
+                         (e.response && e.response.status >= 500)
+      
+      if (!isRetryable || attempt >= retries - 1) {
+        break
+      }
+      logger.info(`asmrOneGet 重试第 ${attempt + 1}/${retries - 1} 次，错误: ${e.code}`)
+      // 指数退避：1s, 2s, 3s, 4s
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+    }
+  }
+  throw lastError
 }
 
 ipcMain.handle('asmrOne:getWorks', async (_, params = {}) => {
@@ -321,7 +448,7 @@ ipcMain.handle('asmrOne:getWorks', async (_, params = {}) => {
       url = `${ASMR_ONE_API_BASE}/works?order=${order}&sort=${sort}&page=${page}&pageSize=${pageSize}&subtitle=${subtitle}`
     }
     
-    const res = await axios.get(url, asmrOneAxiosConfig)
+    const res = await asmrOneGet(url)
     return res.data
   } catch (e) {
     logger.error('Failed to fetch asmr.one works:', e.message)
@@ -331,7 +458,7 @@ ipcMain.handle('asmrOne:getWorks', async (_, params = {}) => {
 
 ipcMain.handle('asmrOne:getWorkInfo', async (_, workId) => {
   try {
-    const res = await axios.get(`${ASMR_ONE_API_BASE}/workInfo/${workId}`, asmrOneAxiosConfig)
+    const res = await asmrOneGet(`${ASMR_ONE_API_BASE}/workInfo/${workId}`)
     return res.data
   } catch (e) {
     logger.error('Failed to fetch asmr.one work info:', workId, e.message)
@@ -341,8 +468,46 @@ ipcMain.handle('asmrOne:getWorkInfo', async (_, workId) => {
 
 ipcMain.handle('asmrOne:getTracks', async (_, workId) => {
   try {
-    const res = await axios.get(`${ASMR_ONE_API_BASE}/tracks/${workId}?v=2`, asmrOneAxiosConfig)
-    return res.data
+    const res = await asmrOneGet(`${ASMR_ONE_API_BASE}/tracks/${workId}?v=2`)
+    let data = res.data
+    
+    // 调试日志
+    logger.info('Tracks API response type:', typeof data, 'isArray:', Array.isArray(data))
+    if (data && typeof data === 'object') {
+      const keys = Object.keys(data)
+      logger.info('Tracks API keys:', JSON.stringify(keys.slice(0, 10)))
+      // 打印第一个元素的结构
+      const firstItem = Array.isArray(data) ? data[0] : data[keys[0]]
+      if (firstItem && typeof firstItem === 'object') {
+        logger.info('Tracks first item keys:', JSON.stringify(Object.keys(firstItem)))
+        logger.info('Tracks first item type:', firstItem.type)
+      }
+    }
+    
+    // 统一转换成数组
+    if (!Array.isArray(data)) {
+      if (data && Array.isArray(data.tracks)) {
+        data = data.tracks
+      } else if (data && Array.isArray(data.data)) {
+        data = data.data
+      } else if (data && Array.isArray(data.list)) {
+        data = data.list
+      } else if (data && typeof data === 'object') {
+        // 可能是类数组对象，转换成数组
+        const keys = Object.keys(data)
+        if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
+          data = keys.map(k => data[k])
+          logger.info('Converted array-like object to array, length:', data.length)
+        } else {
+          logger.warn('Unknown tracks response format, keys:', keys)
+          data = []
+        }
+      } else {
+        data = []
+      }
+    }
+    
+    return data
   } catch (e) {
     logger.error('Failed to fetch asmr.one tracks:', workId, e.message)
     throw new Error(e.message || '获取曲目列表失败')
@@ -351,7 +516,7 @@ ipcMain.handle('asmrOne:getTracks', async (_, workId) => {
 
 ipcMain.handle('asmrOne:getTags', async () => {
   try {
-    const res = await axios.get(`${ASMR_ONE_API_BASE}/tags/`, asmrOneAxiosConfig)
+    const res = await asmrOneGet(`${ASMR_ONE_API_BASE}/tags/`)
     return res.data
   } catch (e) {
     logger.error('Failed to fetch asmr.one tags:', e.message)
@@ -379,4 +544,458 @@ ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
     logger.error('Failed to read audio duration:', filePath, e.message)
     return 0
   }
+})
+
+// 全局下载取消控制器
+let downloadAbortController = null
+
+// ===== ASMR-One 文件下载 =====
+// 下载单个文件到指定目录，支持进度回调
+ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }) => {
+  try {
+    logger.info('[下载] 开始:', fileName)
+    logger.info('[下载] URL:', url)
+    logger.info('[下载] 目录:', savePath)
+    
+    const targetDir = savePath
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true })
+    }
+    const finalPath = path.join(targetDir, fileName)
+    logger.info('[下载] 完整路径:', finalPath)
+
+    // 创建取消控制器
+    downloadAbortController = new AbortController()
+    const signal = downloadAbortController.signal
+
+    logger.info('[下载] 发起请求...')
+    const proxy = await getProxyConfig()
+    const axiosConfig = {
+      method: 'GET',
+      url: url,
+      responseType: 'stream',
+      headers: asmrOneHeaders,
+      timeout: 60000,
+      signal: signal,
+    }
+    if (proxy && proxy.protocol !== 'socks5') {
+      axiosConfig.proxy = {
+        host: proxy.host,
+        port: proxy.port,
+        protocol: proxy.protocol,
+      }
+      logger.info('[下载] 使用代理:', `${proxy.protocol}://${proxy.host}:${proxy.port}`)
+    }
+    const response = await axios(axiosConfig)
+    
+    logger.info('[下载] 响应状态:', response.status)
+    logger.info('[下载] Content-Length:', response.headers['content-length'])
+
+    const totalLength = parseInt(response.headers['content-length'] || 0, 10)
+    let downloaded = 0
+    const writer = fs.createWriteStream(finalPath)
+    let lastProgressTime = 0
+    let lastDownloadedBytes = 0
+
+    response.data.on('data', (chunk) => {
+      downloaded += chunk.length
+      const now = Date.now()
+      if (now - lastProgressTime >= 300 || downloaded === totalLength) {
+        const elapsed = lastProgressTime ? (now - lastProgressTime) / 1000 : 0
+        const speed = elapsed > 0 ? (downloaded - lastDownloadedBytes) / elapsed : 0
+        const progress = totalLength > 0 ? Math.round((downloaded / totalLength) * 100) : 0
+        try {
+          event.sender.send('download:progress', { 
+            fileName, 
+            progress, 
+            downloaded, 
+            totalLength,
+            speed: Math.round(speed)
+          })
+        } catch (_) {}
+        lastProgressTime = now
+        lastDownloadedBytes = downloaded
+      }
+    })
+
+    response.data.pipe(writer)
+
+    // 监听取消信号
+    const onAbort = () => {
+      logger.info('[下载] 用户取消:', fileName)
+      if (response.data && response.data.destroy) {
+        response.data.destroy()
+      }
+      if (writer && writer.destroy) {
+        writer.destroy()
+      }
+    }
+    signal.addEventListener('abort', onAbort)
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        logger.info('[下载] 完成:', fileName, '共', downloaded, '字节')
+        signal.removeEventListener('abort', onAbort)
+        try {
+          event.sender.send('download:progress', { 
+            fileName, progress: 100, downloaded, totalLength, speed: 0
+          })
+        } catch (_) {}
+        resolve()
+      })
+      writer.on('error', (err) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) {
+          reject(new Error('已取消'))
+        } else {
+          logger.error('[下载] 写入错误:', err.message)
+          reject(err)
+        }
+      })
+      response.data.on('error', (err) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) {
+          reject(new Error('已取消'))
+        } else {
+          logger.error('[下载] 响应流错误:', err.message)
+          reject(err)
+        }
+      })
+    })
+
+    downloadAbortController = null
+    return { success: true, path: finalPath, size: downloaded }
+  } catch (e) {
+    downloadAbortController = null
+    logger.error('[下载] 失败:', fileName, e.message, e.code)
+    return { success: false, error: e.message || '下载失败', cancelled: e.message === '已取消' }
+  }
+})
+
+// 取消当前下载
+ipcMain.handle('asmrOne:cancelDownload', async () => {
+  if (downloadAbortController) {
+    downloadAbortController.abort()
+    return true
+  }
+  return false
+})
+
+// 选择下载目录
+ipcMain.handle('dialog:selectDownloadDir', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  } catch (e) {
+    logger.error('Select download dir failed:', e.message)
+    return null
+  }
+})
+
+// ========== 下载队列管理 ==========
+
+/**
+ * 下载任务结构:
+ * {
+ *   id: string,
+ *   workId: string,
+ *   workTitle: string,
+ *   workCover: string,
+ *   rjCode: string,
+ *   files: Array<{
+ *     url: string,
+ *     fileName: string,
+ *     savePath: string,
+ *     size: number,
+ *     status: 'pending' | 'downloading' | 'done' | 'failed' | 'cancelled',
+ *     progress: number,
+ *     downloaded: number,
+ *     totalLength: number,
+ *     speed: number,
+ *     error: string,
+ *   }>,
+ *   status: 'queued' | 'downloading' | 'completed' | 'failed' | 'cancelled',
+ *   currentIndex: number,
+ *   createdAt: number,
+ * }
+ */
+
+const downloadQueue = []
+let activeDownloadTask = null
+let currentAbortController = null
+let taskIdCounter = 0
+
+function generateTaskId() {
+  taskIdCounter++
+  return `task_${Date.now()}_${taskIdCounter}`
+}
+
+function broadcastDownloadState() {
+  if (!mainWindow) return
+  try {
+    mainWindow.webContents.send('download:state', {
+      queue: downloadQueue,
+      active: activeDownloadTask,
+    })
+  } catch (e) {}
+}
+
+async function downloadFileInTask(task, file, fileIndex) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const targetDir = file.savePath
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true })
+      }
+      const finalPath = path.join(targetDir, file.fileName)
+
+      currentAbortController = new AbortController()
+      const signal = currentAbortController.signal
+
+      const proxy = await getProxyConfig()
+      const axiosConfig = {
+        method: 'GET',
+        url: file.url,
+        responseType: 'stream',
+        headers: asmrOneHeaders,
+        timeout: 60000,
+        signal: signal,
+      }
+      if (proxy && proxy.protocol !== 'socks5') {
+        axiosConfig.proxy = {
+          host: proxy.host,
+          port: proxy.port,
+          protocol: proxy.protocol,
+        }
+      }
+
+      const response = await axios(axiosConfig)
+      const totalLength = parseInt(response.headers['content-length'] || '0', 10)
+      let downloaded = 0
+      const writer = fs.createWriteStream(finalPath)
+      let lastProgressTime = 0
+      let lastDownloadedBytes = 0
+
+      file.status = 'downloading'
+      file.totalLength = totalLength
+      file.downloaded = 0
+      file.progress = 0
+      file.speed = 0
+
+      response.data.on('data', (chunk) => {
+        downloaded += chunk.length
+        file.downloaded = downloaded
+        const now = Date.now()
+        if (now - lastProgressTime >= 300 || downloaded === totalLength) {
+          const elapsed = lastProgressTime ? (now - lastProgressTime) / 1000 : 0
+          const speed = elapsed > 0 ? (downloaded - lastDownloadedBytes) / elapsed : 0
+          const progress = totalLength > 0 ? Math.round((downloaded / totalLength) * 100) : 0
+          file.progress = progress
+          file.speed = Math.round(speed)
+          lastProgressTime = now
+          lastDownloadedBytes = downloaded
+          broadcastDownloadState()
+        }
+      })
+
+      response.data.pipe(writer)
+
+      const onAbort = () => {
+        if (response.data && response.data.destroy) response.data.destroy()
+        if (writer && writer.destroy) writer.destroy()
+      }
+      signal.addEventListener('abort', onAbort)
+
+      writer.on('finish', () => {
+        signal.removeEventListener('abort', onAbort)
+        file.status = 'done'
+        file.progress = 100
+        file.speed = 0
+        broadcastDownloadState()
+        resolve({ success: true, path: finalPath, size: downloaded })
+      })
+
+      writer.on('error', (err) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) {
+          file.status = 'cancelled'
+          file.error = '已取消'
+          reject(new Error('已取消'))
+        } else {
+          file.status = 'failed'
+          file.error = err.message
+          reject(err)
+        }
+      })
+
+      response.data.on('error', (err) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) {
+          file.status = 'cancelled'
+          file.error = '已取消'
+          reject(new Error('已取消'))
+        } else {
+          file.status = 'failed'
+          file.error = err.message
+          reject(err)
+        }
+      })
+    } catch (e) {
+      file.status = 'failed'
+      file.error = e.message || '下载失败'
+      reject(e)
+    }
+  })
+}
+
+async function processDownloadQueue() {
+  if (activeDownloadTask) return
+  if (downloadQueue.length === 0) return
+
+  const task = downloadQueue.shift()
+  activeDownloadTask = task
+  task.status = 'downloading'
+  broadcastDownloadState()
+
+  logger.info(`[下载队列] 开始任务: ${task.workTitle}, 共 ${task.files.length} 个文件`)
+
+  try {
+    for (let i = 0; i < task.files.length; i++) {
+      const file = task.files[i]
+      if (file.status === 'done') continue
+      
+      task.currentIndex = i
+      broadcastDownloadState()
+
+      try {
+        await downloadFileInTask(task, file, i)
+      } catch (e) {
+        if (file.status === 'cancelled') {
+          logger.info(`[下载队列] 任务取消: ${task.workTitle}`)
+          task.status = 'cancelled'
+          break
+        }
+        logger.warn(`[下载队列] 文件失败: ${file.fileName}, ${e.message}`)
+      }
+    }
+
+    if (task.status !== 'cancelled') {
+      const allDone = task.files.every((f) => f.status === 'done')
+      const anyFailed = task.files.some((f) => f.status === 'failed')
+      if (allDone) {
+        task.status = 'completed'
+        logger.info(`[下载队列] 任务完成: ${task.workTitle}`)
+      } else if (anyFailed) {
+        task.status = 'failed'
+        logger.warn(`[下载队列] 任务部分失败: ${task.workTitle}`)
+      }
+    }
+  } catch (e) {
+    task.status = 'failed'
+    logger.error(`[下载队列] 任务出错: ${task.workTitle}, ${e.message}`)
+  }
+
+  activeDownloadTask = null
+  currentAbortController = null
+  broadcastDownloadState()
+
+  processDownloadQueue()
+}
+
+// 添加下载任务
+ipcMain.handle('download:addTask', async (event, { work, files, saveDir }) => {
+  const taskId = generateTaskId()
+  const workFolder = work.rjCode || (work.onlineId ? `RJ${work.onlineId}` : work.title || 'download')
+
+  const taskFiles = files.map((f) => {
+    const subDir = f.path ? `${saveDir}/${workFolder}/${f.path}` : `${saveDir}/${workFolder}`
+    return {
+      url: f.url,
+      fileName: f.title,
+      savePath: subDir,
+      size: f.size || 0,
+      status: 'pending',
+      progress: 0,
+      downloaded: 0,
+      totalLength: 0,
+      speed: 0,
+      error: '',
+    }
+  })
+
+  const task = {
+    id: taskId,
+    workId: work.id || work.onlineId || '',
+    workTitle: work.title || '',
+    workCover: work.cover || '',
+    rjCode: work.rjCode || '',
+    files: taskFiles,
+    status: 'queued',
+    currentIndex: 0,
+    createdAt: Date.now(),
+  }
+
+  downloadQueue.push(task)
+  logger.info(`[下载队列] 添加任务: ${task.workTitle}, 共 ${taskFiles.length} 个文件, 队列长度: ${downloadQueue.length}`)
+  broadcastDownloadState()
+
+  processDownloadQueue()
+
+  return taskId
+})
+
+// 获取下载状态
+ipcMain.handle('download:getState', async () => {
+  return {
+    queue: downloadQueue,
+    active: activeDownloadTask,
+  }
+})
+
+// 取消下载任务
+ipcMain.handle('download:cancelTask', async (_, taskId) => {
+  if (activeDownloadTask && activeDownloadTask.id === taskId) {
+    if (currentAbortController) {
+      currentAbortController.abort()
+    }
+    return true
+  }
+  const idx = downloadQueue.findIndex((t) => t.id === taskId)
+  if (idx >= 0) {
+    const task = downloadQueue[idx]
+    task.status = 'cancelled'
+    task.files.forEach((f) => {
+      if (f.status === 'pending') f.status = 'cancelled'
+    })
+    downloadQueue.splice(idx, 1)
+    broadcastDownloadState()
+    return true
+  }
+  return false
+})
+
+// 删除已完成的任务
+ipcMain.handle('download:removeTask', async (_, taskId) => {
+  const idx = downloadQueue.findIndex((t) => t.id === taskId)
+  if (idx >= 0) {
+    downloadQueue.splice(idx, 1)
+    broadcastDownloadState()
+    return true
+  }
+  return false
+})
+
+// 清空已完成的任务
+ipcMain.handle('download:clearCompleted', async () => {
+  for (let i = downloadQueue.length - 1; i >= 0; i--) {
+    const task = downloadQueue[i]
+    if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+      downloadQueue.splice(i, 1)
+    }
+  }
+  broadcastDownloadState()
+  return true
 })
