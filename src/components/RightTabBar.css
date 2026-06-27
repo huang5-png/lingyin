@@ -30,7 +30,7 @@
 }
 
 .tab-item {
-  padding: 10px 8px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -39,6 +39,7 @@
   transition: all var(--transition-fast);
   position: relative;
   text-align: center;
+  font-weight: 600;
 }
 
 .tab-item:hover {
@@ -50,6 +51,7 @@
   color: var(--accent-primary);
   position: relative;
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .tab-item.active::after {
@@ -121,13 +123,14 @@
 }
 
 .cv-tag-mini {
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--tag-bg);
   border: 1px solid var(--tag-border);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   color: var(--tag-text);
-  font-weight: 500;
+  font-weight: 600;
+  min-height: 24px;
 }
 
 .detail-tags {
@@ -137,13 +140,14 @@
 }
 
 .tag-mini {
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--tag-bg);
   border: 1px solid var(--tag-border);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   color: var(--tag-text);
-  font-weight: 500;
+  font-weight: 600;
+  min-height: 24px;
 }
 
 .detail-desc {

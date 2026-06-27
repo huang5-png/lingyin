@@ -14,6 +14,31 @@ import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, 
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import './App.css'
 
+// Toast 通知组件
+const Toast = ({ message, type = 'info', onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3500)
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  const icons = {
+    success: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+    error: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+    info: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
+    warning: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  }
+
+  return (
+    <div className={`toast toast-${type}`}>
+      <span className="toast-icon">{icons[type]}</span>
+      <span className="toast-message">{message}</span>
+      <button className="toast-close" onClick={onClose}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  )
+}
+
 const DEFAULT_SETTINGS = {
   autoPlayNext: true,
   rememberProgress: true,
@@ -71,6 +96,16 @@ export default function App() {
     startBorderRadius: 0,
     endBorderRadius: 0,
   })
+  const [toasts, setToasts] = useState([])
+
+  const showToast = useCallback((message, type = 'info') => {
+    const id = Date.now() + Math.random()
+    setToasts(prev => [...prev, { id, message, type }])
+  }, [])
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
   const playerRef = useRef(null)
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
@@ -246,7 +281,7 @@ export default function App() {
 
       const scanResult = await scanFolder(folderPath)
       if (scanResult.audioFiles.length === 0) {
-        alert('该文件夹中没有找到音频文件')
+        showToast('该文件夹中没有找到音频文件', 'warning')
         return
       }
 
@@ -275,7 +310,7 @@ export default function App() {
       fetchDlsiteMetadataAsync(savedWork.id, folderName, rjCode)
     } catch (e) {
       console.error('Failed to add folder:', e)
-      alert('添加文件夹失败：' + e.message)
+      showToast('添加文件夹失败：' + e.message, 'error')
     }
   }
 
@@ -289,7 +324,7 @@ export default function App() {
 
       const scanResults = await scanMediaLibrary(rootPath)
       if (scanResults.length === 0) {
-        alert('在该目录下没有找到包含音频文件的文件夹')
+        showToast('在该目录下没有找到包含音频文件的文件夹', 'warning')
         return
       }
 
@@ -330,10 +365,10 @@ export default function App() {
         setWorks((prev) => [...prev, ...newWorks])
       }
 
-      alert(`媒体库扫描完成！\n共找到 ${scanResults.length} 个作品文件夹\n成功添加 ${addedCount} 个新作品\n${scanResults.length - addedCount} 个已存在，已跳过\n\n元数据正在后台获取，请稍候...`)
+      showToast('媒体库扫描完成！共找到 ' + scanResults.length + ' 个作品，成功添加 ' + addedCount + ' 个新作品', 'success')
     } catch (e) {
       console.error('Failed to add media library:', e)
-      alert('添加媒体库失败：' + e.message)
+      showToast('添加媒体库失败：' + e.message, 'error')
     }
   }
 
@@ -703,7 +738,7 @@ export default function App() {
       }
     } catch (e) {
       console.error('Failed to delete work:', e)
-      alert('删除失败：' + e.message)
+      showToast('删除失败：' + e.message, 'error')
     }
   }, [selectedWork])
 
@@ -1122,7 +1157,7 @@ export default function App() {
       }
     } catch (e) {
       console.error('Failed to refresh metadata:', e)
-      alert('重新刮削失败：' + e.message)
+      showToast('重新刮削失败：' + e.message, 'error')
     }
   }
 
@@ -1173,7 +1208,7 @@ export default function App() {
       }
     } catch (e) {
       console.error('Failed to refresh subtitles:', e)
-      alert('刷新字幕失败：' + e.message)
+      showToast('刷新字幕失败：' + e.message, 'error')
     }
   }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex])
 
@@ -1340,12 +1375,15 @@ export default function App() {
             <div className="content-area">
               <div className="work-detail-wrapper library-work-detail">
                 {selectedWork && (
-                  <button 
+                  <button
                     className="detail-close-btn"
                     onClick={() => setSelectedWork(null)}
                     title="关闭详情"
                   >
-                    ✕
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
                   </button>
                 )}
               <WorkDetail
@@ -1411,12 +1449,15 @@ export default function App() {
             <div className="main-content discover-detail-content">
               <div className="content-area">
                 <div className="work-detail-wrapper discover-work-detail">
-                  <button 
+                  <button
                     className="detail-close-btn"
                     onClick={() => setSelectedWork(null)}
                     title="关闭详情"
                   >
-                    ✕
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
                   </button>
                   <WorkDetail
                     work={selectedWork}
@@ -1492,6 +1533,14 @@ export default function App() {
         </div>
       )}
 
+      {toasts.length > 0 && (
+        <div className="toast-container">
+          {toasts.map(toast => (
+            <Toast key={toast.id} message={toast.message} type={toast.type} onClose={() => removeToast(toast.id)} />
+          ))}
+        </div>
+      )}
+
       </div>
 
       {isImmersive && selectedWork && (
@@ -1503,13 +1552,13 @@ export default function App() {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <div className="immersive-content">
+          <div className="immersive-cover-wrapper">
             <img src={selectedWork.cover} alt="" className="immersive-cover" />
+          </div>
+          <div className="immersive-bottom">
             <div className="immersive-title">{selectedWork.title || selectedWork.folderName}</div>
             <div className="immersive-subtitle">{selectedWork.circle || ''}</div>
-          </div>
-          {immersiveLyricCues.length > 0 && (
-            <div className="immersive-lyrics">
+            {immersiveLyricCues.length > 0 && (
               <div className="immersive-lyrics-container" ref={immersiveLyricRef}>
                 {immersiveLyricCues.map((cue) => (
                   <div
@@ -1523,9 +1572,8 @@ export default function App() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-          <div className="immersive-hint">按 ESC 或点击右上角关闭</div>
+            )}
+          </div>
         </div>
       )}
 

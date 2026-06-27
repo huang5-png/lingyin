@@ -111,7 +111,7 @@
 }
 
 .download-task-card.downloading {
-  border-color: rgba(167, 139, 250, 0.4);
+  border-color: rgba(201, 100, 66, 0.4);
 }
 
 .download-task-card.completed {
@@ -197,7 +197,7 @@
 }
 
 .task-status.downloading {
-  background: rgba(167, 139, 250, 0.2);
+  background: rgba(201, 100, 66, 0.2);
   color: var(--accent-primary);
 }
 

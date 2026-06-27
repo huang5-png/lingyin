@@ -154,7 +154,7 @@ export default function UsageReport() {
                   </div>
                   <div className="chart-legend">
                     <span className="legend-item">
-                      <span className="legend-dot" style={{ background: '#a78bfa' }} />
+                      <span className="legend-dot" style={{ background: '#c96442' }} />
                       聆听秒数
                     </span>
                   </div>
@@ -176,19 +176,19 @@ export default function UsageReport() {
                   title="标签排行 Top 10"
                   icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>}
                   items={stats.tagRanking}
-                  color="#a78bfa"
+                  color="#c96442"
                 />
                 <RankingCard
                   title="社团排行 Top 10"
                   icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}
                   items={stats.circleRanking}
-                  color="#c084fc"
+                  color="#b0562f"
                 />
                 <RankingCard
                   title="声优排行 Top 10"
                   icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>}
                   items={stats.cvRanking}
-                  color="#c4b5fd"
+                  color="#e0c9a8"
                 />
               </div>
             </section>
@@ -209,7 +209,7 @@ export default function UsageReport() {
                         {w.cover ? (
                           <img src={w.cover} alt="" className="work-cover" />
                         ) : (
-                          <div className="work-cover-placeholder">🎵</div>
+                          <div className="work-cover-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
                         )}
                       </div>
                       <div className="work-info">
@@ -233,7 +233,7 @@ export default function UsageReport() {
             )}
 
             <div className="report-foot">
-              <div className="foot-logo">🎧 聆音</div>
+              <div className="foot-logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> 聆音</div>
               <div className="foot-text">
                 所有数据均来自本地播放记录 · 不会上传任何服务器
               </div>
@@ -327,8 +327,8 @@ function TimelineChart({ timeline, range }) {
     <svg className="timeline-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="tlGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#c4b5fd" stopOpacity="0.7" />
+          <stop offset="0%" stopColor="#c96442" />
+          <stop offset="100%" stopColor="#e0c9a8" stopOpacity="0.7" />
         </linearGradient>
       </defs>
       {/* grid lines */}
@@ -337,8 +337,8 @@ function TimelineChart({ timeline, range }) {
         const val = max * (1 - p)
         return (
           <g key={i}>
-            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="rgba(147,112,219,0.12)" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={padL - 10} y={y + 4} textAnchor="end" fontSize="10" fill="#8b7dad" fontWeight="600">
+            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="rgba(201,100,66,0.12)" strokeWidth="1" strokeDasharray="3 4" />
+            <text x={padL - 10} y={y + 4} textAnchor="end" fontSize="10" fill="#b09d8a" fontWeight="600">
               {formatShortDuration(val)}
             </text>
           </g>
@@ -358,10 +358,10 @@ function TimelineChart({ timeline, range }) {
               width={barW}
               height={isActive ? h : 2}
               rx="3"
-              fill={isActive ? 'url(#tlGrad)' : 'rgba(147,112,219,0.15)'}
+              fill={isActive ? 'url(#tlGrad)' : 'rgba(201,100,66,0.15)'}
             />
             {(i % labelStep === 0 || i === timeline.length - 1) && (
-              <text x={x + barW / 2} y={H - padB + 18} textAnchor="middle" fontSize="10" fill="#8b7dad" fontWeight="600">
+              <text x={x + barW / 2} y={H - padB + 18} textAnchor="middle" fontSize="10" fill="#b09d8a" fontWeight="600">
                 {t.label}
               </text>
             )}

@@ -71,11 +71,12 @@
   font-size: var(--font-size-sm);
   outline: none;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .search-box input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .search-box button {
@@ -88,6 +89,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .search-box button:hover {
@@ -101,8 +103,8 @@
   left: 0;
   right: 0;
   background: var(--card-bg);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -150,7 +152,7 @@
 }
 
 .suggestion-cmd {
-  font-family: 'Consolas', 'Monaco', monospace;
+  font-family: var(--font-mono, 'Consolas', 'Monaco', monospace);
   font-size: 13px;
   font-weight: 600;
   color: var(--accent-primary);
@@ -218,16 +220,19 @@
 
 .tag-picker-btn {
   padding: 8px 16px;
+  min-height: 36px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   gap: 6px;
+  box-shadow: var(--shadow-sm);
 }
 
 .tag-picker-btn:hover {
@@ -238,16 +243,17 @@
 .filter-count {
   background: var(--accent-gradient);
   color: var(--text-on-accent);
-  font-size: 11px;
+  font-size: 10px;
   padding: 2px 6px;
   border-radius: 999px;
   font-weight: 600;
+  min-height: 20px;
 }
 
 .tag-picker {
   background: var(--card-bg);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   padding: 16px;
@@ -317,7 +323,7 @@
 
 .tag-picker-search input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .tag-picker-list {
@@ -412,14 +418,16 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 14px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-soft);
   border-radius: 999px;
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  min-height: 28px;
 }
 
 .filter-tag:hover {
@@ -434,14 +442,17 @@
 
 .clear-all-btn {
   padding: 6px 14px;
+  min-height: 36px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  box-shadow: var(--shadow-sm);
 }
 
 .clear-all-btn:hover {
@@ -458,19 +469,22 @@
 
 .va-tag {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--bg-tertiary);
   border-radius: 999px;
   font-size: 11px;
   color: var(--accent-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-fast), transform 0.16s ease;
   border: 1px solid transparent;
+  font-weight: 600;
+  min-height: 24px;
 }
 
 .va-tag:hover {
   border-color: var(--accent-secondary);
   background: var(--bg-secondary);
+  transform: translateY(-1px);
 }
 
 .va-tag.active {
@@ -559,8 +573,8 @@
 
 .discover-work-card {
   background: var(--card-bg);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -574,12 +588,12 @@
 .discover-work-card:hover {
   transform: translateY(-3px);
   border-color: var(--border-hover);
-  box-shadow: 0 12px 32px rgba(128, 90, 213, 0.2);
+  box-shadow: 0 12px 32px rgba(117, 58, 34, 0.2);
 }
 
 .discover-work-card.selected {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2), 0 8px 24px rgba(128, 90, 213, 0.25);
+  box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.2), 0 8px 24px rgba(117, 58, 34, 0.25);
 }
 
 .discover-card-cover {
@@ -634,7 +648,7 @@
   position: absolute;
   top: 10px;
   left: 10px;
-  padding: 3px 10px;
+  padding: 4px 10px;
   background: var(--accent-gradient);
   color: var(--text-on-accent);
   font-size: 10px;
@@ -642,17 +656,18 @@
   border-radius: var(--radius-full);
   z-index: 2;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  min-height: 24px;
 }
 
 .duration-badge {
   position: absolute;
   bottom: 10px;
   right: 10px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   background: rgba(0, 0, 0, 0.7);
   color: white;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius-sm);
   z-index: 2;
   backdrop-filter: blur(4px);
@@ -701,20 +716,22 @@
 }
 
 .va-tag {
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--tag-bg);
   border: 1px solid var(--tag-border);
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--tag-text);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-fast), transform 0.16s ease;
+  min-height: 24px;
 }
 
 .va-tag:hover {
   border-color: var(--accent-secondary);
   background: var(--bg-secondary);
+  transform: translateY(-1px);
 }
 
 .va-tag.active {
@@ -741,22 +758,24 @@
 }
 
 .work-tag {
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-fast), transform 0.16s ease;
   white-space: nowrap;
+  min-height: 24px;
 }
 
 .work-tag:hover {
   border-color: var(--accent-primary);
   color: var(--accent-primary);
   background: var(--bg-secondary);
+  transform: translateY(-1px);
 }
 
 .work-tag.active {
@@ -767,16 +786,19 @@
 
 .advanced-filter-btn {
   padding: 8px 16px;
+  min-height: 36px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   gap: 8px;
+  box-shadow: var(--shadow-sm);
 }
 
 .advanced-filter-btn:hover {
@@ -793,8 +815,8 @@
 
 .advanced-filter-panel {
   background: var(--card-bg);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -912,12 +934,14 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 14px;
   border-radius: 999px;
   font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  min-height: 28px;
 }
 
 .filter-chip.include {
@@ -947,13 +971,16 @@
 .filter-add-btn {
   align-self: flex-start;
   padding: 6px 14px;
+  min-height: 36px;
   background: var(--bg-tertiary);
   border: 1px dashed var(--border-soft);
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-add-btn:hover {
@@ -983,7 +1010,7 @@
 
 .filter-input-row input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .filter-hint {
@@ -1013,7 +1040,7 @@
 
 .filter-range input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .range-sep {
@@ -1035,7 +1062,7 @@
 
 .filter-col select:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .filter-footer {
@@ -1052,15 +1079,18 @@
 
 .filter-clear-btn {
   padding: 8px 16px;
+  min-height: 36px;
   background: transparent;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-clear-btn:hover {
@@ -1070,6 +1100,7 @@
 
 .filter-apply-btn {
   padding: 8px 24px;
+  min-height: 40px;
   background: var(--accent-gradient);
   border: none;
   border-radius: var(--radius-md);
@@ -1080,6 +1111,7 @@
   transition: all var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-apply-btn:hover {
@@ -1128,13 +1160,16 @@
 
 .page-btn {
   padding: 8px 20px;
+  min-height: 36px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-btn:hover:not(:disabled) {
@@ -1166,7 +1201,7 @@
   color: white;
   font-size: 18px;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(167, 139, 250, 0.4);
+  box-shadow: 0 4px 16px rgba(201, 100, 66, 0.4);
   transition: all var(--transition-normal);
   z-index: 100;
   display: flex;
@@ -1185,6 +1220,6 @@
 
 .back-to-top:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(167, 139, 250, 0.5);
+  box-shadow: 0 6px 20px rgba(201, 100, 66, 0.5);
   filter: brightness(1.1);
 }

@@ -79,7 +79,11 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
         <div className="empty-state">
           <div className="empty-icon-wrapper">
             <div className="empty-icon">
-              <img src="/icons/icon-music-note.png" alt="" className="cover-placeholder-icon" />
+              <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+              </svg>
             </div>
           </div>
           <h2>选择一个作品开始播放</h2>
@@ -151,7 +155,11 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
               <img ref={coverImgRef} src={work.cover} alt="" />
             ) : (
               <div className="cover-placeholder">
-                <img src="/icons/icon-music-note.png" alt="" className="cover-placeholder-icon" />
+                <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18V5l12-2v13"/>
+                  <circle cx="6" cy="18" r="3"/>
+                  <circle cx="18" cy="16" r="3"/>
+                </svg>
               </div>
             )}
           </div>
@@ -167,7 +175,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
               </div>
             )}
             <div className="work-meta-row">
-              {work.rating > 0 && <span className="rating"><img src="/icons/icon-star.png" alt="" className="star-icon" /> {work.rating.toFixed(2)}</span>}
+              {work.rating > 0 && <span className="rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating.toFixed(2)}</span>}
               {work.circle && <span className="circle">社团: {work.circle}</span>}
             </div>
             {work.cvs && work.cvs.length > 0 && (
@@ -199,17 +207,24 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             )}
             <div className="work-actions">
               <button className="action-btn primary" onClick={handleEdit}>
-                <img src="/icons/icon-settings.png" alt="" className="btn-icon" /> 编辑元数据
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg> 编辑元数据
               </button>
               <button className="action-btn" onClick={onRefreshMetadata}>
-                🔄 重新刮削
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> 重新刮削
               </button>
               <button className="action-btn" onClick={onRefreshSubtitles}>
-                📝 刷新字幕
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> 刷新字幕
               </button>
               {work.isOnline && onDownload && (
               <button className="action-btn download" onClick={onDownload}>
-                <img src="/icons/icon-download.png" alt="" className="btn-icon" /> 下载
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg> 下载
               </button>
               )}
             </div>
@@ -223,7 +238,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             <h2 className="section-title">曲目列表</h2>
             <div className="breadcrumb-nav">
               <span className="breadcrumb-item" onClick={() => handleBreadcrumbClick(-1)}>
-                📁 根目录
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> 根目录
               </span>
               {breadcrumbs.map((crumb, idx) => (
                 <span key={idx} className="breadcrumb-sep">/</span>
@@ -280,7 +295,9 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                 >
                   <div className="audio-indicator" />
                   <span className="audio-index">
-                    <span className="folder-icon">📁</span>
+                    <span className="folder-icon">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    </span>
                   </span>
                   <span className="audio-name">{item.name}</span>
                   <span className="audio-duration">{item.audioCount} 首</span>

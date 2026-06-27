@@ -94,6 +94,11 @@
   gap: 6px;
 }
 
+.add-buttons-row {
+  display: flex;
+  gap: 8px;
+}
+
 .add-buttons {
   display: flex;
   flex-direction: column;
@@ -204,7 +209,7 @@
 
 .filter-group select:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
   color: var(--text-primary);
 }
 
@@ -223,6 +228,7 @@
   font-weight: 500;
   transition: all var(--transition-fast);
   outline: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .search-input::placeholder {
@@ -236,7 +242,7 @@
 
 .search-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .work-list {
@@ -287,7 +293,8 @@
 
 .work-item.active {
   background: var(--accent-gradient-soft);
-  border-color: var(--accent-glow);
+  border-color: transparent;
+  border-left: 3px solid var(--accent-primary);
 }
 
 .work-item.active .work-title {
@@ -510,7 +517,7 @@
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(167, 139, 250, 0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(201, 100, 66, 0.06) 0%, transparent 60%);
   pointer-events: none;
   z-index: 1;
   opacity: 0;
@@ -531,13 +538,13 @@
   border-color: var(--accent-glow);
   background: var(--bg-tertiary);
   box-shadow: 0 0 0 1px var(--accent-glow),
-              0 4px 16px rgba(167, 139, 250, 0.15);
+              0 4px 16px rgba(201, 100, 66, 0.15);
 }
 
 .work-item.card.active::before {
   opacity: 1;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(167, 139, 250, 0.1) 0%, transparent 60%);
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(201, 100, 66, 0.1) 0%, transparent 60%);
 }
 
 .card-cover {
@@ -648,7 +655,7 @@
 }
 
 .card-rating {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #fbbf24;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
@@ -705,16 +712,22 @@
 
 .card-tag {
   display: inline-block;
-  padding: 2px 6px;
-  font-size: 10px;
+  padding: 3px 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--tag-text);
   background: var(--tag-bg);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   border: 1px solid var(--tag-border);
   line-height: 1.4;
+  min-height: 24px;
   white-space: nowrap;
   max-width: 100%;
+  transition: transform 0.16s ease;
+}
+
+.card-tag:hover {
+  transform: translateY(-1px);
 }
 
 .card-delete {
@@ -783,7 +796,8 @@
 
 .work-item.row.active {
   background: var(--accent-gradient-soft);
-  border-color: var(--accent-glow);
+  border-color: transparent;
+  border-left: 3px solid var(--accent-primary);
 }
 
 .work-item.row.active .work-title {
@@ -868,15 +882,21 @@
 
 .work-item.row .work-tag-chip {
   display: inline-block;
-  padding: 1px 6px;
-  font-size: 10px;
+  padding: 3px 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--tag-text);
   background: var(--tag-bg);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   border: 1px solid var(--tag-border);
   line-height: 1.4;
+  min-height: 24px;
   white-space: nowrap;
+  transition: transform 0.16s ease;
+}
+
+.work-item.row .work-tag-chip:hover {
+  transform: translateY(-1px);
 }
 
 .work-item.row .work-cv {
@@ -954,4 +974,46 @@
 /* 网格视图下滚动条 */
 .work-list.grid-view::-webkit-scrollbar {
   width: 8px;
+}
+
+/* ===== 添加按钮 ===== */
+.add-btn,
+.add-media-library-btn {
+  flex: 1;
+  min-height: 36px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.add-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.add-media-library-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.add-btn:active,
+.add-media-library-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 rgba(201, 100, 66, 0);
 }

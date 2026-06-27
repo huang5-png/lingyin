@@ -23,6 +23,17 @@ async function getParseFile() {
 
 const isDev = process.env.NODE_ENV === 'development'
 
+// 性能优化：禁用 GPU shader 磁盘缓存，减少 IO 和权限错误
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
+// 性能优化：禁用后台标签页节流，保证音频播放流畅
+app.commandLine.appendSwitch('disable-background-timer-throttling')
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+app.commandLine.appendSwitch('disable-renderer-backgrounding')
+// 性能优化：禁用不必要的 Chromium 功能
+app.commandLine.appendSwitch('disable-features', 'TranslateUI,Translate,MediaRouter,SpareRendererForSitePerProcess,HardwareMediaKeyHandling')
+// 性能优化：限制缓存大小
+app.commandLine.appendSwitch('disk-cache-size', '104857600')
+
 let mainWindow
 
 function createWindow() {
@@ -36,12 +47,21 @@ function createWindow() {
     backgroundColor: '#0a0a1a',
     frame: false,
     icon: iconPath,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
+      sandbox: false,
+      spellcheck: false,
+      enableWebSQL: false,
     },
+  })
+
+  // 性能优化：窗口就绪后再显示，避免白屏闪烁
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
   })
   
   mainWindow.setTitle('聆音')
@@ -50,14 +70,14 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 
-  // 快捷键：Ctrl+Shift+I 切换开发者工具
+  // 快捷键：F12 或 Ctrl+Shift+I 切换开发者工具
   mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+    const isToggle = input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')
+    if (isToggle) {
       if (mainWindow.webContents.isDevToolsOpened()) {
         mainWindow.webContents.closeDevTools()
       } else {

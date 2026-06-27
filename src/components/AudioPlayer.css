@@ -17,9 +17,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background:
-    radial-gradient(ellipse 50% 80% at 20% 0%, rgba(167, 139, 250, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 60% at 80% 100%, rgba(129, 140, 248, 0.04) 0%, transparent 50%);
+  background: none;
   pointer-events: none;
   z-index: 0;
 }
@@ -171,7 +169,7 @@
   pointer-events: none;
   z-index: 2;
   opacity: 0.25;
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.15) 0%, transparent 50%, rgba(129, 140, 248, 0.1) 100%);
+  background: linear-gradient(180deg, rgba(201, 100, 66, 0.15) 0%, transparent 50%, rgba(176, 86, 47, 0.1) 100%);
 }
 
 .player-controls {
@@ -190,7 +188,7 @@
   height: 32px;
   border-radius: var(--radius-md);
   background: var(--tag-bg);
-  font-size: var(--font-size-xs);
+  font-size: 12px;
   font-weight: 600;
   transition: all var(--transition-fast);
   border: 1px solid var(--tag-border);

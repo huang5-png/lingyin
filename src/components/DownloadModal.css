@@ -1,7 +1,7 @@
 .modal-overlay.download-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(30, 27, 46, 0.55);
+  background: rgba(27, 25, 19, 0.55);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
@@ -16,11 +16,11 @@
   max-width: 680px;
   max-height: 86vh;
   background: var(--bg-elevated, rgba(255, 255, 255, 0.95));
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--card-border, rgba(255, 255, 255, 0.8));
   border-radius: var(--radius-xl, 24px);
-  box-shadow: 0 24px 64px rgba(128, 90, 213, 0.25);
+  box-shadow: 0 24px 64px rgba(117, 58, 34, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -28,7 +28,7 @@
 
 .download-modal-header {
   padding: 22px 24px 18px;
-  border-bottom: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border-bottom: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -70,7 +70,7 @@
   height: 30px;
   border-radius: var(--radius-sm, 10px);
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   color: var(--text-tertiary, #6b5d8a);
   font-size: 14px;
   cursor: pointer;
@@ -82,7 +82,7 @@
 }
 
 .download-close-btn:hover {
-  background: var(--bg-hover, rgba(147, 112, 219, 0.1));
+  background: var(--bg-hover, rgba(180, 140, 110, 0.1));
   color: var(--text-primary, #1e1b2e);
 }
 
@@ -111,8 +111,8 @@
 .loading-spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid var(--border-color, rgba(147, 112, 219, 0.15));
-  border-top-color: var(--accent-primary, #a78bfa);
+  border: 3px solid var(--border-color, rgba(180, 140, 110, 0.15));
+  border-top-color: var(--accent-primary, #c96442);
   border-radius: 50%;
   animation: dlSpin 0.9s linear infinite;
 }
@@ -138,7 +138,7 @@
 .dl-chip-btn {
   padding: 5px 14px;
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
@@ -149,9 +149,9 @@
 }
 
 .dl-chip-btn:hover {
-  background: var(--bg-hover, rgba(147, 112, 219, 0.1));
+  background: var(--bg-hover, rgba(180, 140, 110, 0.1));
   color: var(--text-primary, #1e1b2e);
-  border-color: var(--border-hover, rgba(147, 112, 219, 0.25));
+  border-color: var(--border-hover, rgba(180, 140, 110, 0.25));
 }
 
 .download-toolbar-right {
@@ -171,7 +171,7 @@
 
 .download-group {
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   border-radius: var(--radius-md, 16px);
   overflow: hidden;
 }
@@ -187,18 +187,18 @@
 }
 
 .download-group-header:hover {
-  background: var(--bg-hover, rgba(147, 112, 219, 0.1));
+  background: var(--bg-hover, rgba(180, 140, 110, 0.1));
 }
 
 .download-group-header.all-selected {
-  background: var(--accent-gradient-soft, rgba(167, 139, 250, 0.12));
+  background: var(--accent-gradient-soft, rgba(201, 100, 66, 0.12));
 }
 
 .dl-checkbox {
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1.5px solid var(--border-hover, rgba(147, 112, 219, 0.25));
+  border: 1.5px solid var(--border-hover, rgba(180, 140, 110, 0.25));
   background: var(--bg-secondary, rgba(255, 255, 255, 0.7));
   display: flex;
   align-items: center;
@@ -217,12 +217,12 @@
 }
 
 .dl-checkbox.checked {
-  background: var(--accent-gradient, linear-gradient(135deg, #a78bfa, #c084fc));
+  background: var(--accent-gradient, linear-gradient(135deg, #c96442, #b0562f));
   border-color: transparent;
 }
 
 .dl-checkbox.partial {
-  background: var(--accent-400, #a78bfa);
+  background: var(--accent-400, #c96442);
   border-color: transparent;
   color: #fff;
 }
@@ -262,11 +262,11 @@
 }
 
 .download-file-row:hover {
-  background: var(--bg-hover, rgba(147, 112, 219, 0.1));
+  background: var(--bg-hover, rgba(180, 140, 110, 0.1));
 }
 
 .download-file-row.selected {
-  background: var(--accent-gradient-soft, rgba(167, 139, 250, 0.08));
+  background: var(--accent-gradient-soft, rgba(201, 100, 66, 0.08));
 }
 
 .dl-file-name {
@@ -292,7 +292,7 @@
   gap: 10px;
   padding: 12px 14px;
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   border-radius: var(--radius-md, 16px);
   margin-bottom: 12px;
 }
@@ -317,12 +317,12 @@
 
 .dl-dir-btn {
   padding: 5px 12px;
-  background: var(--accent-gradient, linear-gradient(135deg, #a78bfa, #c084fc));
+  background: var(--accent-gradient, linear-gradient(135deg, #c96442, #b0562f));
   color: #fff;
   border: none;
   border-radius: var(--radius-sm, 10px);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
   transition: all var(--transition-fast, 120ms);
@@ -331,7 +331,7 @@
 
 .dl-dir-btn:hover:not(:disabled) {
   filter: brightness(1.08);
-  box-shadow: var(--shadow-glow, 0 0 20px rgba(167, 139, 250, 0.3));
+  box-shadow: var(--shadow-glow, 0 0 20px rgba(201, 100, 66, 0.3));
 }
 
 .dl-dir-btn:disabled {
@@ -348,15 +348,15 @@
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
   border-radius: 9999px;
   overflow: hidden;
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
 }
 
 .download-progress-fill {
   height: 100%;
-  background: var(--accent-gradient, linear-gradient(135deg, #a78bfa, #c084fc));
+  background: var(--accent-gradient, linear-gradient(135deg, #c96442, #b0562f));
   border-radius: 9999px;
   transition: width 200ms ease-out;
-  box-shadow: 0 0 12px rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 12px rgba(201, 100, 66, 0.4);
 }
 
 .download-progress-text {
@@ -394,7 +394,7 @@
 .download-result {
   padding: 12px 14px;
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   border-radius: var(--radius-md, 16px);
   margin-bottom: 12px;
 }
@@ -421,7 +421,7 @@
 
 .download-modal-footer {
   padding: 14px 24px 18px;
-  border-top: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border-top: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -430,18 +430,19 @@
 .dl-btn-secondary {
   padding: 9px 20px;
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.5));
-  border: 1px solid var(--border-color, rgba(147, 112, 219, 0.15));
+  border: 1px solid var(--border-color, rgba(180, 140, 110, 0.15));
   border-radius: var(--radius-md, 16px);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary, #4a3f66);
   cursor: pointer;
   transition: all var(--transition-fast, 120ms);
   font-family: inherit;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(117, 58, 34, 0.1));
 }
 
 .dl-btn-secondary:hover:not(:disabled) {
-  background: var(--bg-hover, rgba(147, 112, 219, 0.1));
+  background: var(--bg-hover, rgba(180, 140, 110, 0.1));
   color: var(--text-primary, #1e1b2e);
 }
 
@@ -452,21 +453,21 @@
 
 .dl-btn-primary {
   padding: 9px 22px;
-  background: var(--accent-gradient, linear-gradient(135deg, #a78bfa, #c084fc));
+  background: var(--accent-gradient, linear-gradient(135deg, #c96442, #b0562f));
   color: #fff;
   border: none;
   border-radius: var(--radius-md, 16px);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast, 120ms);
   font-family: inherit;
-  box-shadow: var(--shadow-sm, 0 2px 8px rgba(128, 90, 213, 0.1));
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(117, 58, 34, 0.1));
 }
 
 .dl-btn-primary:hover:not(:disabled) {
   filter: brightness(1.08);
-  box-shadow: var(--shadow-glow, 0 0 20px rgba(167, 139, 250, 0.3));
+  box-shadow: var(--shadow-glow, 0 0 20px rgba(201, 100, 66, 0.3));
   transform: translateY(-1px);
 }
 
@@ -532,6 +533,6 @@
 
 .download-modal-body::-webkit-scrollbar-thumb,
 .download-group-files::-webkit-scrollbar-thumb {
-  background: var(--border-color, rgba(147, 112, 219, 0.15));
+  background: var(--border-color, rgba(180, 140, 110, 0.15));
   border-radius: 3px;
 }

@@ -139,18 +139,19 @@ const AudioPlayer = forwardRef(function AudioPlayer(
 
         const ws = WaveSurfer.create({
           container: waveformRef.current,
-          waveColor: 'rgba(139, 92, 246, 0.4)',
+          waveColor: 'rgba(201, 100, 66, 0.4)',
           progressColor: '#ec4899',
           cursorColor: 'rgba(255, 255, 255, 0.9)',
           cursorWidth: 2,
-          barWidth: 3,
-          barGap: 2,
-          barRadius: 3,
+          barWidth: 2,
+          barGap: 1,
+          barRadius: 2,
           height: waveformHeight,
           normalize: true,
           hideScrollbar: true,
           barAlign: 'center',
           backend: 'MediaElement',
+          partialRender: true,
         })
 
         wavesurferRef.current = ws
@@ -176,8 +177,13 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           console.error('WaveSurfer error:', err)
         })
 
+        // 节流 auioprocess 事件到约 15fps，减少 React 重渲染
+        let lastProcessTime = 0
         ws.on('audioprocess', (time) => {
           if (cancelled) return
+          const now = performance.now()
+          if (now - lastProcessTime < 66) return
+          lastProcessTime = now
           setCurrentTime(time)
           if (onTimeUpdate) onTimeUpdate(time)
         })
@@ -185,6 +191,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
         ws.on('seek', (time) => {
           if (cancelled) return
           setCurrentTime(time)
+          if (onTimeUpdate) onTimeUpdate(time)
         })
 
         ws.on('play', () => !cancelled && setIsPlaying(true))
@@ -235,7 +242,11 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           />
         ) : (
           <div className="player-cover-placeholder" onClick={onToggleImmersive} title="点击进入沉浸模式">
-            🎵
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/>
+              <circle cx="18" cy="16" r="3"/>
+            </svg>
           </div>
         )}
       </div>
@@ -298,7 +309,12 @@ const AudioPlayer = forwardRef(function AudioPlayer(
 
       <div className="player-right">
         <div className="volume-control">
-          <span className="volume-icon">🔊</span>
+          <span className="volume-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </span>
           <input
             ref={volumeSliderRef}
             type="range"

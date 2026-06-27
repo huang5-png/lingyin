@@ -96,9 +96,9 @@
 }
 
 .settings-tab {
-  padding: 8px 16px;
+  padding: 10px 18px;
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: var(--radius-md);
@@ -117,6 +117,7 @@
   color: var(--text-primary);
   background: var(--bg-secondary);
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-body {
@@ -302,7 +303,7 @@
 
 .setting-select:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
   color: var(--text-primary);
 }
 
@@ -415,14 +416,16 @@
 
 .reset-btn {
   padding: 8px 16px;
+  min-height: 36px;
   background: transparent;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .reset-btn:hover {
@@ -438,11 +441,13 @@
 
 .cancel-btn, .save-btn {
   padding: 8px 20px;
+  min-height: 36px;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .cancel-btn {
@@ -555,11 +560,12 @@
   font-size: var(--font-size-sm);
   outline: none;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
+  box-shadow: var(--shadow-sm), 0 0 0 2px var(--accent-primary);
 }
 
 .settings-input::placeholder {
