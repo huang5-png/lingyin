@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './SettingsModal.css';
+import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
 
 const DEFAULT_SETTINGS = {
   autoPlayNext: true,
@@ -15,6 +16,7 @@ const DEFAULT_SETTINGS = {
   autoScrollLyric: true,
   skipSeconds: 5,
   theme: 'dark',
+  shortcuts: { ...DEFAULT_SHORTCUTS },
 };
 
 const TABS = [
@@ -22,6 +24,7 @@ const TABS = [
   { id: 'appearance', label: '外观' },
   { id: 'main', label: '主界面' },
   { id: 'player', label: '播放界面' },
+  { id: 'shortcuts', label: '快捷键' },
   { id: 'about', label: '关于' },
 ];
 
@@ -385,6 +388,15 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
     </div>
   );
 
+  const renderShortcutsTab = () => (
+    <div className="settings-tab-content">
+      <KeyboardShortcutsPanel
+        settings={settings}
+        onSettingsChange={setSettings}
+      />
+    </div>
+  );
+
   const renderAboutTab = () => (
     <div className="settings-tab-content about-tab">
       <div className="about-logo">
@@ -414,6 +426,8 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
         return renderMainTab();
       case 'player':
         return renderPlayerTab();
+      case 'shortcuts':
+        return renderShortcutsTab();
       case 'about':
         return renderAboutTab();
       default:

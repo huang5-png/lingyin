@@ -13,6 +13,7 @@ import DownloadModal from './components/DownloadModal'
 import PlaylistView from './components/PlaylistView'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
+import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
 
 // Toast 通知组件
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS = {
   viewMode: 'grid',
   loopMode: 'none', // 循环模式：none / one / list
   shuffle: false,   // 随机播放
+  shortcuts: { ...DEFAULT_SHORTCUTS },
 }
 
 // 生成队列项 ID
@@ -1318,31 +1320,68 @@ export default function App() {
     handleSelectAudio(audioFiles[currentIndex + 1])
   }, [settings.autoPlayNext, queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
 
+  // 解析快捷键字符串为可比较的格式
+  const parseShortcut = (shortcutStr) => {
+    if (!shortcutStr) return null
+    const parts = shortcutStr.split('+')
+    return {
+      ctrl: parts.includes('Ctrl'),
+      shift: parts.includes('Shift'),
+      alt: parts.includes('Alt'),
+      key: parts[parts.length - 1],
+    }
+  }
+
+  // 检查按键事件是否匹配快捷键
+  const matchShortcut = (e, shortcutStr) => {
+    if (!shortcutStr) return false
+    const expected = parseShortcut(shortcutStr)
+    if (!expected) return false
+    const key = e.key === ' ' ? 'Space' : e.key
+    return e.ctrlKey === expected.ctrl &&
+           e.shiftKey === expected.shift &&
+           e.altKey === expected.alt &&
+           key === expected.key
+  }
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return
 
-      switch (e.key) {
-        case ' ':
+      const shortcuts = settings.shortcuts || DEFAULT_SHORTCUTS
+
+      if (matchShortcut(e, shortcuts.playPause)) {
+        e.preventDefault()
+        if (playerRef.current) {
+          playerRef.current.playPause()
+        }
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.prevTrack)) {
+        e.preventDefault()
+        handlePrevAudio()
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.nextTrack)) {
+        e.preventDefault()
+        handleNextAudio()
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.exitImmersive)) {
+        if (isImmersive) {
           e.preventDefault()
-          if (playerRef.current) {
-            playerRef.current.playPause()
-          }
-          break
-        case 'ArrowLeft':
-          e.preventDefault()
-          handlePrevAudio()
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          handleNextAudio()
-          break
+          setIsImmersive(false)
+        }
+        return
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handlePrevAudio, handleNextAudio])
+  }, [handlePrevAudio, handleNextAudio, settings.shortcuts, isImmersive])
 
   const handleSelectSubtitle = useCallback(async (index) => {
     setSelectedSubtitleIndex(index)

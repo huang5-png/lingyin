@@ -1,0 +1,230 @@
+.keyboard-shortcuts-panel {
+  padding: 0 4px;
+}
+
+.shortcuts-intro {
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.shortcut-item:hover {
+  background: var(--bg-hover);
+}
+
+.shortcut-item.recording {
+  border-color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+}
+
+.shortcut-item.has-conflict {
+  border-color: var(--error-color, #e53e3e);
+}
+
+.shortcut-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shortcut-action {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.shortcut-desc {
+  font-family: var(--font-family);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.shortcut-conflict {
+  font-family: var(--font-family);
+  font-size: 12px;
+  color: var(--error-color, #e53e3e);
+  margin-top: 4px;
+}
+
+.shortcut-binding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shortcut-current:hover {
+  background: var(--bg-hover);
+}
+
+.shortcut-current:hover .shortcut-edit-btn {
+  opacity: 1;
+}
+
+.shortcut-current:hover .shortcut-reset-btn {
+  opacity: 1;
+}
+
+.shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.shortcut-sep {
+  color: var(--text-tertiary);
+  margin: 0 2px;
+  font-size: 12px;
+}
+
+.shortcut-edit-btn,
+.shortcut-reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.shortcut-edit-btn:hover,
+.shortcut-reset-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.shortcut-edit-btn svg,
+.shortcut-reset-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.shortcut-recording {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(201, 100, 66, 0.15);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--accent-primary);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.recording-indicator::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.shortcut-cancel-btn {
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shortcut-cancel-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.shortcuts-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.reset-all-btn {
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.reset-all-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
