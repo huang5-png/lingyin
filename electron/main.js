@@ -6,6 +6,7 @@ const https = require('https')
 const axios = require('axios')
 const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
+const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
 
 // 创建 keep-alive agent，复用连接，减少 ECONNRESET
@@ -342,6 +343,29 @@ ipcMain.handle('window:isMaximized', () => {
   return mainWindow ? mainWindow.isMaximized() : false
 })
 
+// 翻译 IPC
+ipcMain.handle('translate:text', async (event, text, targetLang) => {
+  try {
+    const settings = await getSettings()
+    const engine = settings.translateEngine || 'google'
+    return await translateText(text, targetLang || 'zh-CN', engine)
+  } catch (e) {
+    logger.error('[翻译] 单条翻译失败:', e.message)
+    return text
+  }
+})
+
+ipcMain.handle('translate:batch', async (event, texts, targetLang) => {
+  try {
+    const settings = await getSettings()
+    const engine = settings.translateEngine || 'google'
+    return await translateBatch(texts, targetLang || 'zh-CN', engine)
+  } catch (e) {
+    logger.error('[翻译] 批量翻译失败:', e.message)
+    return texts
+  }
+})
+
 const ASMR_ONE_API_BASE = 'https://api.asmr-200.com/api'
 
 const asmrOneHeaders = {
@@ -404,6 +428,7 @@ function parseProxyUrl(url) {
 }
 
 setProxyHelpers(getProxyConfig, parseProxyUrl)
+setTranslateProxyHelper(getProxyConfig)
 
 async function asmrOneGet(url, retries = 5) {
   const proxy = await getProxyConfig()

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import './Sidebar.css'
 
-export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange }) {
+export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredWorks = useMemo(() => {
@@ -80,9 +80,31 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
             <button className="settings-btn-icon" onClick={onOpenSettings} title="设置">
               <svg className="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1. 65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
             </button>
+            {onTranslateBatch && (
+              <button
+                className={`settings-btn-icon translate-all-btn ${isAnyTranslating ? 'translating' : ''}`}
+                onClick={() => {
+                  const texts = []
+                  filteredWorks.forEach(w => {
+                    if (w.title) texts.push(w.title)
+                    else if (w.folderName) texts.push(w.folderName)
+                  })
+                  if (texts.length === 0) return
+                  onTranslateBatch(texts)
+                }}
+                title="翻译所有作品标题"
+                disabled={isAnyTranslating}
+              >
+                {isAnyTranslating ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c0 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
+                )}
+              </button>
+            )}
           </div>
         </div>
         <div className="add-buttons-row">
@@ -163,16 +185,16 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                     </div>
                   </div>
                   <div className="card-info">
-                    <div className="card-title">{work.title || work.folderName}</div>
+                    <div className="card-title">{getTranslatedText?.(work.title || work.folderName) || work.title || work.folderName}</div>
                     <div className="card-meta">
                       {work.cvs && work.cvs.length > 0 && (
-                        <span className="card-circle">{work.cvs.slice(0, 2).join('、')}</span>
+                        <span className="card-circle">{work.cvs.slice(0, 2).map(cv => getTranslatedText?.(cv) || cv).join('、')}</span>
                       )}
                     </div>
                     {work.tags && work.tags.length > 0 && (
                       <div className="card-tags">
                         {work.tags.map((tag, i) => (
-                          <span key={i} className="card-tag">{tag}</span>
+                          <span key={i} className="card-tag">{getTranslatedText?.(tag) || tag}</span>
                         ))}
                       </div>
                     )}
@@ -202,16 +224,16 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                     </div>
                   )}
                   <div className="work-info">
-                    <div className="work-title">{work.title || work.folderName}</div>
+                    <div className="work-title">{getTranslatedText?.(work.title || work.folderName) || work.title || work.folderName}</div>
                     <div className="work-meta">
-                      {work.cvs && work.cvs.length > 0 && <span className="work-cv">{work.cvs.slice(0, 2).join('、')}</span>}
+                      {work.cvs && work.cvs.length > 0 && <span className="work-cv">{work.cvs.slice(0, 2).map(cv => getTranslatedText?.(cv) || cv).join('、')}</span>}
                       {work.rating > 0 && <span className="work-rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating}</span>}
-                      {work.circle && <span className="work-circle-name">{work.circle}</span>}
+                      {work.circle && <span className="work-circle-name">{getTranslatedText?.(work.circle) || work.circle}</span>}
                     </div>
                     {work.tags && work.tags.length > 0 && (
                       <div className="work-tags-row">
                         {work.tags.map((tag, i) => (
-                          <span key={i} className="work-tag-chip">{tag}</span>
+                          <span key={i} className="work-tag-chip">{getTranslatedText?.(tag) || tag}</span>
                         ))}
                       </div>
                     )}

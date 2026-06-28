@@ -61,4 +61,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
   windowClose: () => ipcRenderer.invoke('window:close'),
   windowIsMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+
+  // 翻译
+  translateText: (text, targetLang) => ipcRenderer.invoke('translate:text', text, targetLang),
+  translateBatch: (texts, targetLang) => ipcRenderer.invoke('translate:batch', texts, targetLang),
 })

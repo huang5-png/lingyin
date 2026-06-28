@@ -98,6 +98,13 @@ export default function App() {
   })
   const [toasts, setToasts] = useState([])
 
+  // 翻译缓存：内存中存储，关闭软件后清空。key = 原文, value = 译文
+  const translateCacheRef = useRef(new Map())
+  // 翻译状态触发器：每次翻译完成后递增，触发组件重渲染
+  const [translateVersion, setTranslateVersion] = useState(0)
+  // 正在翻译中的 key 集合
+  const [translating, setTranslating] = useState(new Set())
+
   const showToast = useCallback((message, type = 'info') => {
     const id = Date.now() + Math.random()
     setToasts(prev => [...prev, { id, message, type }])
@@ -106,6 +113,101 @@ export default function App() {
   const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
+
+  // 翻译：点击翻译按钮时调用，翻译结果覆盖原文显示
+  // 再次点击同一文本则取消翻译（从缓存删除）
+  const handleTranslate = useCallback(async (text) => {
+    if (!text || !text.trim()) return text
+
+    const cache = translateCacheRef.current
+
+    // 如果已有翻译，则取消翻译（删除缓存，恢复原文）
+    if (cache.has(text)) {
+      cache.delete(text)
+      setTranslateVersion(v => v + 1)
+      return text
+    }
+
+    // 标记正在翻译
+    setTranslating(prev => new Set([...prev, text]))
+
+    try {
+      const translated = await window.electronAPI.translateText(text, 'zh-CN')
+      if (translated && translated !== text) {
+        cache.set(text, translated)
+        setTranslateVersion(v => v + 1)
+        return translated
+      } else {
+        showToast('翻译失败，可能已是中文或网络错误', 'warning')
+      }
+    } catch (e) {
+      showToast('翻译失败: ' + (e.message || '未知错误'), 'error')
+    } finally {
+      setTranslating(prev => {
+        const next = new Set(prev)
+        next.delete(text)
+        return next
+      })
+    }
+    return text
+  }, [showToast])
+
+  // 批量翻译：翻译一组文本（如标题+CV+标签+社团）
+  const handleTranslateBatch = useCallback(async (texts) => {
+    const validTexts = texts.filter(t => t && t.trim())
+    if (validTexts.length === 0) return
+
+    const cache = translateCacheRef.current
+    // 过滤出未翻译的
+    const needTranslate = validTexts.filter(t => !cache.has(t))
+    if (needTranslate.length === 0) {
+      // 全部已翻译，则取消翻译（恢复原文）
+      validTexts.forEach(t => cache.delete(t))
+      setTranslateVersion(v => v + 1)
+      return
+    }
+
+    setTranslating(prev => new Set([...prev, ...needTranslate]))
+    try {
+      const results = await window.electronAPI.translateBatch(needTranslate, 'zh-CN')
+      needTranslate.forEach((text, i) => {
+        if (results[i] && results[i] !== text) {
+          cache.set(text, results[i])
+        }
+      })
+      setTranslateVersion(v => v + 1)
+    } catch (e) {
+      showToast('批量翻译失败', 'error')
+    } finally {
+      setTranslating(prev => {
+        const next = new Set(prev)
+        needTranslate.forEach(t => next.delete(t))
+        return next
+      })
+    }
+  }, [showToast])
+
+  // 获取翻译后的文本：如果缓存中有则返回译文，否则返回原文
+  const getTranslatedText = useCallback((text) => {
+    if (!text) return text
+    return translateCacheRef.current.get(text) || text
+  }, [translateVersion])
+
+  // 检查文本是否已翻译
+  const isTranslated = useCallback((text) => {
+    if (!text) return false
+    return translateCacheRef.current.has(text)
+  }, [translateVersion])
+
+  // 检查文本是否正在翻译中
+  const isTranslating = useCallback((text) => {
+    if (!text) return false
+    return translating.has(text)
+  }, [translating])
+
+  // 是否有任何文本正在翻译中（用于全局翻译按钮的转圈状态）
+  const isAnyTranslating = translating.size > 0
+
   const playerRef = useRef(null)
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
@@ -200,13 +302,27 @@ export default function App() {
     loadDbSettings()
   }, [])
 
+  // 记住上一次的主题，用于检测主题变化
+  const prevThemeRef = useRef(settings.theme)
+
   useEffect(() => {
     const root = document.documentElement
+    const appRoot = document.getElementById('root')
     root.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`)
     root.style.setProperty('--lyric-width', `${settings.lyricWidth}px`)
     root.style.setProperty('--player-height', `${settings.playerHeight}px`)
     if (settings.theme) {
+      // 主题切换时添加过渡动画
+      if (prevThemeRef.current && prevThemeRef.current !== settings.theme && appRoot) {
+        appRoot.classList.add('theme-transitioning')
+        root.setAttribute('data-theme', settings.theme)
+        const timer = setTimeout(() => {
+          appRoot.classList.remove('theme-transitioning')
+        }, 550)
+        return () => clearTimeout(timer)
+      }
       root.setAttribute('data-theme', settings.theme)
+      prevThemeRef.current = settings.theme
     }
   }, [settings])
 
@@ -1369,6 +1485,12 @@ export default function App() {
               onDeleteWork={handleDeleteWork}
               viewMode={viewMode}
               onViewModeChange={handleViewModeChange}
+              onTranslate={handleTranslate}
+              onTranslateBatch={handleTranslateBatch}
+              getTranslatedText={getTranslatedText}
+              isTranslated={isTranslated}
+              isTranslating={isTranslating}
+              isAnyTranslating={isAnyTranslating}
             />
           </div>
           {selectedWork && (
@@ -1398,6 +1520,11 @@ export default function App() {
                     onCircleClick={(circle) => handleFilterChange('circle', circle)}
                     activeCV={cvFilter}
                     activeTag={tagFilter}
+                    onTranslate={handleTranslate}
+                    onTranslateBatch={handleTranslateBatch}
+                    getTranslatedText={getTranslatedText}
+                    isTranslated={isTranslated}
+                    isTranslating={isTranslating}
                   />
                 </div>
                 <div className="right-tab-wrapper">
@@ -1443,6 +1570,12 @@ export default function App() {
               ref={discoverViewRef}
               onSelectWork={handleSelectOnlineWork} 
               selectedWorkId={selectedWork?.id} 
+              onTranslate={handleTranslate}
+              onTranslateBatch={handleTranslateBatch}
+              getTranslatedText={getTranslatedText}
+              isTranslated={isTranslated}
+              isTranslating={isTranslating}
+              isAnyTranslating={isAnyTranslating}
             />
           </div>
           {selectedWork && selectedWork.isOnline && (
@@ -1486,6 +1619,11 @@ export default function App() {
                     activeTag={''}
                     onDownload={() => setShowDownloadModal(true)}
                     onReloadTracks={handleReloadOnlineTracks}
+                    onTranslate={handleTranslate}
+                    onTranslateBatch={handleTranslateBatch}
+                    getTranslatedText={getTranslatedText}
+                    isTranslated={isTranslated}
+                    isTranslating={isTranslating}
                   />
                 </div>
                 <div className="right-tab-wrapper discover-right-tab">

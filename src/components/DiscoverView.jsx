@@ -52,7 +52,7 @@ const formatDLCount = (count) => {
   return String(count)
 }
 
-const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWork, onVaClick, onTagClick }) => {
+const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWork, onVaClick, onTagClick, getTranslatedText }) => {
   return (
     <div
       className={`discover-work-card ${selectedWorkId === `online_${work.id}` ? 'selected' : ''}`}
@@ -82,8 +82,8 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
         <div className="duration-badge">{formatDuration(work.duration)}</div>
       </div>
       <div className="discover-card-info">
-        <h3 className="discover-card-title">{work.title}</h3>
-        <p className="discover-card-circle">{work.name}</p>
+        <h3 className="discover-card-title">{getTranslatedText?.(work.title) || work.title}</h3>
+        <p className="discover-card-circle">{getTranslatedText?.(work.name) || work.name}</p>
         <div className="discover-card-meta">
           {work.vas && work.vas.length > 0 && (
             <div className="discover-card-vas">
@@ -94,7 +94,7 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
                   onClick={(e) => { e.stopPropagation(); onVaClick(va.name, e) }}
                   title="点击筛选此CV"
                 >
-                  {va.name}
+                  {getTranslatedText?.(va.name) || va.name}
                 </span>
               ))}
             </div>
@@ -108,7 +108,7 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
                   onClick={(e) => { e.stopPropagation(); onTagClick(tag.name, e) }}
                   title="点击筛选此标签"
                 >
-                  {tag.name}
+                  {getTranslatedText?.(tag.name) || tag.name}
                 </span>
               ))}
             </div>
@@ -130,7 +130,7 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
 })
 WorkCard.displayName = 'WorkCard'
 
-const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
+const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }, ref) => {
   const [works, setWorks] = useState([])
   const [allTags, setAllTags] = useState([])
   const [loading, setLoading] = useState(true)
@@ -607,8 +607,34 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
     <div className="discover-view">
       <div className="discover-view-header">
         <div className="discover-header">
-          <h1 className="discover-title">发现</h1>
-          <p className="discover-subtitle">探索 asmr.one 上的优质作品</p>
+          <div>
+            <h1 className="discover-title">发现</h1>
+            <p className="discover-subtitle">探索 asmr.one 上的优质作品</p>
+          </div>
+          {onTranslateBatch && works.length > 0 && (
+            <button
+              className={`discover-translate-btn ${isAnyTranslating ? 'translating' : ''}`}
+              onClick={() => {
+                const texts = []
+                works.forEach(w => {
+                  if (w.title) texts.push(w.title)
+                  if (w.name) texts.push(w.name)
+                  if (w.vas) w.vas.forEach(v => { if (v.name) texts.push(v.name) })
+                  if (w.tags) w.tags.forEach(t => { if (t.name) texts.push(t.name) })
+                })
+                if (texts.length > 0) onTranslateBatch(texts)
+              }}
+              title="翻译当前页面所有作品"
+              disabled={isAnyTranslating}
+            >
+              {isAnyTranslating ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c0 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
+              )}
+              {isAnyTranslating ? '翻译中...' : '翻译全部'}
+            </button>
+          )}
         </div>
 
         <div className="discover-filters">
@@ -1116,6 +1142,7 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
                 onSelectWork={onSelectWork}
                 onVaClick={toggleVa}
                 onTagClick={toggleTag}
+                getTranslatedText={getTranslatedText}
               />
             ))}
           </div>

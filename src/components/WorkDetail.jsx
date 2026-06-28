@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
 
-export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks }) {
+export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
@@ -164,7 +164,33 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             )}
           </div>
           <div className="work-info-main">
-            <h1 className="work-title-large">{work.title || work.folderName}</h1>
+            <div className="work-title-row">
+              <h1 className="work-title-large">{getTranslatedText?.(work.title || work.folderName) || work.title || work.folderName}</h1>
+              {onTranslate && (
+                <button
+                  className={`translate-btn ${isTranslated?.(work.title || work.folderName) ? 'active' : ''}`}
+                  onClick={() => {
+                    const texts = [work.title || work.folderName]
+                    if (work.circle) texts.push(work.circle)
+                    if (work.cvs) work.cvs.forEach(cv => texts.push(cv))
+                    if (work.tags) work.tags.slice(0, 10).forEach(tag => texts.push(tag))
+                    // 加入曲目文件名
+                    if (audioFiles) audioFiles.forEach(f => { if (f.name) texts.push(f.name) })
+                    onTranslateBatch(texts)
+                  }}
+                  title={isTranslated?.(work.title || work.folderName) ? '取消翻译' : '翻译为中文'}
+                  disabled={isTranslating?.(work.title || work.folderName)}
+                >
+                  {isTranslating?.(work.title || work.folderName) ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                  ) : isTranslated?.(work.title || work.folderName) ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c0 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
+                  )}
+                </button>
+              )}
+            </div>
             {work.rjCode && (
               <div className="work-rj-row">
                 <div className="work-rj">RJ 编号: {work.rjCode}</div>
@@ -176,7 +202,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             )}
             <div className="work-meta-row">
               {work.rating > 0 && <span className="rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating.toFixed(2)}</span>}
-              {work.circle && <span className="circle clickable" onClick={() => onCircleClick?.(work.circle)} title="点击筛选此社团">社团: {work.circle}</span>}
+              {work.circle && <span className="circle clickable" onClick={() => onCircleClick?.(getTranslatedText?.(work.circle) || work.circle)} title="点击筛选此社团">社团: {getTranslatedText?.(work.circle) || work.circle}</span>}
             </div>
             {work.cvs && work.cvs.length > 0 && (
               <div className="work-cvs">
@@ -187,7 +213,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                     className={`cv-tag ${activeCV === cv ? 'active' : ''}`}
                     onClick={(e) => { e.stopPropagation(); onFilterCV?.(activeCV === cv ? '' : cv) }}
                   >
-                    {cv}
+                    {getTranslatedText?.(cv) || cv}
                   </span>
                 ))}
               </div>
@@ -200,7 +226,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                     className={`tag ${activeTag === tag ? 'active' : ''}`}
                     onClick={(e) => { e.stopPropagation(); onFilterTag?.(activeTag === tag ? '' : tag) }}
                   >
-                    {tag}
+                    {getTranslatedText?.(tag) || tag}
                   </span>
                 ))}
               </div>
@@ -299,7 +325,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     </span>
                   </span>
-                  <span className="audio-name">{item.name}</span>
+                  <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
                   <span className="audio-duration">{item.audioCount} 首</span>
                 </div>
               ) : (
@@ -320,7 +346,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                       idx + 1
                     )}
                   </span>
-                  <span className="audio-name">{item.name}</span>
+                  <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
                   {item.duration && <span className="audio-duration">{formatDuration(item.duration)}</span>}
                 </div>
               )

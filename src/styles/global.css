@@ -180,6 +180,16 @@ body::before {
   z-index: 1;
 }
 
+/* ── Theme Switch Transition ────────────────────────── */
+/* Temporarily applied to #root when theme changes for smooth color transition */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color 0.5s ease, color 0.35s ease, border-color 0.35s ease,
+    box-shadow 0.35s ease, background 0.5s ease !important;
+}
+
 ::selection {
   background: var(--accent-glow);
   color: var(--text-primary);

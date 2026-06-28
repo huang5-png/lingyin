@@ -176,6 +176,26 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
           </div>
         </div>
       </div>
+      <div className="settings-section">
+        <div className="settings-section-title">翻译</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">翻译引擎</div>
+            <div className="setting-desc">选择翻译服务提供商，翻译失败时自动切换其他引擎</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.translateEngine || 'google'}
+              onChange={(e) => setSettings((p) => ({ ...p, translateEngine: e.target.value }))}
+            >
+              <option value="google">谷歌翻译</option>
+              <option value="microsoft">微软翻译</option>
+              <option value="baidu">百度翻译</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -189,20 +209,32 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
             <div className="setting-desc">选择深色或浅色模式</div>
           </div>
           <div className="theme-selector">
-            <div
-              className={`theme-option ${settings.theme === 'dark' ? 'active' : ''}`}
+            <button
+              className={`theme-toggle-btn ${settings.theme === 'dark' ? 'active' : ''}`}
               onClick={() => handleThemeChange('dark')}
+              title="深色模式"
             >
-              <div className="theme-preview dark" />
-              <span className="theme-label">深色</span>
-            </div>
-            <div
-              className={`theme-option ${settings.theme === 'light' ? 'active' : ''}`}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
+              </svg>
+            </button>
+            <button
+              className={`theme-toggle-btn ${settings.theme === 'light' ? 'active' : ''}`}
               onClick={() => handleThemeChange('light')}
+              title="浅色模式"
             >
-              <div className="theme-preview light" />
-              <span className="theme-label">浅色</span>
-            </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>

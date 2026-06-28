@@ -26,6 +26,57 @@
 
 .discover-header {
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.discover-translate-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-heading);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.discover-translate-btn:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+/* 点击动画：按下缩放反馈 */
+.discover-translate-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* 翻译中状态：暖橙色高亮 + 转圈 */
+.discover-translate-btn.translating {
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  border-color: transparent;
+  cursor: progress;
+  box-shadow: var(--shadow-glow);
+}
+
+.discover-translate-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.discover-translate-btn .spin {
+  animation: spin 0.8s linear infinite;
+  transform-origin: center;
 }
 
 .discover-title {

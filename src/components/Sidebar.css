@@ -903,6 +903,93 @@
   line-height: 1.4;
   min-height: 24px;
   white-space: nowrap;
+}
+
+/* ===== 设置按钮（图标按钮）基础样式 ===== */
+.settings-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  padding: 0;
+}
+
+.settings-btn-icon:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.settings-btn-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.settings-btn-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* ===== 翻译全部按钮 ===== */
+/* 与设置按钮保持间距 */
+.translate-all-btn {
+  margin-left: 4px;
+  position: relative;
+}
+
+.translate-all-btn:hover:not(:disabled) {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.translate-all-btn:hover:not(:disabled) .settings-icon {
+  opacity: 1;
+}
+
+/* 点击动画：按下缩放反馈 */
+.translate-all-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* 翻译中状态：暖橙色高亮 */
+.translate-all-btn.translating {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: var(--text-on-accent);
+  cursor: progress;
+  box-shadow: var(--shadow-glow);
+}
+
+.translate-all-btn.translating .settings-icon {
+  opacity: 1;
+}
+
+/* 旋转动画 */
+.spin {
+  animation: spin 0.8s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.work-item.row .work-tag-chip {
   transition: transform 0.16s ease;
 }
 
