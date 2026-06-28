@@ -215,14 +215,18 @@ const AudioPlayer = forwardRef(function AudioPlayer(
     return () => {
       cancelled = true
       if (wavesurferRef.current) {
-        wavesurferRef.current.destroy()
+        try {
+          wavesurferRef.current.destroy()
+        } catch (e) {
+          console.error('Error destroying wavesurfer:', e)
+        }
         wavesurferRef.current = null
       }
     }
   }, [audioPath, waveformHeight])
 
   useEffect(() => {
-    if (wavesurferRef.current) {
+    if (wavesurferRef.current && isReady) {
       wavesurferRef.current.setVolume(volume)
     }
     if (volumeSliderRef.current) {

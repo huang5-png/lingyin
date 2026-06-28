@@ -777,6 +777,7 @@ ipcMain.handle('dialog:selectDownloadDir', async () => {
 const downloadQueue = []
 let activeDownloadTask = null
 let taskIdCounter = 0
+let isProcessingQueue = false
 
 function generateTaskId() {
   taskIdCounter++
@@ -908,18 +909,20 @@ async function downloadFileInTask(task, file, fileIndex) {
 }
 
 async function processDownloadQueue() {
+  if (isProcessingQueue) return
   if (activeDownloadTask) return
   if (downloadQueue.length === 0) return
 
-  const task = downloadQueue.shift()
-  activeDownloadTask = task
-  task.status = 'downloading'
-  broadcastDownloadState()
-
-  logger.info(`[下载队列] 开始任务: ${task.workTitle}, 共 ${task.files.length} 个文件`)
+  isProcessingQueue = true
 
   try {
-    // 多线程并发下载：同时下载 N 个文件
+    const task = downloadQueue.shift()
+    activeDownloadTask = task
+    task.status = 'downloading'
+    broadcastDownloadState()
+
+    logger.info(`[下载队列] 开始任务: ${task.workTitle}, 共 ${task.files.length} 个文件`)
+
     const MAX_CONCURRENT = 3
     const pendingFiles = task.files.filter(f => f.status !== 'done')
     let cancelled = false
@@ -961,15 +964,20 @@ async function processDownloadQueue() {
       }
     }
   } catch (e) {
-    task.status = 'failed'
-    logger.error(`[下载队列] 任务出错: ${task.workTitle}, ${e.message}`)
+    if (activeDownloadTask) {
+      activeDownloadTask.status = 'failed'
+      logger.error(`[下载队列] 任务出错: ${activeDownloadTask.workTitle}, ${e.message}`)
+    }
+  } finally {
+    activeDownloadTask = null
+    activeAbortControllers.clear()
+    isProcessingQueue = false
+    broadcastDownloadState()
   }
 
-  activeDownloadTask = null
-  activeAbortControllers.clear()
-  broadcastDownloadState()
-
-  processDownloadQueue()
+  setTimeout(() => {
+    processDownloadQueue()
+  }, 0)
 }
 
 // 添加下载任务

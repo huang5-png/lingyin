@@ -49,6 +49,9 @@ async function getAllWorks() {
 }
 
 async function addWork(work) {
+  if (!work || !work.id) {
+    throw new Error('Work must have an id')
+  }
   const exists = dbData.works.find((w) => w.id === work.id)
   if (exists) {
     return exists

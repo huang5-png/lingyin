@@ -17,6 +17,7 @@ export function parseSubtitle(text, format) {
 }
 
 export function detectFormat(text) {
+  if (!text) return 'lrc'
   if (/^\[(\d{2}):(\d{2})[.:](\d{2,3})/.test(text)) return 'lrc'
   if (/^\d+\s*$/.test(text.split('\n')[0] || '')) {
     if (text.includes('-->')) return 'srt'
