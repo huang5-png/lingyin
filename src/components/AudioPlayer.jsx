@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import { formatTime } from '../utils/subtitleParser'
+import QueuePanel from './QueuePanel'
 import './AudioPlayer.css'
 
 function pathToFileURL(filePath) {
@@ -22,7 +23,15 @@ function pathToFileURL(filePath) {
 }
 
 const AudioPlayer = forwardRef(function AudioPlayer(
-  { audioPath, title, cover, onTimeUpdate, onReady, onFinish, workId, waveformHeight = 70, defaultVolume = 80, skipSeconds = 5, onPrev, onNext, onToggleImmersive },
+  {
+    audioPath, title, cover, onTimeUpdate, onReady, onFinish, workId,
+    waveformHeight = 70, defaultVolume = 80, skipSeconds = 5,
+    onPrev, onNext, onToggleImmersive,
+    // 播放队列相关
+    queue = [], queueIndex = -1, loopMode = 'none', shuffle = false, showQueuePanel = false,
+    onToggleQueue, onToggleLoop, onToggleShuffle,
+    onPlayFromQueue, onRemoveFromQueue, onClearQueue, onReorderQueue, onCloseQueuePanel,
+  },
   ref,
 ) {
   const waveformRef = useRef(null)
@@ -287,6 +296,12 @@ const AudioPlayer = forwardRef(function AudioPlayer(
         </div>
 
         <div className="player-controls">
+          <button className="ctrl-btn prev-next-btn" onClick={onPrev} title="上一曲" disabled={!isReady || !onPrev}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 20L9 12l10-8v16z"/>
+              <rect x="5" y="4" width="2" height="16" rx="1"/>
+            </svg>
+          </button>
           <button className="ctrl-btn skip-btn" onClick={skipBackward} title={`后退${skipSeconds}秒`} disabled={!isReady}>
             -{skipSeconds}s
           </button>
@@ -304,6 +319,12 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           </button>
           <button className="ctrl-btn skip-btn" onClick={skipForward} title={`前进${skipSeconds}秒`} disabled={!isReady}>
             +{skipSeconds}s
+          </button>
+          <button className="ctrl-btn prev-next-btn" onClick={onNext} title="下一曲" disabled={!isReady || !onNext}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 4l10 8-10 8V4z"/>
+              <rect x="17" y="4" width="2" height="16" rx="1"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -327,7 +348,67 @@ const AudioPlayer = forwardRef(function AudioPlayer(
             className="volume-slider"
           />
         </div>
+        <div className="queue-controls">
+          <button
+            className={`ctrl-btn loop-btn ${loopMode !== 'none' ? 'active' : ''}`}
+            onClick={onToggleLoop}
+            title={`循环模式：${loopMode === 'one' ? '单曲循环' : loopMode === 'list' ? '列表循环' : '顺序播放'}`}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="17 1 21 5 17 9" />
+              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+              <polyline points="7 23 3 19 7 15" />
+              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              {loopMode === 'one' && (
+                <text x="12" y="14.5" textAnchor="middle" fontSize="7" fill="currentColor" stroke="none" fontWeight="700">1</text>
+              )}
+            </svg>
+          </button>
+          <button
+            className={`ctrl-btn shuffle-btn ${shuffle ? 'active' : ''}`}
+            onClick={onToggleShuffle}
+            title={shuffle ? '随机：开' : '随机：关'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 3 21 3 21 8" />
+              <line x1="4" y1="20" x2="21" y2="3" />
+              <polyline points="21 16 21 21 16 21" />
+              <line x1="15" y1="15" x2="21" y2="21" />
+              <line x1="4" y1="4" x2="9" y2="9" />
+            </svg>
+          </button>
+          <button
+            className={`ctrl-btn queue-btn ${showQueuePanel ? 'active' : ''}`}
+            onClick={onToggleQueue}
+            title="播放队列"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+            {queue.length > 0 && <span className="queue-badge">{queue.length}</span>}
+          </button>
+        </div>
       </div>
+      {showQueuePanel && (
+        <QueuePanel
+          queue={queue}
+          queueIndex={queueIndex}
+          loopMode={loopMode}
+          shuffle={shuffle}
+          onPlay={onPlayFromQueue}
+          onRemove={onRemoveFromQueue}
+          onClear={onClearQueue}
+          onReorder={onReorderQueue}
+          onToggleLoop={onToggleLoop}
+          onToggleShuffle={onToggleShuffle}
+          onClose={onCloseQueuePanel}
+        />
+      )}
     </div>
   )
 })

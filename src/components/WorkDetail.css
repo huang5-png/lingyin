@@ -873,7 +873,23 @@
   font-weight: 600;
 }
 
-.audio-add-to-playlist-btn {
+/* ===== 曲目行操作按钮组（下一首/加入队列/加入播放列表） ===== */
+.audio-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.audio-item:hover .audio-action-btns,
+.audio-item.playing .audio-action-btns {
+  opacity: 1;
+}
+
+.audio-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -885,22 +901,27 @@
   color: var(--text-tertiary);
   cursor: pointer;
   flex-shrink: 0;
-  opacity: 0;
-  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.audio-item:hover .audio-add-to-playlist-btn {
-  opacity: 1;
-}
-
-.audio-add-to-playlist-btn:hover {
+.audio-action-btn:hover {
   background: var(--accent-glow);
   color: var(--accent-primary);
 }
 
-.audio-add-to-playlist-btn svg {
+.audio-action-btn svg {
   width: 14px;
   height: 14px;
+}
+
+/* 暗色模式适配 */
+[data-theme="dark"] .audio-action-btn {
+  color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .audio-action-btn:hover {
+  background: rgba(217, 119, 87, 0.18);
+  color: var(--accent-primary);
 }
 
 .modal-overlay {

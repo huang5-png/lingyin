@@ -55,6 +55,13 @@ const DEFAULT_SETTINGS = {
   skipSeconds: 5,
   theme: 'light',
   viewMode: 'grid',
+  loopMode: 'none', // 循环模式：none / one / list
+  shuffle: false,   // 随机播放
+}
+
+// 生成队列项 ID
+function genQueueItemId() {
+  return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
 
 function loadSettings() {
@@ -88,6 +95,13 @@ export default function App() {
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [isImmersive, setIsImmersive] = useState(false)
   const [addToPlaylistTarget, setAddToPlaylistTarget] = useState(null) // { audio, work } 待加入曲目
+  // ===== 播放队列 =====
+  const [playQueue, setPlayQueue] = useState([]) // 队列项数组：{ id, audio, work, source, audioName, workTitle, workCover, addedAt }
+  const [queueIndex, setQueueIndex] = useState(-1) // 当前播放到队列的位置，-1 表示未在队列中播放
+  const [loopMode, setLoopMode] = useState(settings.loopMode || 'none') // none / one / list
+  const [shuffle, setShuffle] = useState(!!settings.shuffle) // 随机播放
+  const [showQueuePanel, setShowQueuePanel] = useState(false) // 队列浮层开关
+  const pendingQueuePlayRef = useRef(null) // 跨作品播放时的待播放项 { item, startedAt }
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
   const [flipState, setFlipState] = useState({
@@ -1052,26 +1066,257 @@ export default function App() {
     }
   }, [])
 
+  // ===== 播放队列：从队列播放某项（支持跨作品）=====
+  const handlePlayFromQueue = useCallback((item, index) => {
+    if (!item || !item.audio) return
+    setQueueIndex(index)
+
+    const targetWork = item.work
+    const isSameWork = selectedWork && (
+      selectedWork.id === targetWork.id ||
+      (targetWork.folderPath && selectedWork.folderPath === targetWork.folderPath)
+    )
+
+    if (isSameWork) {
+      handleSelectAudio(item.audio)
+      return
+    }
+
+    // 跨作品：切换视图和作品，等待加载后由 useEffect 播放
+    setCurrentView(item.source === 'discover' ? 'discover' : 'library')
+    setSelectedWork(targetWork)
+    pendingQueuePlayRef.current = { item, startedAt: Date.now() }
+  }, [selectedWork, handleSelectAudio])
+
+  // 监听 audioFiles / selectedWork 变化，播放跨作品的待播放队列项
+  useEffect(() => {
+    if (!pendingQueuePlayRef.current) return
+    const { item, startedAt } = pendingQueuePlayRef.current
+    if (Date.now() - startedAt > 8000) {
+      pendingQueuePlayRef.current = null
+      showToast('队列播放超时，请重试', 'warning')
+      return
+    }
+    const matched = selectedWork && (
+      selectedWork.id === item.work.id ||
+      (item.work.folderPath && selectedWork.folderPath === item.work.folderPath)
+    )
+    if (!matched) return
+    // 在线作品不依赖 audioFiles
+    if (item.audio.isOnline) {
+      handleSelectAudio(item.audio)
+      pendingQueuePlayRef.current = null
+      return
+    }
+    // 本地作品等 audioFiles 加载完成
+    if (audioFiles.length > 0) {
+      handleSelectAudio(item.audio)
+      pendingQueuePlayRef.current = null
+    }
+  }, [audioFiles, selectedWork, handleSelectAudio, showToast])
+
+  // 推进到队列下一首/上一首，返回是否已处理
+  const advanceQueue = useCallback((direction = 1, isAutoFinish = false) => {
+    if (queueIndex < 0 || playQueue.length === 0) return false
+    // 单曲循环（仅自动播完时）
+    if (isAutoFinish && loopMode === 'one') {
+      if (playerRef.current) playerRef.current.seekTo(0)
+      return true
+    }
+    // 随机
+    if (shuffle && playQueue.length > 1) {
+      let next
+      do {
+        next = Math.floor(Math.random() * playQueue.length)
+      } while (next === queueIndex)
+      handlePlayFromQueue(playQueue[next], next)
+      return true
+    }
+    let nextIdx = queueIndex + direction
+    if (nextIdx < 0) {
+      if (loopMode === 'list') nextIdx = playQueue.length - 1
+      else return false
+    } else if (nextIdx >= playQueue.length) {
+      if (loopMode === 'list') nextIdx = 0
+      else {
+        // 队列结束，退出队列模式
+        setQueueIndex(-1)
+        return false
+      }
+    }
+    handlePlayFromQueue(playQueue[nextIdx], nextIdx)
+    return true
+  }, [queueIndex, playQueue, loopMode, shuffle, handlePlayFromQueue])
+
+  // ===== 播放队列操作 =====
+  // 构造队列项（轻量 work 快照，避免持有完整对象）
+  const buildQueueItem = useCallback((audio, work) => {
+    const w = work || selectedWork
+    if (!audio || !w) return null
+    return {
+      id: genQueueItemId(),
+      audio: {
+        path: audio.path,
+        name: audio.name,
+        isOnline: !!audio.isOnline,
+        duration: audio.duration,
+      },
+      work: {
+        id: w.id,
+        title: w.title || w.folderName || '',
+        cover: w.cover || '',
+        folderPath: w.folderPath || '',
+        isOnline: !!w.isOnline,
+      },
+      source: w.isOnline ? 'discover' : 'library',
+      audioName: audio.name || '',
+      workTitle: w.title || w.folderName || '',
+      workCover: w.cover || '',
+      addedAt: Date.now(),
+    }
+  }, [selectedWork])
+
+  // 加入队列末尾
+  const handleAddToQueue = useCallback((audio, work) => {
+    const item = buildQueueItem(audio, work)
+    if (!item) return
+    setPlayQueue((prev) => {
+      if (item.audio.path && prev.some((it) => it.audio.path === item.audio.path)) {
+        showToast('该曲目已在队列中', 'info')
+        return prev
+      }
+      showToast(`已加入队列：${item.audioName}`, 'success')
+      return [...prev, item]
+    })
+  }, [buildQueueItem, showToast])
+
+  // 下一首播放：插入到当前 queueIndex 之后
+  const handlePlayNext = useCallback((audio, work) => {
+    const item = buildQueueItem(audio, work)
+    if (!item) return
+    setPlayQueue((prev) => {
+      if (item.audio.path && prev.some((it) => it.audio.path === item.audio.path)) {
+        showToast('该曲目已在队列中', 'info')
+        return prev
+      }
+      const insertAt = queueIndex >= 0 ? queueIndex + 1 : prev.length
+      const next = [...prev]
+      next.splice(insertAt, 0, item)
+      showToast(`下一首播放：${item.audioName}`, 'success')
+      return next
+    })
+  }, [buildQueueItem, queueIndex, showToast])
+
+  // 移除队列项
+  const handleRemoveFromQueue = useCallback((itemId) => {
+    const idx = playQueue.findIndex((it) => it.id === itemId)
+    if (idx < 0) return
+    setPlayQueue((prev) => prev.filter((it) => it.id !== itemId))
+    setQueueIndex((qi) => {
+      if (qi < 0) return -1
+      if (idx < qi) return qi - 1
+      if (idx === qi) return idx >= playQueue.length - 1 ? -1 : idx
+      return qi
+    })
+  }, [playQueue])
+
+  // 清空队列
+  const handleClearQueue = useCallback(() => {
+    setPlayQueue([])
+    setQueueIndex(-1)
+    showToast('队列已清空', 'info')
+  }, [showToast])
+
+  // 重排序：按 itemIds 顺序重排，未列入的追加到末尾
+  const handleReorderQueue = useCallback((itemIds) => {
+    setPlayQueue((prev) => {
+      const map = new Map(prev.map((it) => [it.id, it]))
+      const next = []
+      for (const id of itemIds) {
+        const it = map.get(id)
+        if (it) {
+          next.push(it)
+          map.delete(id)
+        }
+      }
+      for (const it of map.values()) next.push(it)
+      // 同步 queueIndex 指向当前播放项的新位置
+      setQueueIndex((qi) => {
+        if (qi < 0) return -1
+        const current = prev[qi]
+        if (!current) return -1
+        const newIdx = next.findIndex((it) => it.id === current.id)
+        return newIdx < 0 ? -1 : newIdx
+      })
+      return next
+    })
+  }, [])
+
+  // 切换循环模式：none -> one -> list -> none
+  const handleToggleLoopMode = useCallback(() => {
+    setLoopMode((prev) => {
+      const next = prev === 'none' ? 'one' : prev === 'one' ? 'list' : 'none'
+      try {
+        const s = { ...settings, loopMode: next }
+        localStorage.setItem('appSettings', JSON.stringify(s))
+        window.electronAPI?.dbSaveSettings?.(s)
+      } catch (e) {}
+      return next
+    })
+  }, [settings])
+
+  // 切换随机
+  const handleToggleShuffle = useCallback(() => {
+    setShuffle((prev) => {
+      const next = !prev
+      try {
+        const s = { ...settings, shuffle: next }
+        localStorage.setItem('appSettings', JSON.stringify(s))
+        window.electronAPI?.dbSaveSettings?.(s)
+      } catch (e) {}
+      return next
+    })
+  }, [settings])
+
+  // 切换队列面板显示
+  const handleToggleQueuePanel = useCallback(() => {
+    setShowQueuePanel((prev) => !prev)
+  }, [])
+
   const handlePrevAudio = useCallback(() => {
+    // 队列模式优先
+    if (queueIndex >= 0 && playQueue.length > 0) {
+      if (advanceQueue(-1, false)) return
+    }
+    // 回退到当前作品 audioFiles 逻辑
     if (!currentAudio || audioFiles.length === 0) return
     const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
     if (currentIndex <= 0) return
     handleSelectAudio(audioFiles[currentIndex - 1])
-  }, [currentAudio, audioFiles, handleSelectAudio])
+  }, [queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
 
   const handleNextAudio = useCallback(() => {
+    if (queueIndex >= 0 && playQueue.length > 0) {
+      if (advanceQueue(1, false)) return
+    }
     if (!currentAudio || audioFiles.length === 0) return
     const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
     if (currentIndex < 0 || currentIndex >= audioFiles.length - 1) return
     handleSelectAudio(audioFiles[currentIndex + 1])
-  }, [currentAudio, audioFiles, handleSelectAudio])
+  }, [queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
 
   const handleFinish = useCallback(() => {
-    if (!settings.autoPlayNext || !currentAudio || audioFiles.length === 0) return
+    if (!settings.autoPlayNext) return
+    // 队列模式
+    if (queueIndex >= 0 && playQueue.length > 0) {
+      if (advanceQueue(1, true)) return
+    }
+    // 回退到 audioFiles 逻辑
+    if (!currentAudio || audioFiles.length === 0) return
     const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
     if (currentIndex < 0 || currentIndex >= audioFiles.length - 1) return
     handleSelectAudio(audioFiles[currentIndex + 1])
-  }, [settings.autoPlayNext, currentAudio, audioFiles, handleSelectAudio])
+  }, [settings.autoPlayNext, queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1606,6 +1851,8 @@ export default function App() {
                     isTranslated={isTranslated}
                     isTranslating={isTranslating}
                     onAddToPlaylist={handleOpenAddToPlaylist}
+                    onAddToQueue={handleAddToQueue}
+                    onPlayNext={handlePlayNext}
                   />
                 </div>
                 <div className="right-tab-wrapper">
@@ -1639,6 +1886,19 @@ export default function App() {
                   defaultVolume={settings.defaultVolume}
                   skipSeconds={settings.skipSeconds || 5}
                   onToggleImmersive={() => setIsImmersive(!isImmersive)}
+                  queue={playQueue}
+                  queueIndex={queueIndex}
+                  loopMode={loopMode}
+                  shuffle={shuffle}
+                  showQueuePanel={showQueuePanel}
+                  onToggleQueue={handleToggleQueuePanel}
+                  onToggleLoop={handleToggleLoopMode}
+                  onToggleShuffle={handleToggleShuffle}
+                  onPlayFromQueue={handlePlayFromQueue}
+                  onRemoveFromQueue={handleRemoveFromQueue}
+                  onClearQueue={handleClearQueue}
+                  onReorderQueue={handleReorderQueue}
+                  onCloseQueuePanel={() => setShowQueuePanel(false)}
                 />
               </div>
             </div>
@@ -1706,6 +1966,8 @@ export default function App() {
                     isTranslated={isTranslated}
                     isTranslating={isTranslating}
                     onAddToPlaylist={handleOpenAddToPlaylist}
+                    onAddToQueue={handleAddToQueue}
+                    onPlayNext={handlePlayNext}
                   />
                 </div>
                 <div className="right-tab-wrapper discover-right-tab">
@@ -1739,6 +2001,19 @@ export default function App() {
                   defaultVolume={settings.defaultVolume}
                   skipSeconds={settings.skipSeconds || 5}
                   onToggleImmersive={() => setIsImmersive(!isImmersive)}
+                  queue={playQueue}
+                  queueIndex={queueIndex}
+                  loopMode={loopMode}
+                  shuffle={shuffle}
+                  showQueuePanel={showQueuePanel}
+                  onToggleQueue={handleToggleQueuePanel}
+                  onToggleLoop={handleToggleLoopMode}
+                  onToggleShuffle={handleToggleShuffle}
+                  onPlayFromQueue={handlePlayFromQueue}
+                  onRemoveFromQueue={handleRemoveFromQueue}
+                  onClearQueue={handleClearQueue}
+                  onReorderQueue={handleReorderQueue}
+                  onCloseQueuePanel={() => setShowQueuePanel(false)}
                 />
               </div>
             </div>

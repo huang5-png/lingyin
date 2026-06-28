@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
 
-export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist }) {
+export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
@@ -348,21 +348,57 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                   </span>
                   <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
                   {item.duration && <span className="audio-duration">{formatDuration(item.duration)}</span>}
-                  {onAddToPlaylist && (
-                    <button
-                      className="audio-add-to-playlist-btn"
-                      title="加入播放列表"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onAddToPlaylist(item)
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                    </button>
-                  )}
+                  <div className="audio-action-btns">
+                    {onPlayNext && (
+                      <button
+                        className="audio-action-btn audio-play-next-btn"
+                        title="下一首播放"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onPlayNext(item)
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="4 4 14 12 4 20" fill="currentColor" stroke="none"/>
+                          <line x1="17" y1="6" x2="17" y2="18" />
+                          <line x1="20" y1="9" x2="20" y2="15" />
+                        </svg>
+                      </button>
+                    )}
+                    {onAddToQueue && (
+                      <button
+                        className="audio-action-btn audio-add-to-queue-btn"
+                        title="加入队列"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onAddToQueue(item)
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="8" y1="6" x2="20" y2="6" />
+                          <line x1="8" y1="12" x2="20" y2="12" />
+                          <line x1="8" y1="18" x2="14" y2="18" />
+                          <line x1="18" y1="15" x2="18" y2="21" />
+                          <line x1="15" y1="18" x2="21" y2="18" />
+                        </svg>
+                      </button>
+                    )}
+                    {onAddToPlaylist && (
+                      <button
+                        className="audio-action-btn audio-add-to-playlist-btn"
+                        title="加入播放列表"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onAddToPlaylist(item)
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             ))

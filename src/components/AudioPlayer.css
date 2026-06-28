@@ -399,3 +399,109 @@
   color: #111827;
   border-color: #9ca3af;
 }
+
+/* ===== 上一曲/下一曲按钮 ===== */
+.ctrl-btn.prev-next-btn {
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 13px;
+}
+
+.ctrl-btn.prev-next-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ===== 队列控制区 ===== */
+.queue-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  position: relative;
+}
+
+.ctrl-btn.loop-btn,
+.ctrl-btn.shuffle-btn,
+.ctrl-btn.queue-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 13px;
+  position: relative;
+}
+
+.ctrl-btn.loop-btn svg,
+.ctrl-btn.shuffle-btn svg,
+.ctrl-btn.queue-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 激活态：暖橙高亮 */
+.ctrl-btn.active,
+.ctrl-btn.loop-btn.active,
+.ctrl-btn.shuffle-btn.active,
+.ctrl-btn.queue-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.active,
+[data-theme="dark"] .ctrl-btn.loop-btn.active,
+[data-theme="dark"] .ctrl-btn.shuffle-btn.active,
+[data-theme="dark"] .ctrl-btn.queue-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+.ctrl-btn.loop-btn.active,
+.ctrl-btn.shuffle-btn.active {
+  box-shadow: 0 0 0 1px rgba(201, 100, 66, 0.2);
+}
+
+/* 队列数量徽标 */
+.queue-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #faf9f5);
+}
+
+[data-theme="dark"] .queue-badge {
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #262624);
+}
+
+/* ===== 高 DPI 适配 ===== */
+@media (min-resolution: 1.5dppx) {
+  .ctrl-btn.prev-next-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+  .ctrl-btn.loop-btn,
+  .ctrl-btn.shuffle-btn,
+  .ctrl-btn.queue-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+}
