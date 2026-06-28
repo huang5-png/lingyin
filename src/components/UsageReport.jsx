@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import StateView from './StateView'
 import './UsageReport.css'
 
 const RANGES = [
@@ -88,14 +89,28 @@ export default function UsageReport() {
         </div>
 
         {loading ? (
-          <div className="report-loading">
-            <div className="loading-spinner" />
-            <span>正在读取聆听记录...</span>
-          </div>
+          <StateView
+            type="loading"
+            iconType="loading"
+            title="正在读取聆听记录..."
+            className="report-state"
+          />
         ) : error ? (
-          <div className="report-error">加载失败：{error}</div>
+          <StateView
+            type="error"
+            iconType="error"
+            title="加载失败"
+            description={error}
+            className="report-state"
+          />
         ) : !hasData ? (
-          <EmptyState range={rangeLabel} />
+          <StateView
+            type="empty"
+            iconType="empty"
+            title={`${rangeLabel}还没有聆听记录`}
+            description="在「我的库」或「发现」中播放一段声音，让聆听被记录下来，回到这里就能看到你的专属数据。"
+            className="report-state"
+          />
         ) : (
           <>
             {/* ===== Key metrics ===== */}
@@ -260,19 +275,6 @@ function MetricCard({ icon, value, label, delta }) {
   )
 }
 
-function EmptyState({ range }) {
-  return (
-    <div className="empty-state">
-      <div className="empty-emoji">🌙</div>
-      <div className="empty-title">{range}还没有聆听记录</div>
-      <div className="empty-desc">
-        在「我的库」或「发现」中播放一段声音，<br />
-        让聆听被记录下来，回到这里就能看到你的专属数据。
-      </div>
-    </div>
-  )
-}
-
 function RankingCard({ title, icon, items, color }) {
   const max = items.length > 0 ? items[0].seconds : 1
   return (
@@ -309,6 +311,10 @@ function RankingCard({ title, icon, items, color }) {
 }
 
 function TimelineChart({ timeline, range }) {
+  const [hoveredIndex, setHoveredIndex] = useState(-1)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const containerRef = useRef(null)
+
   if (!timeline || timeline.length === 0) return null
   const max = Math.max(1, ...timeline.map((t) => t.seconds))
   const W = 940
@@ -327,59 +333,96 @@ function TimelineChart({ timeline, range }) {
     ? 1
     : Math.max(1, Math.ceil(timeline.length / 16))
 
+  const handleMouseMove = (e, index) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const svgRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
+    setTooltipPos({
+      x: e.clientX - svgRect.left,
+      y: e.clientY - svgRect.top,
+    })
+    setHoveredIndex(index)
+  }
+
+  const handleMouseLeave = () => {
+    setHoveredIndex(-1)
+  }
+
   return (
-    <svg className="timeline-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="tlGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#c96442" />
-          <stop offset="100%" stopColor="#e0c9a8" stopOpacity="0.7" />
-        </linearGradient>
-      </defs>
-      {/* grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
-        const y = padT + plotH * p
-        const val = max * (1 - p)
-        return (
-          <g key={i}>
-            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="rgba(201,100,66,0.12)" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={padL - 10} y={y + 4} textAnchor="end" fontSize="10" fill="#b09d8a" fontWeight="600">
-              {formatShortDuration(val)}
-            </text>
-          </g>
-        )
-      })}
-      {/* bars */}
-      {timeline.map((t, i) => {
-        const h = max > 0 ? (t.seconds / max) * plotH : 0
-        const x = padL + i * (barW + barGap)
-        const y = padT + plotH - h
-        const isActive = t.seconds > 0
-        const showLabel = i % labelStep === 0 || i === timeline.length - 1
-        return (
-          <g key={i}>
-            <rect
-              x={x}
-              y={isActive ? y : padT + plotH - 2}
-              width={barW}
-              height={isActive ? h : 2}
-              rx="3"
-              fill={isActive ? 'url(#tlGrad)' : 'rgba(201,100,66,0.15)'}
-            />
-            {showLabel && (
-              <text
-                x={x + barW / 2}
-                y={H - padB + 18}
-                textAnchor="middle"
-                fontSize={range === 'year' ? 11 : 10}
-                fill="#b09d8a"
-                fontWeight="600"
-              >
-                {t.label}
+    <div className="timeline-container" ref={containerRef}>
+      <svg className="timeline-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="tlGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c96442" />
+            <stop offset="100%" stopColor="#e0c9a8" stopOpacity="0.7" />
+          </linearGradient>
+          <linearGradient id="tlGradHover" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e07a5a" />
+            <stop offset="100%" stopColor="#f0d9c0" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        {/* grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+          const y = padT + plotH * p
+          const val = max * (1 - p)
+          return (
+            <g key={i}>
+              <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="rgba(201,100,66,0.12)" strokeWidth="1" strokeDasharray="3 4" />
+              <text x={padL - 10} y={y + 4} textAnchor="end" fontSize="10" fill="#b09d8a" fontWeight="600">
+                {formatShortDuration(val)}
               </text>
-            )}
-          </g>
-        )
-      })}
-    </svg>
+            </g>
+          )
+        })}
+        {/* bars */}
+        {timeline.map((t, i) => {
+          const h = max > 0 ? (t.seconds / max) * plotH : 0
+          const x = padL + i * (barW + barGap)
+          const y = padT + plotH - h
+          const isActive = t.seconds > 0
+          const isHovered = hoveredIndex === i
+          const showLabel = i % labelStep === 0 || i === timeline.length - 1
+          return (
+            <g key={i}>
+              <rect
+                x={x}
+                y={isActive ? y : padT + plotH - 2}
+                width={barW}
+                height={isActive ? h : 2}
+                rx="3"
+                fill={isHovered && isActive ? 'url(#tlGradHover)' : (isActive ? 'url(#tlGrad)' : 'rgba(201,100,66,0.15)')}
+                style={{ cursor: isActive ? 'pointer' : 'default', transition: 'fill 0.15s ease' }}
+                onMouseMove={(e) => handleMouseMove(e, i)}
+                onMouseLeave={handleMouseLeave}
+              />
+              {showLabel && (
+                <text
+                  x={x + barW / 2}
+                  y={H - padB + 18}
+                  textAnchor="middle"
+                  fontSize={range === 'year' ? 11 : 10}
+                  fill="#b09d8a"
+                  fontWeight="600"
+                >
+                  {t.label}
+                </text>
+              )}
+            </g>
+          )
+        })}
+      </svg>
+      {/* Tooltip */}
+      {hoveredIndex >= 0 && timeline[hoveredIndex] && (
+        <div
+          className="timeline-tooltip"
+          style={{
+            left: tooltipPos.x + 12,
+            top: tooltipPos.y - 40,
+          }}
+        >
+          <div className="tooltip-label">{timeline[hoveredIndex].label}</div>
+          <div className="tooltip-value">{formatDuration(timeline[hoveredIndex].seconds)}</div>
+        </div>
+      )}
+    </div>
   )
 }
