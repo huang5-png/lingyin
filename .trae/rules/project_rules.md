@@ -115,7 +115,7 @@
 | `components/PlaylistView.jsx` | 播放列表视图（多列表、拖拽排序、加入弹窗） |
 | `components/QueuePanel.jsx` | 播放队列浮层（拖拽排序、循环/随机切换、当前项高亮、ESC 关闭） |
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签 |
-| `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/关于，五个 Tab） |
+| `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/关于，六个 Tab） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
 | `components/StateView.jsx` | 统一空态/加载态/错误状态组件（支持预置图标、紧凑模式、行内模式） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
@@ -366,23 +366,42 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 
 ### 13. 设置面板
 
-设置弹窗包含 5 个分类标签页：
+设置弹窗包含 6 个分类标签页：
 - **基本** — 播放设置（自动播放下一首、记住进度、启动时自动播放、默认音量、快进快退秒数）
 - **外观** — 主题、是否显示评分、波形高度
 - **主界面** — 侧边栏宽度、歌词宽度、播放器高度
 - **播放界面** — 显示歌词、自动滚动歌词
+- **快捷键** — 自定义快捷键配置，支持组合键
 - **关于** — 版本信息、应用图标
 
 设置同时保存到 localStorage 和数据库。
 
 ### 14. 快捷键
 
+#### 默认快捷键
 | 快捷键 | 功能 | 作用域 |
 |--------|------|--------|
 | 空格 | 播放/暂停 | 全局（非输入框） |
 | ← | 上一曲 | 全局（非输入框） |
 | → | 下一曲 | 全局（非输入框） |
 | ESC | 退出沉浸式模式 | 沉浸式界面 |
+
+#### 快捷键配置
+- 用户可在「设置 → 快捷键」中自定义快捷键
+- 支持组合键（如 Ctrl+Shift+P）
+- 可配置的快捷键：
+  - `playPause` — 播放/暂停
+  - `prevTrack` — 上一曲
+  - `nextTrack` — 下一曲
+  - `exitImmersive` — 退出沉浸式
+- 配置存储在 `settings.shortcuts` 中，持久化到 db.json
+- 快捷键冲突检测：检测同一组合键被多个动作使用
+
+#### 实现
+- `KeyboardShortcutsPanel.jsx` — 快捷键配置面板组件
+- `KeyboardShortcutsPanel.css` — 样式文件
+- `DEFAULT_SHORTCUTS` — 默认快捷键常量
+- `matchShortcut(e, shortcutStr)` — 匹配按键事件与快捷键字符串
 
 ### 15. 下载管理
 
