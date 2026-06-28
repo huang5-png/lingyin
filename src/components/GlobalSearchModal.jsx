@@ -5,13 +5,26 @@ import './GlobalSearchModal.css'
 const RESULT_TYPE = {
   WORK: 'work',
   AUDIO: 'audio',
+  PLAYING: 'playing',
 }
 
-export default function GlobalSearchModal({ isOpen, onClose, works, onSelectWork, onPlayAudio }) {
+export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio, currentWork, onSelectWork, onPlayAudio }) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef(null)
   const listRef = useRef(null)
+
+  // 正在播放的曲目（无搜索词时显示）
+  const playingResult = useMemo(() => {
+    if (!currentAudio || !currentWork) return null
+    return {
+      type: RESULT_TYPE.PLAYING,
+      audio: currentAudio,
+      work: currentWork,
+      displayTitle: currentAudio.name || '未知曲目',
+      displaySub: currentWork.title || currentWork.folderName || '未知作品',
+    }
+  }, [currentAudio, currentWork])
 
   // 搜索本地作品
   const localResults = useMemo(() => {
@@ -123,8 +136,14 @@ export default function GlobalSearchModal({ isOpen, onClose, works, onSelectWork
     if (result.type === RESULT_TYPE.WORK) {
       onSelectWork(result.work)
       onClose()
+    } else if (result.type === RESULT_TYPE.PLAYING) {
+      // 正在播放的曲目，调用 onPlayAudio 跳转到当前播放
+      if (onPlayAudio) {
+        onPlayAudio(result.audio, result.work)
+      }
+      onClose()
     }
-  }, [onSelectWork, onClose])
+  }, [onSelectWork, onPlayAudio, onClose])
 
   const handleOverlayClick = useCallback((e) => {
     if (e.target === e.currentTarget) {
@@ -215,7 +234,33 @@ export default function GlobalSearchModal({ isOpen, onClose, works, onSelectWork
           </div>
         )}
 
-        {!query.trim() && (
+        {!query.trim() && playingResult && (
+          <div className="global-search-results" ref={listRef}>
+            <div className="results-section-title">正在播放</div>
+            <div
+              key="playing"
+              data-index={0}
+              className={`global-search-result-item playing ${selectedIndex === 0 ? 'selected' : ''}`}
+              onClick={() => handleSelect(playingResult)}
+              onMouseEnter={() => setSelectedIndex(0)}
+            >
+              <div className="result-icon playing-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+                </svg>
+              </div>
+              <div className="result-info">
+                <div className="result-title">{playingResult.displayTitle}</div>
+                <div className="result-sub">
+                  <span className="result-badge playing-badge">播放中</span>
+                  <span className="result-sub-text">{playingResult.displaySub}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!query.trim() && !playingResult && (
           <div className="global-search-hint">
             <div className="hint-item">
               <kbd>↑</kbd><kbd>↓</kbd>

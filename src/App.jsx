@@ -2181,6 +2181,8 @@ export default function App() {
         isOpen={showGlobalSearch}
         onClose={() => setShowGlobalSearch(false)}
         works={works}
+        currentAudio={currentAudio}
+        currentWork={selectedWork}
         onSelectWork={(work) => {
           setCurrentView('library')
           handleSelectWork(work)

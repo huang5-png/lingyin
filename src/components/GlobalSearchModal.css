@@ -92,8 +92,13 @@
   background: var(--bg-hover, rgba(201, 100, 66, 0.08));
 }
 
-.global-search-result-item.selected {
-  background: rgba(201, 100, 66, 0.12);
+.global-search-result-item.playing {
+  background: linear-gradient(135deg, rgba(201, 100, 66, 0.08), rgba(176, 86, 47, 0.05));
+}
+
+.global-search-result-item.playing:hover,
+.global-search-result-item.playing.selected {
+  background: linear-gradient(135deg, rgba(201, 100, 66, 0.15), rgba(176, 86, 47, 0.1));
 }
 
 .result-icon {
@@ -105,6 +110,23 @@
   background: var(--bg-secondary, rgba(200, 190, 180, 0.15));
   border-radius: var(--radius-md, 10px);
   flex-shrink: 0;
+}
+
+.result-icon.playing-icon {
+  background: var(--accent-gradient);
+}
+
+.result-icon.playing-icon svg {
+  color: #fff;
+}
+
+.results-section-title {
+  padding: 8px 14px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary, #a09890);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .result-icon svg {
@@ -144,6 +166,11 @@
   font-size: 11px;
   color: var(--text-secondary, #7a7570);
   font-family: var(--font-heading, 'Poppins', sans-serif);
+}
+
+.result-badge.playing-badge {
+  background: var(--accent-gradient);
+  color: #fff;
 }
 
 .result-sub-text {
