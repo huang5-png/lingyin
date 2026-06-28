@@ -92,7 +92,8 @@ const AudioPlayer = forwardRef(function AudioPlayer(
     const percentage = Math.max(0, Math.min(1, x / rect.width))
     const time = percentage * duration
 
-    setTooltipPosition(x)
+    // 使用百分比定位，避免大窗口下像素偏差
+    setTooltipPosition(percentage * 100)
     setTooltipTime(time)
     setShowTooltip(true)
   }
@@ -279,7 +280,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           </div>
           <div
             className={`waveform-tooltip ${showTooltip ? 'visible' : ''}`}
-            style={{ left: `${tooltipPosition}px` }}
+            style={{ left: `${tooltipPosition}%` }}
           >
             {formatTime(tooltipTime)}
           </div>

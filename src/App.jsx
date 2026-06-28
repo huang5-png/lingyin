@@ -1371,10 +1371,10 @@ export default function App() {
               onViewModeChange={handleViewModeChange}
             />
           </div>
-          <div className="main-content">
-            <div className="content-area">
-              <div className="work-detail-wrapper library-work-detail">
-                {selectedWork && (
+          {selectedWork && (
+            <div className="main-content">
+              <div className="content-area">
+                <div className="work-detail-wrapper library-work-detail">
                   <button
                     className="detail-close-btn"
                     onClick={() => setSelectedWork(null)}
@@ -1385,59 +1385,59 @@ export default function App() {
                       <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
                   </button>
-                )}
-              <WorkDetail
-                work={selectedWork}
-                audioFiles={audioFiles}
-                currentAudio={currentAudio}
-                onSelectAudio={handleSelectAudio}
-                onEditMetadata={handleEditMetadata}
-                onRefreshMetadata={handleRefreshMetadata}
-                onRefreshSubtitles={handleRefreshSubtitles}
-                onFilterCV={(cv) => handleFilterChange('cv', cv)}
-                onFilterTag={(tag) => handleFilterChange('tag', tag)}
-                activeCV={cvFilter}
-                activeTag={tagFilter}
-              />
+                  <WorkDetail
+                    work={selectedWork}
+                    audioFiles={audioFiles}
+                    currentAudio={currentAudio}
+                    onSelectAudio={handleSelectAudio}
+                    onEditMetadata={handleEditMetadata}
+                    onRefreshMetadata={handleRefreshMetadata}
+                    onRefreshSubtitles={handleRefreshSubtitles}
+                    onFilterCV={(cv) => handleFilterChange('cv', cv)}
+                    onFilterTag={(tag) => handleFilterChange('tag', tag)}
+                    onCircleClick={(circle) => handleFilterChange('circle', circle)}
+                    activeCV={cvFilter}
+                    activeTag={tagFilter}
+                  />
+                </div>
+                <div className="right-tab-wrapper">
+                  <RightTabBar
+                    activeTab={rightTab}
+                    onTabChange={setRightTab}
+                    work={selectedWork}
+                    cues={currentCues}
+                    currentTime={currentTime}
+                    onSeek={handleSeek}
+                    subtitleOptions={subtitleOptions}
+                    selectedSubtitleIndex={selectedSubtitleIndex}
+                    onSelectSubtitle={handleSelectSubtitle}
+                    onAddSubtitleFile={handleAddSubtitleFile}
+                  />
+                </div>
               </div>
-              <div className="right-tab-wrapper">
-              <RightTabBar
-                activeTab={rightTab}
-                onTabChange={setRightTab}
-                work={selectedWork}
-                cues={currentCues}
-                currentTime={currentTime}
-                onSeek={handleSeek}
-                subtitleOptions={subtitleOptions}
-                selectedSubtitleIndex={selectedSubtitleIndex}
-                onSelectSubtitle={handleSelectSubtitle}
-                onAddSubtitleFile={handleAddSubtitleFile}
-              />
+              <div className="player-bar">
+                <AudioPlayer
+                  ref={playerRef}
+                  audioPath={currentAudio?.path}
+                  title={currentAudio?.name}
+                  cover={selectedWork?.cover}
+                  onTimeUpdate={handleTimeUpdate}
+                  onReady={handleReady}
+                  onFinish={handleFinish}
+                  onPrev={handlePrevAudio}
+                  onNext={handleNextAudio}
+                  workId={selectedWork?.id}
+                  waveformHeight={settings.waveformHeight}
+                  defaultVolume={settings.defaultVolume}
+                  skipSeconds={settings.skipSeconds || 5}
+                  onToggleImmersive={() => setIsImmersive(!isImmersive)}
+                />
               </div>
             </div>
-            <div className="player-bar">
-              <AudioPlayer
-                ref={playerRef}
-                audioPath={currentAudio?.path}
-                title={currentAudio?.name}
-                cover={selectedWork?.cover}
-                onTimeUpdate={handleTimeUpdate}
-                onReady={handleReady}
-                onFinish={handleFinish}
-                onPrev={handlePrevAudio}
-                onNext={handleNextAudio}
-                workId={selectedWork?.id}
-                waveformHeight={settings.waveformHeight}
-                defaultVolume={settings.defaultVolume}
-                skipSeconds={settings.skipSeconds || 5}
-                onToggleImmersive={() => setIsImmersive(!isImmersive)}
-              />
-            </div>
-          </div>
+          )}
         </div>
       )}
-      {currentView === 'discover' && (
-        <div className={`discover-layout ${selectedWork && selectedWork.isOnline ? 'has-detail' : ''}`}>
+      <div className={`discover-layout ${selectedWork && selectedWork.isOnline ? 'has-detail' : ''}`} style={{ display: currentView === 'discover' ? '' : 'none' }}>
           <div className="discover-main">
             <DiscoverView 
               ref={discoverViewRef}
@@ -1475,6 +1475,11 @@ export default function App() {
                     onFilterTag={(tag) => {
                       if (tag && discoverViewRef.current) {
                         discoverViewRef.current.toggleTag(tag)
+                      }
+                    }}
+                    onCircleClick={(circle) => {
+                      if (circle && discoverViewRef.current) {
+                        discoverViewRef.current.toggleCircle(circle)
                       }
                     }}
                     activeCV={''}
@@ -1519,7 +1524,6 @@ export default function App() {
             </div>
           )}
         </div>
-      )}
 
       {currentView === 'annual-report' && (
         <div className="report-view">
@@ -1608,6 +1612,7 @@ export default function App() {
         <DownloadModal
           work={selectedWork}
           onClose={() => setShowDownloadModal(false)}
+          onNavigateToDownload={() => setCurrentView('download')}
         />
       )}
       </div>

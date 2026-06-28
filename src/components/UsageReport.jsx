@@ -8,21 +8,23 @@ const RANGES = [
 ]
 
 function formatDuration(totalSeconds) {
-  if (!totalSeconds || totalSeconds < 1) return '0 分钟'
+  if (!totalSeconds || totalSeconds < 1) return '0 秒'
   const h = Math.floor(totalSeconds / 3600)
   const m = Math.floor((totalSeconds % 3600) / 60)
   const s = Math.floor(totalSeconds % 60)
-  if (h > 0) return `${h} 小时 ${m} 分钟`
+  if (h > 0) return `${h} 小时 ${m} 分 ${s} 秒`
   if (m > 0) return `${m} 分 ${s} 秒`
   return `${s} 秒`
 }
 
 function formatShortDuration(totalSeconds) {
-  if (!totalSeconds || totalSeconds < 1) return '0'
-  const h = (totalSeconds / 3600).toFixed(1)
-  const m = (totalSeconds / 60).toFixed(0)
-  if (totalSeconds >= 3600) return `${h}h`
-  return `${m}m`
+  if (!totalSeconds || totalSeconds < 1) return '0s'
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = Math.floor(totalSeconds % 60)
+  if (h > 0) return `${h}h${m}m${s}s`
+  if (m > 0) return `${m}m${s}s`
+  return `${s}s`
 }
 
 export default function UsageReport() {
@@ -311,17 +313,19 @@ function TimelineChart({ timeline, range }) {
   const max = Math.max(1, ...timeline.map((t) => t.seconds))
   const W = 940
   const H = 280
-  const padL = 50
+  const padL = 58
   const padR = 20
   const padT = 20
-  const padB = 36
+  const padB = 40
   const plotW = W - padL - padR
   const plotH = H - padT - padB
   const barGap = 4
   const barW = Math.max(2, (plotW / timeline.length) - barGap)
 
-  // skip labels if too dense
-  const labelStep = Math.max(1, Math.ceil(timeline.length / 12))
+  // 年度显示全部12个月，月度显示约每2天，日度显示每2小时
+  const labelStep = range === 'year'
+    ? 1
+    : Math.max(1, Math.ceil(timeline.length / 16))
 
   return (
     <svg className="timeline-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
@@ -350,6 +354,7 @@ function TimelineChart({ timeline, range }) {
         const x = padL + i * (barW + barGap)
         const y = padT + plotH - h
         const isActive = t.seconds > 0
+        const showLabel = i % labelStep === 0 || i === timeline.length - 1
         return (
           <g key={i}>
             <rect
@@ -360,8 +365,15 @@ function TimelineChart({ timeline, range }) {
               rx="3"
               fill={isActive ? 'url(#tlGrad)' : 'rgba(201,100,66,0.15)'}
             />
-            {(i % labelStep === 0 || i === timeline.length - 1) && (
-              <text x={x + barW / 2} y={H - padB + 18} textAnchor="middle" fontSize="10" fill="#b09d8a" fontWeight="600">
+            {showLabel && (
+              <text
+                x={x + barW / 2}
+                y={H - padB + 18}
+                textAnchor="middle"
+                fontSize={range === 'year' ? 11 : 10}
+                fill="#b09d8a"
+                fontWeight="600"
+              >
                 {t.label}
               </text>
             )}

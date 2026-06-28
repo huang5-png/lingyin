@@ -1149,6 +1149,12 @@
   font-weight: 700;
 }
 
+.discover-card-stats .dl-count {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-size: 11px;
+}
+
 .discover-pagination {
   display: flex;
   justify-content: center;
@@ -1187,6 +1193,86 @@
   font-size: var(--font-size-sm);
   color: var(--text-tertiary);
   font-weight: 500;
+}
+
+.page-num-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-num-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.page-num-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.page-dots {
+  width: 36px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  user-select: none;
+}
+
+.page-jump {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.page-jump-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.page-jump-input {
+  width: 52px;
+  height: 32px;
+  padding: 0 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.page-jump-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.page-jump-input::-webkit-inner-spin-button,
+.page-jump-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.page-jump-total {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .back-to-top {

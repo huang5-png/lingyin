@@ -443,18 +443,23 @@ function ToggleSwitch({ checked, onChange }) {
 }
 
 function Slider({ value, min, max, onChange, step = 1 }) {
-  const percentage = ((value - min) / (max - min)) * 100;
+  const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
   return (
-    <input
-      type="range"
-      className="settings-slider"
-      value={value}
-      min={min}
-      max={max}
-      step={step}
-      onChange={onChange}
-      style={{ backgroundSize: `${percentage}% 100%` }}
-    />
+    <div className="custom-slider">
+      <input
+        type="range"
+        className="custom-slider-input"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={onChange}
+      />
+      <div className="custom-slider-track">
+        <div className="custom-slider-fill" style={{ width: `${percentage}%` }} />
+        <div className="custom-slider-thumb" style={{ left: `${percentage}%` }} />
+      </div>
+    </div>
   );
 }
 

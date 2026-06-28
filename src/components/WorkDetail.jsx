@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
 
-export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, activeCV, activeTag, onDownload, onReloadTracks }) {
+export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
@@ -176,7 +176,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
             )}
             <div className="work-meta-row">
               {work.rating > 0 && <span className="rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating.toFixed(2)}</span>}
-              {work.circle && <span className="circle">社团: {work.circle}</span>}
+              {work.circle && <span className="circle clickable" onClick={() => onCircleClick?.(work.circle)} title="点击筛选此社团">社团: {work.circle}</span>}
             </div>
             {work.cvs && work.cvs.length > 0 && (
               <div className="work-cvs">

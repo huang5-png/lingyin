@@ -61,7 +61,7 @@ function formatSpeed(bps) {
   return (bps / (1024 * 1024)).toFixed(1) + ' MB/s'
 }
 
-export default function DownloadModal({ work, onClose }) {
+export default function DownloadModal({ work, onClose, onNavigateToDownload }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [groups, setGroups] = useState([])
@@ -129,6 +129,16 @@ export default function DownloadModal({ work, onClose }) {
 
   const selectAll = useCallback(() => {
     setSelected(new Set(allFiles.map((f) => f.url)))
+  }, [allFiles])
+
+  const selectByExt = useCallback((exts) => {
+    const allowed = new Set(exts)
+    setSelected(new Set(allFiles
+      .filter((f) => {
+        const ext = f.title.split('.').pop()?.toLowerCase()
+        return allowed.has(ext)
+      })
+      .map((f) => f.url)))
   }, [allFiles])
 
   const selectNone = useCallback(() => setSelected(new Set()), [])
@@ -202,6 +212,11 @@ export default function DownloadModal({ work, onClose }) {
               <div className="download-toolbar">
                 <div className="download-toolbar-left">
                   <button className="dl-chip-btn" onClick={selectAll}>全选</button>
+                  <button className="dl-chip-btn" onClick={() => selectByExt(['mp3'])}>MP3</button>
+                  <button className="dl-chip-btn" onClick={() => selectByExt(['wav'])}>WAV</button>
+                  <button className="dl-chip-btn" onClick={() => selectByExt(['flac'])}>FLAC</button>
+                  <button className="dl-chip-btn" onClick={() => selectByExt(['jpg', 'jpeg', 'png'])}>图片</button>
+                  <button className="dl-chip-btn" onClick={() => selectByExt(['txt'])}>TXT</button>
                   <button className="dl-chip-btn" onClick={selectNone}>清空</button>
                 </div>
                 <div className="download-toolbar-right">
@@ -278,7 +293,7 @@ export default function DownloadModal({ work, onClose }) {
           {added && (
             <button
               className="dl-btn-primary"
-              onClick={onClose}
+              onClick={() => { onNavigateToDownload?.(); onClose() }}
             >
               查看下载管理
             </button>

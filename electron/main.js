@@ -469,7 +469,10 @@ ipcMain.handle('asmrOne:getWorks', async (_, params = {}) => {
     }
     
     const res = await asmrOneGet(url)
-    return res.data
+    return {
+      works: res.data.works || [],
+      pagination: res.data.pagination || { currentPage: page, pageSize, totalCount: 0 }
+    }
   } catch (e) {
     logger.error('Failed to fetch asmr.one works:', e.message)
     throw new Error(e.message || '获取作品列表失败')
@@ -568,6 +571,9 @@ ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
 
 // 全局下载取消控制器
 let downloadAbortController = null
+
+// 下载队列的取消控制器集合（支持多线程并发取消）
+let activeAbortControllers = new Set()
 
 // ===== ASMR-One 文件下载 =====
 // 下载单个文件到指定目录，支持进度回调
@@ -745,7 +751,6 @@ ipcMain.handle('dialog:selectDownloadDir', async () => {
 
 const downloadQueue = []
 let activeDownloadTask = null
-let currentAbortController = null
 let taskIdCounter = 0
 
 function generateTaskId() {
@@ -772,8 +777,9 @@ async function downloadFileInTask(task, file, fileIndex) {
       }
       const finalPath = path.join(targetDir, file.fileName)
 
-      currentAbortController = new AbortController()
-      const signal = currentAbortController.signal
+      const abortController = new AbortController()
+      activeAbortControllers.add(abortController)
+      const signal = abortController.signal
 
       const proxy = await getProxyConfig()
       const axiosConfig = {
@@ -829,8 +835,13 @@ async function downloadFileInTask(task, file, fileIndex) {
       }
       signal.addEventListener('abort', onAbort)
 
-      writer.on('finish', () => {
+      const cleanup = () => {
         signal.removeEventListener('abort', onAbort)
+        activeAbortControllers.delete(abortController)
+      }
+
+      writer.on('finish', () => {
+        cleanup()
         file.status = 'done'
         file.progress = 100
         file.speed = 0
@@ -839,7 +850,7 @@ async function downloadFileInTask(task, file, fileIndex) {
       })
 
       writer.on('error', (err) => {
-        signal.removeEventListener('abort', onAbort)
+        cleanup()
         if (signal.aborted) {
           file.status = 'cancelled'
           file.error = '已取消'
@@ -852,7 +863,7 @@ async function downloadFileInTask(task, file, fileIndex) {
       })
 
       response.data.on('error', (err) => {
-        signal.removeEventListener('abort', onAbort)
+        cleanup()
         if (signal.aborted) {
           file.status = 'cancelled'
           file.error = '已取消'
@@ -883,24 +894,35 @@ async function processDownloadQueue() {
   logger.info(`[下载队列] 开始任务: ${task.workTitle}, 共 ${task.files.length} 个文件`)
 
   try {
-    for (let i = 0; i < task.files.length; i++) {
-      const file = task.files[i]
-      if (file.status === 'done') continue
-      
-      task.currentIndex = i
-      broadcastDownloadState()
+    // 多线程并发下载：同时下载 N 个文件
+    const MAX_CONCURRENT = 3
+    const pendingFiles = task.files.filter(f => f.status !== 'done')
+    let cancelled = false
 
-      try {
-        await downloadFileInTask(task, file, i)
-      } catch (e) {
-        if (file.status === 'cancelled') {
-          logger.info(`[下载队列] 任务取消: ${task.workTitle}`)
-          task.status = 'cancelled'
-          break
+    async function downloadWorker() {
+      while (pendingFiles.length > 0 && !cancelled) {
+        const file = pendingFiles.shift()
+        if (!file) break
+        
+        task.currentIndex = task.files.indexOf(file)
+        broadcastDownloadState()
+
+        try {
+          await downloadFileInTask(task, file, task.currentIndex)
+        } catch (e) {
+          if (file.status === 'cancelled') {
+            cancelled = true
+            logger.info(`[下载队列] 任务取消: ${task.workTitle}`)
+            break
+          }
+          logger.warn(`[下载队列] 文件失败: ${file.fileName}, ${e.message}`)
         }
-        logger.warn(`[下载队列] 文件失败: ${file.fileName}, ${e.message}`)
       }
     }
+
+    const concurrency = Math.min(MAX_CONCURRENT, pendingFiles.length)
+    const workers = Array.from({ length: concurrency }, () => downloadWorker())
+    await Promise.all(workers)
 
     if (task.status !== 'cancelled') {
       const allDone = task.files.every((f) => f.status === 'done')
@@ -919,7 +941,7 @@ async function processDownloadQueue() {
   }
 
   activeDownloadTask = null
-  currentAbortController = null
+  activeAbortControllers.clear()
   broadcastDownloadState()
 
   processDownloadQueue()
@@ -978,9 +1000,11 @@ ipcMain.handle('download:getState', async () => {
 // 取消下载任务
 ipcMain.handle('download:cancelTask', async (_, taskId) => {
   if (activeDownloadTask && activeDownloadTask.id === taskId) {
-    if (currentAbortController) {
-      currentAbortController.abort()
+    // 取消所有正在进行的下载
+    for (const controller of activeAbortControllers) {
+      try { controller.abort() } catch (e) {}
     }
+    activeAbortControllers.clear()
     return true
   }
   const idx = downloadQueue.findIndex((t) => t.id === taskId)

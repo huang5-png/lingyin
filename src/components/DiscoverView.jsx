@@ -45,6 +45,13 @@ const formatDuration = (seconds) => {
   return `${mins}m`
 }
 
+const formatDLCount = (count) => {
+  if (count == null) return '--'
+  if (count >= 10000) return (count / 10000).toFixed(1) + '万'
+  if (count >= 1000) return (count / 1000).toFixed(1) + 'k'
+  return String(count)
+}
+
 const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWork, onVaClick, onTagClick }) => {
   return (
     <div
@@ -113,6 +120,7 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
                 {work.rate_average_2dp}
               </span>
             )}
+            <span className="dl-count">{work.dl_count != null ? formatDLCount(work.dl_count) : '--'}</span>
             <span className="price">¥{work.price}</span>
           </div>
         </div>
@@ -131,6 +139,8 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(20)
+  const [totalPages, setTotalPages] = useState(0)
+  const [pageInput, setPageInput] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [activeTags, setActiveTags] = useState([])
   const [excludeTags, setExcludeTags] = useState([])
@@ -255,6 +265,10 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
         keyword
       })
       setWorks(data.works || [])
+      if (data.pagination) {
+        const total = Math.ceil((data.pagination.totalCount || 0) / pageSize)
+        setTotalPages(total)
+      }
     } catch (e) {
       console.error('Failed to fetch works:', e)
       if (works.length === 0) setError('加载失败，请检查网络连接')
@@ -396,6 +410,55 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
     setPage(1)
   }
 
+  const generatePageNumbers = (currentPage, totalPages) => {
+    if (totalPages <= 0) return []
+    const pages = []
+    const maxVisible = 5
+    
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      let start = Math.max(2, currentPage - 2)
+      let end = Math.min(totalPages - 1, currentPage + 2)
+      
+      if (currentPage <= 3) {
+        end = Math.min(maxVisible, totalPages - 1)
+      }
+      if (currentPage >= totalPages - 2) {
+        start = Math.max(2, totalPages - maxVisible + 1)
+      }
+      
+      if (start > 2) pages.push('...')
+      for (let i = start; i <= end; i++) pages.push(i)
+      if (end < totalPages - 1) pages.push('...')
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
+  const handlePageInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const num = parseInt(pageInput, 10)
+      if (num >= 1 && num <= totalPages) {
+        setPage(num)
+        setPageInput('')
+      } else if (num > totalPages) {
+        setPage(totalPages)
+        setPageInput('')
+      }
+    }
+  }
+
+  // 当 totalPages 变化时，确保 page 不超出范围
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [totalPages])
+
+  const pageNumbers = useMemo(() => generatePageNumbers(page, totalPages), [page, totalPages])
+
   const handleTagPickerSelect = (tagName) => {
     if (tagPickerMode === 'include') {
       toggleTag(tagName)
@@ -493,6 +556,7 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
   useImperativeHandle(ref, () => ({
     toggleTag,
     toggleVa,
+    toggleCircle,
     clearAllFilters,
   }))
 
@@ -1064,14 +1128,40 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId }, ref) => {
             >
               上一页
             </button>
-            <span className="page-info">第 {page} 页</span>
+            {pageNumbers.map((p, i) => (
+              p === '...' ? (
+                <span key={`dots-${i}`} className="page-dots">...</span>
+              ) : (
+                <button
+                  key={p}
+                  className={`page-num-btn ${p === page ? 'active' : ''}`}
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </button>
+              )
+            ))}
             <button
               className="page-btn"
               onClick={() => setPage((p) => p + 1)}
-              disabled={works.length < pageSize}
+              disabled={totalPages > 0 ? page >= totalPages : works.length < pageSize}
             >
               下一页
             </button>
+            <div className="page-jump">
+              <span className="page-jump-label">跳转</span>
+              <input
+                className="page-jump-input"
+                type="number"
+                min="1"
+                max={totalPages || 1}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={handlePageInputKeyDown}
+                placeholder={String(page)}
+              />
+              <span className="page-jump-total">/ 共 {totalPages > 0 ? totalPages : '?'} 页</span>
+            </div>
           </div>
         </>
       )}

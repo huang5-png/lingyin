@@ -2,12 +2,8 @@
   flex: 1;
   height: 100%;
   min-width: 0;
-  background: var(--card-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--card-shadow);
+  min-height: 0;
+  background: transparent;
   overflow: hidden;
   position: relative;
   display: flex;

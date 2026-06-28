@@ -367,6 +367,8 @@
   white-space: nowrap;
   letter-spacing: 0.02em;
   font-weight: 500;
+  /* 防止 tooltip 超出波形两端 */
+  max-width: none;
 }
 
 .waveform-tooltip.visible {

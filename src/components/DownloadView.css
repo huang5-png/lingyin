@@ -1,8 +1,9 @@
 .download-view {
   display: flex;
   flex-direction: column;
+  flex: 1;
   height: 100%;
-  background: var(--bg-primary);
+  background: transparent;
 }
 
 .download-view-header {
