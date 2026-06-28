@@ -59,7 +59,7 @@ function detectLanguage(basename) {
       return 'ja'
     }
   }
-  return 'ja'
+  return 'unknown'
 }
 
 export function detectLanguageFromContent(text) {
