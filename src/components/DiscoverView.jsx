@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useRef } from 'react'
 import './DiscoverView.css'
+import StateView from './StateView'
 
 const ADVANCED_COMMANDS = [
   { cmd: '$tag:', desc: '搜索标签', icon: 'tag' },
@@ -1055,9 +1056,9 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
           </div>
           <div className="tag-picker-list" ref={tagListRef} onScroll={handleTagScroll}>
             {tagsLoading ? (
-              <p className="tag-picker-loading">加载中...</p>
+              <StateView type="loading" className="state-view-compact" />
             ) : visibleTags.length === 0 ? (
-              <p className="tag-picker-empty">没有找到匹配的标签</p>
+              <StateView type="empty" iconType="empty" title="没有找到匹配的标签" className="state-view-compact" />
             ) : (
               <>
                 {visibleTags.map(tag => {
@@ -1110,17 +1111,15 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
 
       <div className="discover-view-content" ref={contentRef} onScroll={handleContentScroll}>
       {loading && (
-        <div className="discover-loading">
-          <div className="loading-spinner" />
-          <p>加载中...</p>
-        </div>
+        <StateView type="loading" title="加载中..." />
       )}
 
       {!loading && error && works.length === 0 && (
-        <div className="discover-error">
-          <p>{error}</p>
-          <button onClick={fetchWorks}>重试</button>
-        </div>
+        <StateView
+          type="error"
+          title={error}
+          action={<button onClick={fetchWorks}>重试</button>}
+        />
       )}
 
       {(works.length > 0 || (!loading && !error)) && (

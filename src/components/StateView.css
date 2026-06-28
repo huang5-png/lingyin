@@ -1,0 +1,162 @@
+.state-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  min-height: 200px;
+  width: 100%;
+}
+
+/* 图标容器 */
+.state-view-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+.state-view-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 加载动画 */
+.spinner-icon {
+  animation: state-view-spin 1s linear infinite;
+}
+
+@keyframes state-view-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 标题 */
+.state-view-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+/* 描述 */
+.state-view-description {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  max-width: 280px;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+/* 操作按钮区域 */
+.state-view-action {
+  margin-top: 16px;
+}
+
+.state-view-action button {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  transition: all var(--transition-fast);
+}
+
+.state-view-action button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* 空态变体 */
+.state-view-empty .state-view-icon {
+  opacity: 0.5;
+}
+
+/* 加载态变体 */
+.state-view-loading .state-view-icon {
+  opacity: 0.8;
+  color: var(--accent-primary);
+}
+
+.state-view-loading .state-view-title {
+  color: var(--text-secondary);
+}
+
+/* 错误态变体 */
+.state-view-error .state-view-icon {
+  color: var(--error-color);
+  opacity: 0.8;
+}
+
+.state-view-error .state-view-title {
+  color: var(--error-color);
+}
+
+/* 紧凑模式（小尺寸） */
+.state-view-compact {
+  padding: 24px 16px;
+  min-height: 120px;
+}
+
+.state-view-compact .state-view-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+}
+
+.state-view-compact .state-view-title {
+  font-size: var(--font-size-base);
+}
+
+.state-view-compact .state-view-description {
+  font-size: var(--font-size-xs);
+}
+
+/* 行内模式（横向排列） */
+.state-view-inline {
+  flex-direction: row;
+  gap: 12px;
+  padding: 16px;
+  min-height: auto;
+  text-align: left;
+}
+
+.state-view-inline .state-view-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.state-view-inline .state-view-title {
+  font-size: var(--font-size-sm);
+  margin-bottom: 4px;
+}
+
+.state-view-inline .state-view-description {
+  font-size: var(--font-size-xs);
+}
+
+/* 暗色模式适配 */
+[data-theme="dark"] .state-view-icon {
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .state-view-empty .state-view-icon {
+  opacity: 0.5;
+}
+
+[data-theme="dark"] .state-view-loading .state-view-icon {
+  opacity: 0.9;
+}

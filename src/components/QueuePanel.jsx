@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import './QueuePanel.css'
+import StateView from './StateView'
 
 // 循环模式图标
 const LoopNoneIcon = () => (
@@ -192,20 +193,12 @@ export default function QueuePanel({
 
       <div className="queue-panel-body" ref={listRef}>
         {queue.length === 0 ? (
-          <div className="queue-empty">
-            <div className="queue-empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </div>
-            <p>队列为空</p>
-            <p className="queue-empty-hint">在作品详情的曲目列表中点击「+」加入队列</p>
-          </div>
+          <StateView
+            type="empty"
+            iconType="playlist"
+            title="队列为空"
+            description="在作品详情的曲目列表中点击「+」加入队列"
+          />
         ) : (
           <div className="queue-list">
             {queue.map((item, idx) => {

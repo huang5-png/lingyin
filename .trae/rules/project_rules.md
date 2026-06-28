@@ -117,6 +117,7 @@
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/关于，五个 Tab） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
+| `components/StateView.jsx` | 统一空态/加载态/错误状态组件（支持预置图标、紧凑模式、行内模式） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |

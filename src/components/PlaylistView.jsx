@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import './PlaylistView.css'
+import StateView from './StateView'
 
 export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) {
   const [playlists, setPlaylists] = useState([])
@@ -249,9 +250,15 @@ export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) 
 
         <div className="playlist-list">
           {loading ? (
-            <div className="playlist-empty-mini">加载中...</div>
+            <StateView type="loading" className="playlist-state-inline" />
           ) : playlists.length === 0 ? (
-            <div className="playlist-empty-mini">还没有播放列表<br />点击 + 新建</div>
+            <StateView
+              type="empty"
+              iconType="playlist"
+              title="还没有播放列表"
+              description="点击 + 新建"
+              className="playlist-state-inline"
+            />
           ) : (
             playlists.map((pl) => (
               <div
@@ -302,20 +309,12 @@ export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) 
 
       <div className="playlist-detail">
         {!selectedPlaylist ? (
-          <div className="playlist-empty-state">
-            <div className="empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </div>
-            <h3>{playlists.length === 0 ? '创建你的第一个播放列表' : '选择一个播放列表'}</h3>
-            <p>在曲目列表中点击 <span className="add-to-playlist-icon">+</span> 即可加入播放列表</p>
-          </div>
+          <StateView
+            type="empty"
+            iconType="playlist"
+            title={playlists.length === 0 ? '创建你的第一个播放列表' : '选择一个播放列表'}
+            description="在曲目列表中点击 + 即可加入播放列表"
+          />
         ) : (
           <>
             <div className="playlist-detail-header">
@@ -350,10 +349,13 @@ export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) 
 
             <div className="playlist-items-list">
               {(!selectedPlaylist.items || selectedPlaylist.items.length === 0) ? (
-                <div className="playlist-empty-inline">
-                  这个播放列表还是空的<br />
-                  前往「我的库」或「发现」并点击曲目旁的 <span className="add-to-playlist-icon">+</span> 添加
-                </div>
+                <StateView
+                  type="empty"
+                  iconType="empty"
+                  title="这个播放列表还是空的"
+                  description="前往「我的库」或「发现」并点击曲目旁的 + 添加"
+                  className="playlist-state-inline"
+                />
               ) : (
                 selectedPlaylist.items.map((item, idx) => (
                   <div

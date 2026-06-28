@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
+import StateView from './StateView'
 
 export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext }) {
   const [showEditor, setShowEditor] = useState(false)
@@ -76,19 +77,12 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
   if (!work) {
     return (
       <div className="work-detail empty">
-        <div className="empty-state">
-          <div className="empty-icon-wrapper">
-            <div className="empty-icon">
-              <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 18V5l12-2v13"/>
-                <circle cx="6" cy="18" r="3"/>
-                <circle cx="18" cy="16" r="3"/>
-              </svg>
-            </div>
-          </div>
-          <h2>选择一个作品开始播放</h2>
-          <p>从左侧列表选择作品，或添加新文件夹</p>
-        </div>
+        <StateView
+          type="empty"
+          iconType="empty"
+          title="选择一个作品开始播放"
+          description="从左侧列表选择作品，或添加新文件夹"
+        />
       </div>
     )
   }
@@ -298,19 +292,19 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
         </div>
         <div className="audio-list">
           {isLoadingTracks ? (
-            <div className="tracks-loading">
-              <div className="loading-spinner" />
-              <span>正在加载曲目列表...</span>
-            </div>
+            <StateView type="loading" title="正在加载曲目列表..." />
           ) : hasTracksError ? (
-            <div className="tracks-error">
-              <span>曲目列表加载失败</span>
-              {onReloadTracks && (
-                <button className="retry-btn-large" onClick={onReloadTracks}>
-                  点击重试
-                </button>
-              )}
-            </div>
+            <StateView
+              type="error"
+              title="曲目列表加载失败"
+              action={
+                onReloadTracks && (
+                  <button className="retry-btn-large" onClick={onReloadTracks}>
+                    点击重试
+                  </button>
+                )
+              }
+            />
           ) : (
             currentDir?.children.map((item, idx) => (
               item.isDirectory ? (
