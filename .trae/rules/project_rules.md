@@ -103,9 +103,9 @@
 | 文件 | 职责 |
 |------|------|
 | `App.jsx` | 根组件，核心状态管理（selectedWork/currentAudio/subtitleOptions/currentTime/currentView/isImmersive/flipState） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、快进快退、进度保存、沉浸式切换） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
-| `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑） |
+| `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组） |
 | `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器） |
 | `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Related/Playlists 四个 Tab） |
 | `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表） |
@@ -113,6 +113,7 @@
 | `components/DownloadModal.jsx` | 下载配置弹窗（选择文件、音质、添加到队列） |
 | `components/UsageReport.jsx` | 使用统计视图（年度/月度/日度切换、标签/CV/社团排行） |
 | `components/PlaylistView.jsx` | 播放列表视图（多列表、拖拽排序、加入弹窗） |
+| `components/QueuePanel.jsx` | 播放队列浮层（拖拽排序、循环/随机切换、当前项高亮、ESC 关闭） |
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/关于，五个 Tab） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
@@ -463,7 +464,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   - 曲目行支持 HTML5 拖拽排序（draggable），乐观更新
   - 双击曲目行触发 `onPlayItem`
   - 「跳转到作品」按钮触发 `onNavigateToWork`
-- `WorkDetail.jsx`：曲目列表项 hover 时显示「+」按钮，触发 `onAddToPlaylist(audio)`
+- `WorkDetail.jsx`：曲目列表项 hover 时显示 `audio-action-btns` 按钮组，包含「下一首播放」「加入队列」「加入播放列表」三个按钮（详见第 18 节「播放队列」）
 - `AddToPlaylistModal`（App.jsx 内联）：列出全部播放列表 + 一键新建并加入，提交后调用 `playlistAddItem`
 
 #### 视图切换
@@ -473,6 +474,91 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 #### 播放联动
 - 从播放列表播放本地曲目时：根据 `workId` 在 `works` 中查找作品 → 切换到 library 视图 → 选中作品 → 轮询 `latestAudioFilesRef` 直到曲目加载完成 → 调用 `handleSelectAudio`
 - 在线曲目：提示用户回到「发现」视图重新打开作品
+
+### 18. 播放队列
+
+#### 设计原则
+- **纯内存版**：队列仅存在于 React state，不写入 `db.json`，重启清空，避免磁盘 IO
+- **跨作品支持**：队列项携带轻量 work 快照（id/title/cover/folderPath/isOnline），支持跨作品自动切换
+- **队列优先**：当 `queueIndex >= 0` 时，上一曲/下一曲/播放完毕均优先走队列调度；否则回退到当前作品 `audioFiles` 线性遍历
+
+#### 核心状态（App.jsx）
+- `playQueue: QueueItem[]` — 队列项数组
+- `queueIndex: number` — 当前播放到队列的位置，`-1` 表示未在队列中播放
+- `loopMode: 'none' | 'one' | 'list'` — 循环模式（顺序/单曲/列表），与 `settings.loopMode` 双向同步
+- `shuffle: boolean` — 随机播放，与 `settings.shuffle` 双向同步
+- `showQueuePanel: boolean` — 队列浮层开关
+- `pendingQueuePlayRef` — 跨作品播放时的待播放项 `{ item, startedAt }`，配合 useEffect 等待 audioFiles 加载
+
+#### 队列项结构
+```js
+{
+  id: 'q_<base36时间戳>_<6位随机>',  // genQueueItemId() 生成
+  audio: { path, name, isOnline, duration },  // 轻量音频快照
+  work: { id, title, cover, folderPath, isOnline },  // 轻量作品快照
+  source: 'library' | 'discover',
+  audioName, workTitle, workCover,  // 冗余字段供 UI 直接渲染
+  addedAt: number,
+}
+```
+
+#### 调度逻辑
+- `handlePlayFromQueue(item, index)` — 设置 `queueIndex` 并播放；若跨作品则切换视图/作品并设置 `pendingQueuePlayRef`，由 useEffect 在 `audioFiles` 加载完成后调用 `handleSelectAudio`
+- `advanceQueue(direction, isAutoFinish)` — 推进到上/下一首；返回 `boolean` 表示是否已处理
+  - `isAutoFinish && loopMode === 'one'` → seekTo(0) 重播当前
+  - `shuffle && length > 1` → 随机选下一首（避免选到当前）
+  - 边界处理：`loopMode === 'list'` 时循环；否则退出队列模式（`queueIndex = -1`）
+- `handlePrevAudio / handleNextAudio / handleFinish` — 三处入口均先判断 `queueIndex >= 0`，队列优先
+
+#### 队列操作
+| 函数 | 说明 |
+|------|------|
+| `buildQueueItem(audio, work)` | 构造队列项（work 默认取 selectedWork） |
+| `handleAddToQueue(audio, work)` | 加入队列末尾，按 `audio.path` 去重 |
+| `handlePlayNext(audio, work)` | 插入到 `queueIndex + 1` 位置（下一首播放） |
+| `handleRemoveFromQueue(itemId)` | 移除指定项并同步 queueIndex |
+| `handleClearQueue()` | 清空队列并重置 queueIndex |
+| `handleReorderQueue(itemIds)` | 按 itemId 数组重排，未列入的追加末尾，同步 queueIndex 指向当前播放项 |
+| `handleToggleLoopMode()` | none → one → list → none，同步 localStorage + db |
+| `handleToggleShuffle()` | 切换随机，同步 localStorage + db |
+| `handleToggleQueuePanel()` | 切换浮层显示 |
+
+#### 入口与 UI
+- **WorkDetail.jsx** 曲目行 hover 时显示 `audio-action-btns` 容器，包含三个按钮：
+  - `audio-play-next-btn` — 下一首播放（触发 `onPlayNext`）
+  - `audio-add-to-queue-btn` — 加入队列（触发 `onAddToQueue`）
+  - `audio-add-to-playlist-btn` — 加入播放列表（保留原行为）
+- **AudioPlayer.jsx** 右侧 `queue-controls` 区：
+  - 循环按钮（loop-btn，激活时显示"1"标记表示单曲循环）
+  - 随机按钮（shuffle-btn）
+  - 队列按钮（queue-btn，带数量徽标 `queue-badge`）
+- **QueuePanel.jsx** 浮层组件：
+  - 定位：`position: absolute; bottom: calc(100% + 8px); right: 0; width: 380px; max-height: 60vh`
+  - 毛玻璃背景 + `--shadow-xl` + `--z-index-popover`
+  - 头部：循环/随机/清空/关闭工具按钮 + 数量徽标
+  - 列表项：拖拽手柄 + 序号/播放动画 + 封面 + 信息 + 移除按钮
+  - 当前播放项高亮（暖橙色背景）+ 3 条柱形播放动画
+  - HTML5 拖拽排序（复用 PlaylistView 模式）
+  - ESC 关闭监听（capture 阶段，阻止冒泡）
+  - 空态：图标 + 提示文字「在作品详情的曲目列表中点击「+」加入队列」
+  - 完整暗色模式适配 + 高 DPI 适配（1.5dppx/2dppx）
+
+#### 跨作品播放流程
+1. 用户在 WorkDetail 点击「下一首播放」或「加入队列」→ 调用 `buildQueueItem` 构造队列项
+2. 用户在 QueuePanel 点击某项 → `handlePlayFromQueue(item, index)`
+3. 若目标作品 ≠ 当前后台作品：
+   - `setCurrentView` 切换到 library/discover
+   - `setSelectedWork(targetWork)` 触发 audioFiles 异步加载
+   - 设置 `pendingQueuePlayRef = { item, startedAt: Date.now() }`
+4. useEffect 监听 `audioFiles / selectedWork` 变化：
+   - 8 秒超时 → 清空 ref + toast 警告
+   - 在线作品 → 立即 `handleSelectAudio(item.audio)`
+   - 本地作品 → 等待 `audioFiles.length > 0` 后 `handleSelectAudio(item.audio)`
+
+#### 设置同步
+- `loopMode` 和 `shuffle` 同时存储在 `localStorage.appSettings` 和 `db.json.settings`
+- 启动时从 `settings.loopMode / settings.shuffle` 初始化 state
+- 切换时同步写入两处（参考其他设置的持久化模式）
 
 ## 已知约定
 
