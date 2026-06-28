@@ -11,6 +11,7 @@ import UsageReport from './components/UsageReport'
 import DownloadView from './components/DownloadView'
 import DownloadModal from './components/DownloadModal'
 import PlaylistView from './components/PlaylistView'
+import GlobalSearchModal from './components/GlobalSearchModal'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
@@ -95,6 +96,7 @@ export default function App() {
   const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(-1)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [isImmersive, setIsImmersive] = useState(false)
   const [addToPlaylistTarget, setAddToPlaylistTarget] = useState(null) // { audio, work } 待加入曲目
   // ===== 播放队列 =====
@@ -318,6 +320,23 @@ export default function App() {
       }
     }
     loadDbSettings()
+  }, [])
+
+  // 全局快捷键：Ctrl+K 打开快速搜索
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // 忽略输入框中的 Ctrl+K
+      if (e.ctrlKey && e.key === 'k') {
+        const tag = document.activeElement?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) {
+          return
+        }
+        e.preventDefault()
+        setShowGlobalSearch((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   // 记住上一次的主题，用于检测主题变化
@@ -2157,6 +2176,27 @@ export default function App() {
           onNavigateToDownload={() => setCurrentView('download')}
         />
       )}
+
+      <GlobalSearchModal
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+        works={works}
+        onSelectWork={(work) => {
+          setCurrentView('library')
+          handleSelectWork(work)
+        }}
+        onPlayAudio={(audio, work) => {
+          if (work) {
+            setCurrentView(work.isOnline ? 'discover' : 'library')
+            if (work.isOnline) {
+              // 在线作品需要完整加载
+              handleSelectOnlineWork({ id: work.onlineId, title: work.title, mainCoverUrl: work.cover, name: work.circle, vas: (work.cvs || []).map(c => ({ name: c })), tags: (work.tags || []).map(t => ({ name: t })) })
+            } else {
+              handleSelectWork(work)
+            }
+          }
+        }}
+      />
 
       {addToPlaylistTarget && (
         <AddToPlaylistModal
