@@ -359,7 +359,7 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
         <img src="/app-icon.png" alt="聆音" className="about-icon-img" />
       </div>
       <div className="about-name">聆音 Lingyin</div>
-      <div className="about-version">版本 1.0.0</div>
+      <div className="about-version">版本 1.1.0</div>
       <div className="about-desc">
         沉浸式 ASMR 音声播放器，
         支持波形可视化、歌词同步、作品管理等功能。
