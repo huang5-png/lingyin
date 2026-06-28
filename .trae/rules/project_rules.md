@@ -67,6 +67,7 @@
 - **discover（发现）**：在线 asmr.one 浏览，左右分栏布局（discover-layout），左侧搜索列表 + 右侧详情播放器
 - **download（下载管理）**：后台下载任务列表，实时进度、速度、状态展示
 - **usage-report（使用统计）**：年度/月度/日度播放时长、标签/CV/社团排行
+- **playlist（播放列表）**：用户自建播放列表管理，左侧列表栏 + 右侧曲目列表，支持拖拽排序
 
 #### 分栏布局特性
 - library / discover 视图采用 flex 左右分栏
@@ -111,6 +112,7 @@
 | `components/DownloadView.jsx` | 下载管理视图（任务列表、进度、速度、状态控制） |
 | `components/DownloadModal.jsx` | 下载配置弹窗（选择文件、音质、添加到队列） |
 | `components/UsageReport.jsx` | 使用统计视图（年度/月度/日度切换、标签/CV/社团排行） |
+| `components/PlaylistView.jsx` | 播放列表视图（多列表、拖拽排序、加入弹窗） |
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/关于，五个 Tab） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
@@ -432,6 +434,45 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 两种统计视图切换：趋势图 / 排行榜
 - 排行榜支持标签 / CV / 社团 / 作品分类切换
 - 数据在主进程聚合后返回渲染进程
+
+### 17. 播放列表
+
+#### 数据结构
+- 存储位置：`db.json.playlists`（数组）
+- 每个播放列表：`{ id, name, createdAt, updatedAt, items: [PlaylistItem] }`
+- 每个曲目项：`{ id, workId, workTitle, workCover, audioPath, audioName, isOnline, addedAt }`
+- ID 生成规则：`pl_<base36时间戳>_<6位随机>` / `it_<base36时间戳>_<6位随机>`
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `playlist:getAll` | 获取全部播放列表 |
+| `playlist:create` | 创建新播放列表，返回新对象 |
+| `playlist:rename` | 重命名播放列表 |
+| `playlist:delete` | 删除播放列表 |
+| `playlist:addItem` | 添加曲目（按 audioPath 自动去重） |
+| `playlist:removeItem` | 移除指定曲目 |
+| `playlist:reorderItems` | 按 itemId 数组重新排序，未列入的项目追加到末尾 |
+| `playlist:clear` | 清空播放列表 |
+
+#### 前端组件
+- `PlaylistView.jsx`：左侧列表栏 + 右侧曲目列表
+  - 新建播放列表（顶部 + 按钮）
+  - 单击选中、双击重命名
+  - 删除按钮 hover 显示
+  - 曲目行支持 HTML5 拖拽排序（draggable），乐观更新
+  - 双击曲目行触发 `onPlayItem`
+  - 「跳转到作品」按钮触发 `onNavigateToWork`
+- `WorkDetail.jsx`：曲目列表项 hover 时显示「+」按钮，触发 `onAddToPlaylist(audio)`
+- `AddToPlaylistModal`（App.jsx 内联）：列出全部播放列表 + 一键新建并加入，提交后调用 `playlistAddItem`
+
+#### 视图切换
+- `currentView === 'playlist'` 时渲染 PlaylistView
+- 左侧导航栏「播放列表」项已绑定 `setCurrentView('playlist')`
+
+#### 播放联动
+- 从播放列表播放本地曲目时：根据 `workId` 在 `works` 中查找作品 → 切换到 library 视图 → 选中作品 → 轮询 `latestAudioFilesRef` 直到曲目加载完成 → 调用 `handleSelectAudio`
+- 在线曲目：提示用户回到「发现」视图重新打开作品
 
 ## 已知约定
 

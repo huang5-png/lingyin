@@ -873,6 +873,36 @@
   font-weight: 600;
 }
 
+.audio-add-to-playlist-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.audio-item:hover .audio-add-to-playlist-btn {
+  opacity: 1;
+}
+
+.audio-add-to-playlist-btn:hover {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+}
+
+.audio-add-to-playlist-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

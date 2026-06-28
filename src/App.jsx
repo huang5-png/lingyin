@@ -10,6 +10,7 @@ import DiscoverView from './components/DiscoverView'
 import UsageReport from './components/UsageReport'
 import DownloadView from './components/DownloadView'
 import DownloadModal from './components/DownloadModal'
+import PlaylistView from './components/PlaylistView'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import './App.css'
@@ -86,6 +87,7 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [isImmersive, setIsImmersive] = useState(false)
+  const [addToPlaylistTarget, setAddToPlaylistTarget] = useState(null) // { audio, work } 待加入曲目
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
   const [flipState, setFlipState] = useState({
@@ -1361,6 +1363,80 @@ export default function App() {
     setShowSettingsModal(true)
   }
 
+  // ===== 播放列表：从曲目项「+」加入 =====
+  const handleOpenAddToPlaylist = useCallback((audio) => {
+    if (!audio) return
+    setAddToPlaylistTarget({ audio, work: selectedWork })
+  }, [selectedWork])
+
+  const handleCloseAddToPlaylist = useCallback(() => {
+    setAddToPlaylistTarget(null)
+  }, [])
+
+  // 从播放列表点击播放某项：根据 workId 找到本地作品，切换视图并播放
+  const handlePlayPlaylistItem = useCallback(async (item) => {
+    if (!item) return
+    try {
+      // 在线曲目：直接构造作品并播放
+      if (item.isOnline) {
+        // 在线曲目通常依赖已加载的作品上下文，简单切换到「发现」视图并提示
+        showToast('在线曲目请在「发现」中重新打开作品后播放', 'info')
+        return
+      }
+      // 本地作品：从 works 中查找
+      const target = works.find((w) => w.id === item.workId) || works.find((w) => w.folderPath === item.workId)
+      if (!target) {
+        showToast('找不到原作品，可能已被删除', 'warning')
+        return
+      }
+      // 切换到 library 视图并选中作品
+      setCurrentView('library')
+      setSelectedWork(target)
+      // 等待 audioFiles 加载完成后播放对应曲目（通过轮询 playerRef）
+      const tryPlay = setInterval(() => {
+        // audioFiles 是异步加载的，借助 closure 直接读 state 不可行，改用全局引用
+        // 使用 querySelector 找到对应 audio-name 的元素并不优雅，改为读取最新 audioFiles 通过 setState 后再触发
+        // 这里采用轮询 setAudioFiles 已加载的标志
+        // 但因为 closure 限制，使用 ref 保存最新 audioFiles
+        const files = latestAudioFilesRef.current
+        if (files && files.length > 0) {
+          const target2 = files.find((f) => f.path === item.audioPath)
+          if (target2) {
+            handleSelectAudio(target2)
+            clearInterval(tryPlay)
+          }
+        }
+      }, 200)
+      setTimeout(() => clearInterval(tryPlay), 8000)
+    } catch (e) {
+      console.error('Failed to play playlist item:', e)
+      showToast('播放失败：' + (e.message || ''), 'error')
+    }
+  }, [works, showToast, handleSelectAudio])
+
+  // 跳转到作品
+  const handleNavigateToWorkFromPlaylist = useCallback((item) => {
+    if (!item) return
+    if (item.isOnline) {
+      setCurrentView('discover')
+      showToast('已切换到「发现」视图', 'info')
+      return
+    }
+    const target = works.find((w) => w.id === item.workId) || works.find((w) => w.folderPath === item.workId)
+    if (!target) {
+      showToast('找不到原作品', 'warning')
+      return
+    }
+    setCurrentView('library')
+    setSelectedWork(target)
+  }, [works, showToast])
+
+  // 保存最新的 audioFiles 到 ref，供上面轮询使用
+  const latestAudioFilesRef = useRef([])
+  useEffect(() => {
+    latestAudioFilesRef.current = audioFiles
+  }, [audioFiles])
+
   const handleSaveSettings = (newSettings) => {
     setSettings(newSettings)
     localStorage.setItem('appSettings', JSON.stringify(newSettings))
@@ -1447,7 +1523,11 @@ export default function App() {
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
             </div>
-            <div className="nav-item" title="播放列表">
+            <div
+              className={`nav-item ${currentView === 'playlist' ? 'active' : ''}`}
+              title="播放列表"
+              onClick={() => setCurrentView('playlist')}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6" />
                 <line x1="8" y1="12" x2="21" y2="12" />
@@ -1525,6 +1605,7 @@ export default function App() {
                     getTranslatedText={getTranslatedText}
                     isTranslated={isTranslated}
                     isTranslating={isTranslating}
+                    onAddToPlaylist={handleOpenAddToPlaylist}
                   />
                 </div>
                 <div className="right-tab-wrapper">
@@ -1624,6 +1705,7 @@ export default function App() {
                     getTranslatedText={getTranslatedText}
                     isTranslated={isTranslated}
                     isTranslating={isTranslating}
+                    onAddToPlaylist={handleOpenAddToPlaylist}
                   />
                 </div>
                 <div className="right-tab-wrapper discover-right-tab">
@@ -1673,6 +1755,14 @@ export default function App() {
         <div className="download-view-wrapper">
           <DownloadView />
         </div>
+      )}
+
+      {currentView === 'playlist' && (
+        <PlaylistView
+          onPlayItem={handlePlayPlaylistItem}
+          onNavigateToWork={handleNavigateToWorkFromPlaylist}
+          onToast={showToast}
+        />
       )}
 
       {toasts.length > 0 && (
@@ -1753,7 +1843,172 @@ export default function App() {
           onNavigateToDownload={() => setCurrentView('download')}
         />
       )}
+
+      {addToPlaylistTarget && (
+        <AddToPlaylistModal
+          target={addToPlaylistTarget}
+          onClose={handleCloseAddToPlaylist}
+          onToast={showToast}
+        />
+      )}
       </div>
     </ErrorBoundary>
+  )
+}
+
+// 加入播放列表弹窗
+function AddToPlaylistModal({ target, onClose, onToast }) {
+  const [playlists, setPlaylists] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedId, setSelectedId] = useState(null)
+  const [creatingName, setCreatingName] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const refresh = useCallback(async () => {
+    try {
+      const data = await window.electronAPI.playlistGetAll()
+      setPlaylists(data || [])
+      if (data && data.length > 0) setSelectedId(data[0].id)
+    } catch (e) {
+      console.error('Failed to load playlists:', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const handleConfirm = useCallback(async () => {
+    if (!selectedId || !target?.audio) return
+    setSubmitting(true)
+    try {
+      const { audio, work } = target
+      const item = {
+        workId: work?.id || '',
+        workTitle: work?.title || work?.folderName || '',
+        workCover: work?.cover || '',
+        audioPath: audio.path,
+        audioName: audio.name || '',
+        isOnline: !!audio.isOnline,
+      }
+      const updated = await window.electronAPI.playlistAddItem(selectedId, item)
+      if (updated) {
+        // 检查是否真的加入（去重时 items 不变）
+        const existsBefore = playlists.find((p) => p.id === selectedId)?.items?.some((it) => it.audioPath === audio.path)
+        onToast?.(existsBefore ? '该曲目已在播放列表中' : `已加入播放列表`, existsBefore ? 'info' : 'success')
+      }
+      onClose()
+    } catch (e) {
+      onToast?.('加入失败：' + (e.message || ''), 'error')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [selectedId, target, playlists, onToast, onClose])
+
+  const handleCreateAndAdd = useCallback(async () => {
+    const name = (creatingName || '').trim()
+    if (!name) {
+      setShowCreate(false)
+      setCreatingName('')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const created = await window.electronAPI.playlistCreate(name)
+      const { audio, work } = target
+      const item = {
+        workId: work?.id || '',
+        workTitle: work?.title || work?.folderName || '',
+        workCover: work?.cover || '',
+        audioPath: audio.path,
+        audioName: audio.name || '',
+        isOnline: !!audio.isOnline,
+      }
+      await window.electronAPI.playlistAddItem(created.id, item)
+      onToast?.(`已创建并加入「${created.name}」`, 'success')
+      onClose()
+    } catch (e) {
+      onToast?.('创建失败：' + (e.message || ''), 'error')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [creatingName, target, onToast, onClose])
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal add-to-playlist-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>加入播放列表</h3>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="add-to-playlist-target-info">
+            <span className="add-to-playlist-target-name">{target?.audio?.name || '未知曲目'}</span>
+            {target?.work?.title && <span className="add-to-playlist-target-work">{target.work.title}</span>}
+          </div>
+          {loading ? (
+            <div className="add-to-playlist-loading">加载中...</div>
+          ) : playlists.length === 0 && !showCreate ? (
+            <div className="add-to-playlist-empty">
+              <p>还没有播放列表</p>
+              <button className="btn-primary" onClick={() => setShowCreate(true)}>新建播放列表</button>
+            </div>
+          ) : (
+            <div className="add-to-playlist-list">
+              {playlists.map((pl) => (
+                <label
+                  key={pl.id}
+                  className={`add-to-playlist-option ${selectedId === pl.id ? 'selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="playlist-target"
+                    checked={selectedId === pl.id}
+                    onChange={() => setSelectedId(pl.id)}
+                  />
+                  <span className="add-to-playlist-option-name">{pl.name}</span>
+                  <span className="add-to-playlist-option-count">{(pl.items || []).length} 首</span>
+                </label>
+              ))}
+              {showCreate ? (
+                <div className="add-to-playlist-create">
+                  <input
+                    type="text"
+                    className="playlist-name-input"
+                    placeholder="新播放列表名称"
+                    value={creatingName}
+                    autoFocus
+                    onChange={(e) => setCreatingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateAndAdd()
+                      else if (e.key === 'Escape') { setShowCreate(false); setCreatingName('') }
+                    }}
+                    maxLength={50}
+                  />
+                  <button className="btn-primary" onClick={handleCreateAndAdd} disabled={submitting}>创建并加入</button>
+                </div>
+              ) : (
+                <button className="add-to-playlist-new-btn" onClick={() => setShowCreate(true)}>
+                  + 新建播放列表
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+          <button
+            className="btn-primary"
+            onClick={handleConfirm}
+            disabled={!selectedId || submitting || loading}
+          >
+            {submitting ? '处理中...' : '加入'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

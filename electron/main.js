@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -281,6 +281,39 @@ ipcMain.handle('db:getUsageStats', async (_, opts) => {
 
 ipcMain.handle('db:getAllHistory', async () => {
   return getAllHistory()
+})
+
+// ===== 播放列表 IPC =====
+ipcMain.handle('playlist:getAll', async () => {
+  return getAllPlaylists()
+})
+
+ipcMain.handle('playlist:create', async (_, name) => {
+  return createPlaylist(name)
+})
+
+ipcMain.handle('playlist:rename', async (_, id, name) => {
+  return renamePlaylist(id, name)
+})
+
+ipcMain.handle('playlist:delete', async (_, id) => {
+  return deletePlaylist(id)
+})
+
+ipcMain.handle('playlist:addItem', async (_, id, item) => {
+  return addPlaylistItem(id, item)
+})
+
+ipcMain.handle('playlist:removeItem', async (_, id, itemId) => {
+  return removePlaylistItem(id, itemId)
+})
+
+ipcMain.handle('playlist:reorderItems', async (_, id, itemIds) => {
+  return reorderPlaylistItems(id, itemIds)
+})
+
+ipcMain.handle('playlist:clear', async (_, id) => {
+  return clearPlaylist(id)
 })
 
 ipcMain.handle('log:info', async (_, message, ...args) => {

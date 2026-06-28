@@ -25,6 +25,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbAppendHistory: (entry) => ipcRenderer.invoke('db:appendHistory', entry),
   dbGetUsageStats: (opts) => ipcRenderer.invoke('db:getUsageStats', opts),
   dbGetAllHistory: () => ipcRenderer.invoke('db:getAllHistory'),
+
+  // 播放列表
+  playlistGetAll: () => ipcRenderer.invoke('playlist:getAll'),
+  playlistCreate: (name) => ipcRenderer.invoke('playlist:create', name),
+  playlistRename: (id, name) => ipcRenderer.invoke('playlist:rename', id, name),
+  playlistDelete: (id) => ipcRenderer.invoke('playlist:delete', id),
+  playlistAddItem: (id, item) => ipcRenderer.invoke('playlist:addItem', id, item),
+  playlistRemoveItem: (id, itemId) => ipcRenderer.invoke('playlist:removeItem', id, itemId),
+  playlistReorderItems: (id, itemIds) => ipcRenderer.invoke('playlist:reorderItems', id, itemIds),
+  playlistClear: (id) => ipcRenderer.invoke('playlist:clear', id),
   logInfo: (message, ...args) => ipcRenderer.invoke('log:info', message, ...args),
   logWarn: (message, ...args) => ipcRenderer.invoke('log:warn', message, ...args),
   logError: (message, ...args) => ipcRenderer.invoke('log:error', message, ...args),

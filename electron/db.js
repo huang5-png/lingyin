@@ -14,6 +14,7 @@ async function initDB() {
     subtitles: {},
     settings: {},
     history: [],
+    playlists: [],
   }
 
   try {
@@ -285,6 +286,130 @@ async function getAllHistory() {
   return dbData.history || []
 }
 
+// ===== Playlists =====
+// Playlist 结构：{ id, name, createdAt, updatedAt, items: [PlaylistItem] }
+// PlaylistItem 结构：{ id, workId, workTitle, workCover, audioPath, audioName, isOnline, addedAt }
+
+function genId(prefix = 'pl') {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function ensurePlaylists() {
+  if (!Array.isArray(dbData.playlists)) dbData.playlists = []
+  return dbData.playlists
+}
+
+async function getAllPlaylists() {
+  return ensurePlaylists()
+}
+
+async function createPlaylist(name) {
+  const playlists = ensurePlaylists()
+  const now = Date.now()
+  const safeName = (name && String(name).trim()) || '未命名播放列表'
+  const playlist = {
+    id: genId('pl'),
+    name: safeName,
+    createdAt: now,
+    updatedAt: now,
+    items: [],
+  }
+  playlists.push(playlist)
+  saveDB()
+  return playlist
+}
+
+async function renamePlaylist(id, name) {
+  const playlists = ensurePlaylists()
+  const pl = playlists.find((p) => p.id === id)
+  if (!pl) return null
+  const safeName = (name && String(name).trim()) || '未命名播放列表'
+  pl.name = safeName
+  pl.updatedAt = Date.now()
+  saveDB()
+  return pl
+}
+
+async function deletePlaylist(id) {
+  const playlists = ensurePlaylists()
+  const idx = playlists.findIndex((p) => p.id === id)
+  if (idx < 0) return false
+  playlists.splice(idx, 1)
+  saveDB()
+  return true
+}
+
+async function addPlaylistItem(id, item) {
+  const playlists = ensurePlaylists()
+  const pl = playlists.find((p) => p.id === id)
+  if (!pl) return null
+  if (!item || !item.audioPath) return pl
+  // 去重：相同 audioPath 不重复加入
+  const exists = (pl.items || []).find((it) => it.audioPath === item.audioPath)
+  if (exists) return pl
+  if (!Array.isArray(pl.items)) pl.items = []
+  const newItem = {
+    id: genId('it'),
+    workId: item.workId || '',
+    workTitle: item.workTitle || '',
+    workCover: item.workCover || '',
+    audioPath: item.audioPath,
+    audioName: item.audioName || '',
+    isOnline: !!item.isOnline,
+    addedAt: Date.now(),
+  }
+  pl.items.push(newItem)
+  pl.updatedAt = Date.now()
+  saveDB()
+  return pl
+}
+
+async function removePlaylistItem(id, itemId) {
+  const playlists = ensurePlaylists()
+  const pl = playlists.find((p) => p.id === id)
+  if (!pl) return null
+  if (!Array.isArray(pl.items)) pl.items = []
+  const idx = pl.items.findIndex((it) => it.id === itemId)
+  if (idx < 0) return pl
+  pl.items.splice(idx, 1)
+  pl.updatedAt = Date.now()
+  saveDB()
+  return pl
+}
+
+async function reorderPlaylistItems(id, itemIds) {
+  const playlists = ensurePlaylists()
+  const pl = playlists.find((p) => p.id === id)
+  if (!pl) return null
+  if (!Array.isArray(pl.items)) pl.items = []
+  if (!Array.isArray(itemIds)) return pl
+  const map = new Map(pl.items.map((it) => [it.id, it]))
+  const next = []
+  for (const iid of itemIds) {
+    const it = map.get(iid)
+    if (it) {
+      next.push(it)
+      map.delete(iid)
+    }
+  }
+  // 任何未在 itemIds 中的项目追加到末尾，避免数据丢失
+  for (const remaining of map.values()) next.push(remaining)
+  pl.items = next
+  pl.updatedAt = Date.now()
+  saveDB()
+  return pl
+}
+
+async function clearPlaylist(id) {
+  const playlists = ensurePlaylists()
+  const pl = playlists.find((p) => p.id === id)
+  if (!pl) return null
+  pl.items = []
+  pl.updatedAt = Date.now()
+  saveDB()
+  return pl
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -301,4 +426,12 @@ module.exports = {
   appendHistory,
   getUsageStats,
   getAllHistory,
+  getAllPlaylists,
+  createPlaylist,
+  renamePlaylist,
+  deletePlaylist,
+  addPlaylistItem,
+  removePlaylistItem,
+  reorderPlaylistItems,
+  clearPlaylist,
 }
