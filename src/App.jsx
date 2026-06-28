@@ -53,7 +53,7 @@ const DEFAULT_SETTINGS = {
   showLyric: true,
   autoScrollLyric: true,
   skipSeconds: 5,
-  theme: 'dark',
+  theme: 'light',
   viewMode: 'grid',
 }
 
