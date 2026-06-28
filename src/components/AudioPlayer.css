@@ -505,3 +505,120 @@
     min-width: 32px;
   }
 }
+
+/* ===== 睡眠定时器 ===== */
+.sleep-timer-control {
+  position: relative;
+  margin-left: 8px;
+}
+
+.ctrl-btn.sleep-timer-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 13px;
+  position: relative;
+}
+
+.ctrl-btn.sleep-timer-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 定时器激活态 */
+.ctrl-btn.sleep-timer-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.sleep-timer-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+/* 定时器剩余时间徽标 */
+.sleep-timer-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 28px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #faf9f5);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .sleep-timer-badge {
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #262624);
+}
+
+/* 定时器下拉菜单 */
+.sleep-timer-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 140px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-index-popover, 1000);
+  overflow: hidden;
+}
+
+.sleep-timer-header {
+  padding: 10px 12px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.02em;
+}
+
+.sleep-timer-options {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sleep-timer-option {
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.01em;
+}
+
+.sleep-timer-option:hover {
+  background: var(--bg-hover);
+}
+
+.sleep-timer-option.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .sleep-timer-option.active {
+  background: rgba(217, 119, 87, 0.12);
+}

@@ -580,6 +580,53 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 启动时从 `settings.loopMode / settings.shuffle` 初始化 state
 - 切换时同步写入两处（参考其他设置的持久化模式）
 
+### 19. 睡眠定时器
+
+#### 功能概述
+- 用户可设置播放一段时间后自动停止播放
+- 适合睡前听 ASMR 的使用场景
+- 不持久化到设置，每次启动重置
+
+#### 核心状态（App.jsx）
+- `sleepTimerMinutes` — 设置的分钟数，0 表示关闭
+- `sleepTimerRemaining` — 剩余秒数
+
+#### 定时器选项
+```js
+export const SLEEP_TIMER_OPTIONS = [
+  { label: '关闭', value: 0 },
+  { label: '5 分钟', value: 5 },
+  { label: '10 分钟', value: 10 },
+  { label: '15 分钟', value: 15 },
+  { label: '30 分钟', value: 30 },
+  { label: '45 分钟', value: 45 },
+  { label: '60 分钟', value: 60 },
+  { label: '90 分钟', value: 90 },
+]
+```
+
+#### 倒计时逻辑
+- `useEffect` 监听 `sleepTimerMinutes` 变化，启动/停止倒计时
+- 每秒减少 `sleepTimerRemaining`
+- 倒计时到 0 时：
+  - 调用 `playerRef.current.playPause()` 暂停播放
+  - 重置 `sleepTimerMinutes` 为 0
+  - 显示 Toast 通知
+
+#### UI 入口
+- `AudioPlayer.jsx` 播放器右侧区域
+- 位于队列控制按钮旁边
+- 月亮图标按钮，点击展开下拉菜单
+- 激活时按钮高亮 + 显示剩余时间徽标
+
+#### 格式化函数
+```js
+function formatSleepTimerRemaining(seconds) {
+  // 小于60分钟：M:SS 格式
+  // 大于等于60分钟：H:MM:SS 格式
+}
+```
+
 ## 已知约定
 
 - 代码注释用中文

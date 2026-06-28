@@ -62,6 +62,18 @@ const DEFAULT_SETTINGS = {
   shortcuts: { ...DEFAULT_SHORTCUTS },
 }
 
+// 睡眠定时器预设选项（分钟）
+export const SLEEP_TIMER_OPTIONS = [
+  { label: '关闭', value: 0 },
+  { label: '5 分钟', value: 5 },
+  { label: '10 分钟', value: 10 },
+  { label: '15 分钟', value: 15 },
+  { label: '30 分钟', value: 30 },
+  { label: '45 分钟', value: 45 },
+  { label: '60 分钟', value: 60 },
+  { label: '90 分钟', value: 90 },
+]
+
 // 生成队列项 ID
 function genQueueItemId() {
   return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
@@ -106,6 +118,9 @@ export default function App() {
   const [shuffle, setShuffle] = useState(!!settings.shuffle) // 随机播放
   const [showQueuePanel, setShowQueuePanel] = useState(false) // 队列浮层开关
   const pendingQueuePlayRef = useRef(null) // 跨作品播放时的待播放项 { item, startedAt }
+  // ===== 睡眠定时器 =====
+  const [sleepTimerMinutes, setSleepTimerMinutes] = useState(0) // 设置的分钟数，0 表示关闭
+  const [sleepTimerRemaining, setSleepTimerRemaining] = useState(0) // 剩余秒数
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
   const [flipState, setFlipState] = useState({
@@ -1304,6 +1319,38 @@ export default function App() {
     setShowQueuePanel((prev) => !prev)
   }, [])
 
+  // ===== 睡眠定时器 =====
+  const handleSetSleepTimer = useCallback((minutes) => {
+    setSleepTimerMinutes(minutes)
+    if (minutes > 0) {
+      setSleepTimerRemaining(minutes * 60)
+      showToast(`睡眠定时器已设置：${minutes} 分钟后停止播放`, 'info')
+    } else {
+      setSleepTimerRemaining(0)
+      showToast('睡眠定时器已取消', 'info')
+    }
+  }, [showToast])
+
+  // 睡眠定时器倒计时逻辑
+  useEffect(() => {
+    if (sleepTimerMinutes <= 0) return
+    const timer = setInterval(() => {
+      setSleepTimerRemaining((prev) => {
+        if (prev <= 1) {
+          // 时间到，暂停播放
+          if (playerRef.current) {
+            playerRef.current.playPause()
+          }
+          setSleepTimerMinutes(0)
+          showToast('睡眠定时器到时，播放已停止', 'info')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [sleepTimerMinutes, showToast])
+
   const handlePrevAudio = useCallback(() => {
     // 队列模式优先
     if (queueIndex >= 0 && playQueue.length > 0) {
@@ -1957,6 +2004,9 @@ export default function App() {
                   onClearQueue={handleClearQueue}
                   onReorderQueue={handleReorderQueue}
                   onCloseQueuePanel={() => setShowQueuePanel(false)}
+                  sleepTimerMinutes={sleepTimerMinutes}
+                  sleepTimerRemaining={sleepTimerRemaining}
+                  onSetSleepTimer={handleSetSleepTimer}
                 />
               </div>
             </div>
@@ -2072,6 +2122,9 @@ export default function App() {
                   onClearQueue={handleClearQueue}
                   onReorderQueue={handleReorderQueue}
                   onCloseQueuePanel={() => setShowQueuePanel(false)}
+                  sleepTimerMinutes={sleepTimerMinutes}
+                  sleepTimerRemaining={sleepTimerRemaining}
+                  onSetSleepTimer={handleSetSleepTimer}
                 />
               </div>
             </div>

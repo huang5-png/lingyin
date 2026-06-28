@@ -4,6 +4,19 @@ import { formatTime } from '../utils/subtitleParser'
 import QueuePanel from './QueuePanel'
 import './AudioPlayer.css'
 
+// 格式化睡眠定时器剩余时间
+function formatSleepTimerRemaining(seconds) {
+  if (seconds <= 0) return ''
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  if (mins >= 60) {
+    const hours = Math.floor(mins / 60)
+    const remainingMins = mins % 60
+    return `${hours}:${String(remainingMins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+  return `${mins}:${String(secs).padStart(2, '0')}`
+}
+
 function pathToFileURL(filePath) {
   if (!filePath) return ''
   let normalizedPath = filePath.replace(/\\/g, '/')
@@ -31,6 +44,8 @@ const AudioPlayer = forwardRef(function AudioPlayer(
     queue = [], queueIndex = -1, loopMode = 'none', shuffle = false, showQueuePanel = false,
     onToggleQueue, onToggleLoop, onToggleShuffle,
     onPlayFromQueue, onRemoveFromQueue, onClearQueue, onReorderQueue, onCloseQueuePanel,
+    // 睡眠定时器相关
+    sleepTimerMinutes = 0, sleepTimerRemaining = 0, onSetSleepTimer,
   },
   ref,
 ) {
@@ -48,6 +63,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
   const [tooltipTime, setTooltipTime] = useState(0)
   const [tooltipPosition, setTooltipPosition] = useState(0)
   const volumeSliderRef = useRef(null)
+  const [showSleepTimer, setShowSleepTimer] = useState(false) // 定时器下拉菜单显示状态
 
   useImperativeHandle(ref, () => ({
     seekTo: (time) => {
@@ -392,6 +408,75 @@ const AudioPlayer = forwardRef(function AudioPlayer(
             </svg>
             {queue.length > 0 && <span className="queue-badge">{queue.length}</span>}
           </button>
+        </div>
+        <div className="sleep-timer-control">
+          <button
+            className={`ctrl-btn sleep-timer-btn ${sleepTimerMinutes > 0 ? 'active' : ''}`}
+            onClick={() => setShowSleepTimer(!showSleepTimer)}
+            title={sleepTimerMinutes > 0 ? `睡眠定时器：${formatSleepTimerRemaining(sleepTimerRemaining)}后停止` : '睡眠定时器'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            {sleepTimerMinutes > 0 && (
+              <span className="sleep-timer-badge">{formatSleepTimerRemaining(sleepTimerRemaining)}</span>
+            )}
+          </button>
+          {showSleepTimer && (
+            <div className="sleep-timer-dropdown">
+              <div className="sleep-timer-header">睡眠定时器</div>
+              <div className="sleep-timer-options">
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 0 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(0); setShowSleepTimer(false) }}
+                >
+                  关闭
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 5 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(5); setShowSleepTimer(false) }}
+                >
+                  5 分钟
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 10 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(10); setShowSleepTimer(false) }}
+                >
+                  10 分钟
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 15 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(15); setShowSleepTimer(false) }}
+                >
+                  15 分钟
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 30 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(30); setShowSleepTimer(false) }}
+                >
+                  30 分钟
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 45 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(45); setShowSleepTimer(false) }}
+                >
+                  45 分钟
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 60 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(60); setShowSleepTimer(false) }}
+                >
+                  60 分钟
+                </button>
+                <button
+                  className={`sleep-timer-option ${sleepTimerMinutes === 90 ? 'active' : ''}`}
+                  onClick={() => { onSetSleepTimer(90); setShowSleepTimer(false) }}
+                >
+                  90 分钟
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {showQueuePanel && (
