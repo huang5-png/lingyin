@@ -268,13 +268,13 @@ export default function App() {
   const getTranslatedText = useCallback((text) => {
     if (!text) return text
     return translateCacheRef.current.get(text) || text
-  }, [translateVersion])
+  }, [])
 
   // 检查文本是否已翻译
   const isTranslated = useCallback((text) => {
     if (!text) return false
     return translateCacheRef.current.has(text)
-  }, [translateVersion])
+  }, [])
 
   // 检查文本是否正在翻译中
   const isTranslating = useCallback((text) => {
@@ -283,10 +283,10 @@ export default function App() {
   }, [translating])
 
   // 是否有任何文本正在翻译中（用于全局翻译按钮的转圈状态）
-  const isAnyTranslating = translating.size > 0
+  const isAnyTranslating = useMemo(() => translating.size > 0, [translating])
 
   // 是否有翻译内容（用于双语显示模式）
-  const hasTranslation = currentCues.some(cue => cue.translated)
+  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
 
   // 切换字幕翻译：批量翻译当前所有字幕文本
   const handleToggleTranslate = useCallback(async () => {
@@ -394,6 +394,7 @@ export default function App() {
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
   const lastHistoryTimeRef = useRef(0)
+  const durationRef = useRef(0)
   const loadingWorkIdRef = useRef(null)
 
   const currentCueIndex = useMemo(() => {
@@ -1114,7 +1115,7 @@ export default function App() {
           lastSaveTimeRef.current = now
           window.electronAPI.dbSaveProgress(selectedWork.id, currentAudio.path, {
             currentTime: time,
-            duration: duration,
+            duration: durationRef.current,
           })
         }
         // Record listening history every 60 seconds (both online & local)
@@ -1134,11 +1135,12 @@ export default function App() {
         }
       }
     },
-    [selectedWork, currentAudio, duration],
+    [selectedWork, currentAudio],
   )
 
   const handleReady = useCallback((dur) => {
     setDuration(dur)
+    durationRef.current = dur
   }, [])
 
   const handleSeek = useCallback((time) => {
