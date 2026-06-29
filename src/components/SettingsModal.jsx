@@ -476,6 +476,19 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
         <span className="about-dot">·</span>
         <span className="about-link">反馈建议</span>
       </div>
+      <div className="about-actions">
+        <button
+          className="about-action-btn"
+          onClick={async () => {
+            await window.electronAPI.openLogFolder()
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          打开日志文件夹
+        </button>
+      </div>
     </div>
   );
 

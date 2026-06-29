@@ -650,6 +650,34 @@
   color: var(--text-tertiary);
 }
 
+.about-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.about-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-heading);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.about-action-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
 /* ── Animations ────────────────────────────────────── */
 .fade-in {
   opacity: 1;

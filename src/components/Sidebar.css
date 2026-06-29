@@ -356,6 +356,16 @@
   color: var(--text-primary);
 }
 
+.filter-row {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-half {
+  flex: 1;
+  min-width: 0;
+}
+
 .search-group {
   margin-bottom: 4px;
 }

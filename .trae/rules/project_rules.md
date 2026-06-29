@@ -38,26 +38,29 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  自定义标题栏 (title-bar) — 透明背景，与应用融为一体                  │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌────┐ ┌──────────┐ ┌──────────────────────┐ ┌────────────┐       │
-│  │ 左 │ │  侧边栏  │ │   主内容区            │ │ 右侧标签栏 │       │
-│  │ 侧 │ │ (卡片)   │ │  （作品详情卡片）     │ │ （卡片）   │       │
-│  │ 航 │ │          │ │  （曲目列表卡片）     │ │            │       │
-│  │ 栏 │ │          │ │                      │ │            │       │
-│  │(卡│ │          │ │                      │ │            │       │
-│  │片)│ │          │ │                      │ │            │       │
-│  └────┘ └──────────┘ └──────────────────────┘ └────────────┘       │
-│  ┌──────────────────────────────────────────────────────────┐      │
-│  │  底部播放栏 (player-bar / AudioPlayer) — 卡片           │      │
-│  └──────────────────────────────────────────────────────────┘      │
-└─────────────────────────────────────────────────────────────────────┘
+├──────┬──────────────────────────────────────────────────────────────┤
+│      │  右侧内容区 (right-content-area)                             │
+│  左  │  ┌──────────────────────────────────────────────────────┐   │
+│  侧  │  │  library / discover / download 等视图区域            │   │
+│  导  │  │  （侧边栏卡片 + 详情卡片 + 右侧标签栏卡片）          │   │
+│  航  │  └──────────────────────────────────────────────────────┘   │
+│  栏  │  ┌──────────────────────────────────────────────────────┐   │
+│  (卡 │  │  底部播放栏 (AudioPlayer) — 卡片                    │   │
+│  片) │  └──────────────────────────────────────────────────────┘   │
+│  64px│                                                             │
+└──────┴──────────────────────────────────────────────────────────────┘
 ```
 
-- 左侧导航栏（64px，卡片）：我的库 / 发现 / 下载 / 统计 / 播放列表 / 设置
-- 侧边栏（280px，卡片）：作品列表、搜索、筛选、添加文件夹
-- 主内容区：作品详情卡片 + 曲目列表卡片
-- 右侧标签栏（卡片）：Details / Subtitles / Related / Playlists
-- 底部播放栏（卡片）：波形、播放控制、快进快退、音量、沉浸式
+- **左侧导航栏**（64px，卡片，`left-nav-bar`）：贯穿整个窗口高度，我的库 / 发现 / 最近播放 / 使用报告 / 下载管理 / 播放列表 / 设置
+- **右侧内容区**（`right-content-area`，flex 垂直布局）：
+  - **视图区域**（flex: 1）：根据当前视图切换不同内容
+    - **侧边栏**（卡片，`library-main` / `discover-main`）：作品列表、搜索、筛选、添加文件夹
+    - **作品详情区**（卡片，`work-detail-wrapper`）：作品详情 + 曲目列表
+    - **可拖拽分割线**（`content-splitter`）：8px 宽，可拖动调整右侧面板宽度（240-600px）
+    - **右侧标签栏**（卡片，`right-tab-bar`）：Details / Subtitles / Related / Playlists
+  - **底部播放栏**（卡片，`global-player-bar`）：波形、播放控制、快进快退、音量、沉浸式、睡眠定时器、队列
+    - 默认高度 96px（可在设置中调整）
+    - 仅占右侧内容区宽度，不延伸到左侧导航栏下方
 - 所有面板间距：`--spacing-card: 16px`
 - 背景有渐变叠加层营造纸张质感
 
@@ -65,16 +68,19 @@
 
 - **library（我的库）**：本地作品管理，左右分栏布局（library-layout），左侧作品列表卡片 + 右侧详情区
 - **discover（发现）**：在线 asmr.one 浏览，左右分栏布局（discover-layout），左侧搜索列表 + 右侧详情播放器
+- **recent-plays（最近播放）**：最近播放过的作品列表，按时间倒序排列
+- **annual-report（使用报告）**：年度/月度/日度播放时长、标签/CV/社团/作品排行
 - **download（下载管理）**：后台下载任务列表，实时进度、速度、状态展示
-- **usage-report（使用统计）**：年度/月度/日度播放时长、标签/CV/社团排行
 - **playlist（播放列表）**：用户自建播放列表管理，左侧列表栏 + 右侧曲目列表，支持拖拽排序
 
 #### 分栏布局特性
 - library / discover 视图采用 flex 左右分栏
-- 有选中作品时（`.has-detail`）：左侧约 32%，右侧约 60%
-- 无选中作品时：左侧占满 100%
-- 支持最小宽度约束，防止过度挤压
+- 有选中作品时（`.has-detail`）：左侧约 38%（360-460px），右侧约 56%
+- 无选中作品时：左侧占满 100%，右侧隐藏
+- 支持最小宽度约束，防止过度挤压（左侧 360px，右侧 520px）
 - 整个视图区域有 16px padding，卡片之间有 gap
+- **自动隐藏侧边栏**（`autoHideSidebar`，默认开启）：选中作品时左侧列表自动收起，展开详情区；可在设置中关闭
+- **可拖拽分割线**（`content-splitter`）：详情区内作品详情与右侧标签栏之间有 8px 宽的拖拽条，可拖动调整右侧面板宽度（240-600px）
 
 ### 数据流
 
@@ -102,22 +108,25 @@
 
 | 文件 | 职责 |
 |------|------|
-| `App.jsx` | 根组件，核心状态管理（selectedWork/currentAudio/subtitleOptions/currentTime/currentView/isImmersive/flipState） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、集成 QueuePanel 浮层） |
+| `App.jsx` | 根组件，核心状态管理（selectedWork/playingWork/currentAudio/currentView/isImmersive/flipState/playQueue/queueIndex/loopMode/shuffle/sleepTimer/rightPanelWidth） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
-| `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组） |
-| `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器） |
+| `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
+| `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
 | `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Related/Playlists 四个 Tab） |
-| `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表） |
-| `components/DownloadView.jsx` | 下载管理视图（任务列表、进度、速度、状态控制） |
+| `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表、重试机制） |
+| `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品） |
+| `components/UsageReport.jsx` | 使用报告视图（年度/月度/日度切换、标签/CV/社团/作品排行） |
+| `components/DownloadView.jsx` | 下载管理视图（任务列表、进度、速度、状态控制、后台下载） |
 | `components/DownloadModal.jsx` | 下载配置弹窗（选择文件、音质、添加到队列） |
-| `components/UsageReport.jsx` | 使用统计视图（年度/月度/日度切换、标签/CV/社团排行） |
 | `components/PlaylistView.jsx` | 播放列表视图（多列表、拖拽排序、加入弹窗） |
 | `components/QueuePanel.jsx` | 播放队列浮层（拖拽排序、循环/随机切换、当前项高亮、ESC 关闭） |
-| `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签 |
+| `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签、翻译切换 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/关于，六个 Tab） |
+| `components/KeyboardShortcutsPanel.jsx` | 快捷键配置面板（自定义快捷键、冲突检测） |
+| `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索作品/曲目/CV/社团，快捷键唤起） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
-| `components/StateView.jsx` | 统一空态/加载态/错误状态组件（支持预置图标、紧凑模式、行内模式、多种尺寸） |
+| `components/StateView.jsx` | 统一空态/加载态/错误状态组件（13+ 预置图标、sm/md/lg 尺寸、紧凑/行内模式） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
@@ -253,6 +262,19 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 数据库文件路径：`C:\Users\{用户}\AppData\Roaming\lingyin\db.json`
 - 设置同时存储在 localStorage 和 db 中（localStorage 优先加载）
 - 播放历史（`progressHistory`）用于统计，每 30 秒记录一次
+
+#### 数据结构一览
+```json
+{
+  "works": [],           // 本地作品列表
+  "progress": {},        // 播放进度 { workId::audioPath: seconds }
+  "progressHistory": [], // 播放历史记录（用于统计）
+  "subtitles": {},       // 字幕选择 { workId::audioPath: subtitleData }
+  "settings": {},        // 用户设置
+  "playlists": [],       // 播放列表
+  "translateCache": {}   // 翻译缓存 { workId::audioPath: { text, timestamp } }
+}
+```
 
 ### 5. 媒体库扫描规则
 
@@ -449,10 +471,10 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 ### 14. 设置面板
 
 设置弹窗包含 6 个分类标签页：
-- **基本** — 播放设置（自动播放下一首、记住进度、启动时自动播放、默认音量、快进快退秒数）
-- **外观** — 主题、是否显示评分、波形高度
+- **基本** — 播放设置（自动播放下一首、记住进度、启动时自动播放、默认音量、快进快退秒数、自动隐藏侧边栏）
+- **外观** — 主题、是否显示评分、波形高度、视图模式（网格/列表）
 - **主界面** — 侧边栏宽度、歌词宽度、播放器高度
-- **播放界面** — 显示歌词、自动滚动歌词
+- **播放界面** — 显示歌词、自动滚动歌词、字幕语言优先级、字幕字体大小、自动翻译字幕
 - **快捷键** — 自定义快捷键配置，支持组合键
 - **关于** — 版本信息、应用图标
 

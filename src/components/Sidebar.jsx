@@ -126,27 +126,29 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="filter-group">
-            <label>CV 筛选</label>
-            <select value={cvFilter} onChange={(e) => onFilterChange('cv', e.target.value)}>
-              <option value="">全部 CV</option>
-              {allCVs.map((cv) => (
-                <option key={cv} value={cv}>
-                  {cv}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="filter-group">
-            <label>社团筛选</label>
-            <select value={circleFilter} onChange={(e) => onFilterChange('circle', e.target.value)}>
-              <option value="">全部社团</option>
-              {allCircles.map((circle) => (
-                <option key={circle} value={circle}>
-                  {circle}
-                </option>
-              ))}
-            </select>
+          <div className="filter-row">
+            <div className="filter-group filter-half">
+              <label>CV 筛选</label>
+              <select value={cvFilter} onChange={(e) => onFilterChange('cv', e.target.value)}>
+                <option value="">全部 CV</option>
+                {allCVs.map((cv) => (
+                  <option key={cv} value={cv}>
+                    {cv}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-group filter-half">
+              <label>社团筛选</label>
+              <select value={circleFilter} onChange={(e) => onFilterChange('circle', e.target.value)}>
+                <option value="">全部社团</option>
+                {allCircles.map((circle) => (
+                  <option key={circle} value={circle}>
+                    {circle}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         </div>
@@ -254,17 +256,6 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
             </div>
           ))
         )}
-      </div>
-
-      <div className="sidebar-footer">
-        <button
-          className="log-btn"
-          onClick={async () => {
-            await window.electronAPI.openLogFolder()
-          }}
-        >
-          打开日志文件夹
-        </button>
       </div>
     </div>
   )

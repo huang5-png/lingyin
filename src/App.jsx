@@ -50,9 +50,9 @@ const DEFAULT_SETTINGS = {
   defaultVolume: 80,
   sidebarWidth: 280,
   lyricWidth: 360,
-  playerHeight: 120,
+  playerHeight: 96,
   showRatingStars: true,
-  waveformHeight: 70,
+  waveformHeight: 56,
   showLyric: true,
   autoScrollLyric: true,
   skipSeconds: 5,
@@ -1993,6 +1993,8 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        <div className="right-content-area">
       {currentView === 'library' && (
         <div className={`library-layout ${selectedWork ? 'has-detail' : ''} ${settings.autoHideSidebar && selectedWork ? 'hide-sidebar' : ''}`}>
           <div className="library-main">
@@ -2208,8 +2210,6 @@ export default function App() {
         </div>
       )}
 
-      </div>
-
       {/* 全局播放栏 - 常驻底部 */}
       {currentAudio && (
         <div className="global-player-bar">
@@ -2247,6 +2247,9 @@ export default function App() {
           />
         </div>
       )}
+
+      </div>
+      </div>
 
       {isImmersive && playingWork && (
         <div 
