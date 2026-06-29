@@ -488,26 +488,40 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 | 空格 | 播放/暂停 | 全局（非输入框） |
 | ← | 上一曲 | 全局（非输入框） |
 | → | 下一曲 | 全局（非输入框） |
-| ESC | 退出沉浸式模式 | 沉浸式界面 |
+| ↑ | 音量增加（+5%） | 全局（非输入框） |
+| ↓ | 音量减少（-5%） | 全局（非输入框） |
+| ESC | 关闭弹窗/退出沉浸式 | 全局（弹窗优先级高于沉浸式） |
 | Ctrl+K | 全局搜索 | 全局（非输入框） |
 
 #### 快捷键配置
 - 用户可在「设置 → 快捷键」中自定义快捷键
 - 支持组合键（如 Ctrl+Shift+P）
+- 支持清除单个快捷键绑定（点击「×」按钮）
+- 支持按 ESC 取消录制
 - 可配置的快捷键：
   - `playPause` — 播放/暂停
   - `prevTrack` — 上一曲
   - `nextTrack` — 下一曲
-  - `exitImmersive` — 退出沉浸式
-  - `globalSearch` — 全局搜索
-- 配置存储在 `settings.shortcuts` 中，持久化到 db.json
+  - `volumeUp` — 音量增加（默认 ↑）
+  - `volumeDown` — 音量减少（默认 ↓）
+  - `seekBackward` — 快退（默认未设置）
+  - `seekForward` — 快进（默认未设置）
+  - `toggleImmersive` — 切换沉浸式（默认未设置）
+  - `exitImmersive` — 退出沉浸式（默认 ESC）
+  - `toggleQueue` — 显示/隐藏队列（默认未设置）
+  - `openSettings` — 打开设置（默认未设置）
+  - `globalSearch` — 全局搜索（默认 Ctrl+K）
+- 配置存储在 `settings.shortcuts` 中，持久化到 db.json + localStorage
 - 快捷键冲突检测：检测同一组合键被多个动作使用
+- ESC 键处理优先级：弹窗（全局搜索/设置/下载/队列）→ 沉浸式模式
 
 #### 实现
 - `KeyboardShortcutsPanel.jsx` — 快捷键配置面板组件
 - `KeyboardShortcutsPanel.css` — 样式文件
-- `DEFAULT_SHORTCUTS` — 默认快捷键常量
+- `DEFAULT_SHORTCUTS` — 默认快捷键常量（包含 12 个可配置项）
 - `matchShortcut(e, shortcutStr)` — 匹配按键事件与快捷键字符串
+- `parseShortcut(shortcutStr)` — 解析快捷键字符串
+- AudioPlayer 通过 `useImperativeHandle` 暴露 `setVolume/getVolume/skipBackward/skipForward` 供快捷键调用
 
 ### 16. 下载管理
 
