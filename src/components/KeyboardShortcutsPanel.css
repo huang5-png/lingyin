@@ -118,6 +118,7 @@
   font-size: 12px;
 }
 
+.shortcut-clear-btn,
 .shortcut-edit-btn,
 .shortcut-reset-btn {
   display: flex;
@@ -135,16 +136,33 @@
   transition: all var(--transition-fast);
 }
 
+.shortcut-clear-btn:hover {
+  background: rgba(229, 62, 62, 0.1);
+  color: #e53e3e;
+}
+
 .shortcut-edit-btn:hover,
 .shortcut-reset-btn:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
+.shortcut-clear-btn svg,
 .shortcut-edit-btn svg,
 .shortcut-reset-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.shortcut-current:hover .shortcut-clear-btn {
+  opacity: 1;
+}
+
+.shortcut-unset {
+  font-family: var(--font-family);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-style: italic;
 }
 
 .shortcut-recording {

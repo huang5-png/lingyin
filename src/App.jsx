@@ -429,17 +429,6 @@ export default function App() {
     setIsImmersive(false)
   }, [])
 
-  useEffect(() => {
-    if (!isImmersive) return
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setIsImmersive(false)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isImmersive])
-
   const zoomRef = useRef(1)
 
   useEffect(() => {
@@ -1482,9 +1471,54 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        if (e.key === 'Escape') {
+          if (showGlobalSearch) {
+            e.preventDefault()
+            setShowGlobalSearch(false)
+          } else if (showSettingsModal) {
+            e.preventDefault()
+            setShowSettingsModal(false)
+          } else if (showDownloadModal) {
+            e.preventDefault()
+            setShowDownloadModal(false)
+          } else if (showQueuePanel) {
+            e.preventDefault()
+            setShowQueuePanel(false)
+          }
+        }
+        return
+      }
 
       const shortcuts = settings.shortcuts || DEFAULT_SHORTCUTS
+
+      if (matchShortcut(e, shortcuts.exitImmersive)) {
+        if (showGlobalSearch) {
+          e.preventDefault()
+          setShowGlobalSearch(false)
+          return
+        }
+        if (showSettingsModal) {
+          e.preventDefault()
+          setShowSettingsModal(false)
+          return
+        }
+        if (showDownloadModal) {
+          e.preventDefault()
+          setShowDownloadModal(false)
+          return
+        }
+        if (showQueuePanel) {
+          e.preventDefault()
+          setShowQueuePanel(false)
+          return
+        }
+        if (isImmersive) {
+          e.preventDefault()
+          setIsImmersive(false)
+        }
+        return
+      }
 
       if (matchShortcut(e, shortcuts.playPause)) {
         e.preventDefault()
@@ -1506,11 +1540,59 @@ export default function App() {
         return
       }
 
-      if (matchShortcut(e, shortcuts.exitImmersive)) {
-        if (isImmersive) {
-          e.preventDefault()
-          setIsImmersive(false)
+      if (matchShortcut(e, shortcuts.volumeUp)) {
+        e.preventDefault()
+        if (playerRef.current) {
+          const currentVol = playerRef.current.getVolume?.() ?? (settings.defaultVolume / 100)
+          const newVol = Math.min(1, currentVol + 0.05)
+          playerRef.current.setVolume(newVol)
         }
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.volumeDown)) {
+        e.preventDefault()
+        if (playerRef.current) {
+          const currentVol = playerRef.current.getVolume?.() ?? (settings.defaultVolume / 100)
+          const newVol = Math.max(0, currentVol - 0.05)
+          playerRef.current.setVolume(newVol)
+        }
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.seekBackward)) {
+        e.preventDefault()
+        if (playerRef.current) {
+          playerRef.current.skipBackward?.(settings.skipSeconds || 5)
+        }
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.seekForward)) {
+        e.preventDefault()
+        if (playerRef.current) {
+          playerRef.current.skipForward?.(settings.skipSeconds || 5)
+        }
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.toggleImmersive)) {
+        e.preventDefault()
+        if (currentAudio) {
+          setIsImmersive((prev) => !prev)
+        }
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.toggleQueue)) {
+        e.preventDefault()
+        setShowQueuePanel((prev) => !prev)
+        return
+      }
+
+      if (matchShortcut(e, shortcuts.openSettings)) {
+        e.preventDefault()
+        setShowSettingsModal(true)
         return
       }
 
@@ -1523,7 +1605,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handlePrevAudio, handleNextAudio, settings.shortcuts, isImmersive])
+  }, [handlePrevAudio, handleNextAudio, settings.shortcuts, settings.defaultVolume, settings.skipSeconds, isImmersive, showGlobalSearch, showSettingsModal, showDownloadModal, showQueuePanel, currentAudio])
 
   const handleSelectSubtitle = useCallback(async (index) => {
     setSelectedSubtitleIndex(index)

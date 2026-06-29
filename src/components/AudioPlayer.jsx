@@ -79,7 +79,22 @@ const AudioPlayer = forwardRef(function AudioPlayer(
       }
     },
     setVolume: (v) => {
-      setVolume(v)
+      const clamped = Math.max(0, Math.min(1, v))
+      setVolume(clamped)
+      if (wavesurferRef.current) {
+        wavesurferRef.current.setVolume(clamped)
+      }
+    },
+    getVolume: () => volume,
+    skipBackward: (seconds) => {
+      if (wavesurferRef.current && currentTime > 0) {
+        wavesurferRef.current.skip(-(seconds || skipSeconds))
+      }
+    },
+    skipForward: (seconds) => {
+      if (wavesurferRef.current && currentTime < duration) {
+        wavesurferRef.current.skip(seconds || skipSeconds)
+      }
     },
   }))
 
