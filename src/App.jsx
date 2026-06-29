@@ -58,8 +58,9 @@ const DEFAULT_SETTINGS = {
   skipSeconds: 5,
   theme: 'light',
   viewMode: 'grid',
-  loopMode: 'none', // 循环模式：none / one / list
-  shuffle: false,   // 随机播放
+  loopMode: 'none',
+  shuffle: false,
+  autoHideSidebar: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
 }
 
@@ -2012,7 +2013,7 @@ export default function App() {
           </div>
         </div>
       {currentView === 'library' && (
-        <div className={`library-layout ${selectedWork ? 'has-detail' : ''}`}>
+        <div className={`library-layout ${selectedWork ? 'has-detail' : ''} ${settings.autoHideSidebar && selectedWork ? 'hide-sidebar' : ''}`}>
           <div className="library-main">
             <Sidebar
               works={filteredWorks}
@@ -2130,7 +2131,7 @@ export default function App() {
           )}
         </div>
       )}
-      <div className={`discover-layout ${selectedWork && selectedWork.isOnline ? 'has-detail' : ''}`} style={{ display: currentView === 'discover' ? '' : 'none' }}>
+      <div className={`discover-layout ${selectedWork && selectedWork.isOnline ? 'has-detail' : ''} ${settings.autoHideSidebar && selectedWork && selectedWork.isOnline ? 'hide-sidebar' : ''}`} style={{ display: currentView === 'discover' ? '' : 'none' }}>
           <div className="discover-main">
             <DiscoverView 
               ref={discoverViewRef}

@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   autoScrollLyric: true,
   skipSeconds: 5,
   theme: 'dark',
+  autoHideSidebar: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
 };
 
@@ -311,6 +312,18 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
             <ToggleSwitch
               checked={settings.showRatingStars}
               onChange={() => handleToggle('showRatingStars')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">打开详情时隐藏侧边栏</div>
+            <div className="setting-desc">选中作品后自动隐藏左侧列表，让详情区占满更多空间</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.autoHideSidebar}
+              onChange={() => handleToggle('autoHideSidebar')}
             />
           </div>
         </div>

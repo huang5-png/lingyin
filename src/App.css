@@ -580,6 +580,38 @@
   display: none;
 }
 
+.library-layout.hide-sidebar .library-main {
+  flex: 0 0 0;
+  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-right: -16px;
+  transition: flex-basis var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow), opacity var(--transition-normal), margin-right var(--transition-slow);
+}
+
+.library-layout.hide-sidebar > .main-content {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.discover-layout.hide-sidebar .discover-main {
+  flex: 0 0 0;
+  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-right: -16px;
+  transition: flex-basis var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow), opacity var(--transition-normal), margin-right var(--transition-slow);
+}
+
+.discover-layout.hide-sidebar > .discover-detail-content {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
 .discover-layout {
   flex: 1;
   display: flex;
