@@ -124,7 +124,7 @@
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签、翻译切换 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/关于，六个 Tab） |
 | `components/KeyboardShortcutsPanel.jsx` | 快捷键配置面板（自定义快捷键、冲突检测） |
-| `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索作品/曲目/CV/社团，快捷键唤起） |
+| `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索作品/播放列表/CV/社团/标签，快捷键唤起，方向键选择+回车跳转） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
 | `components/StateView.jsx` | 统一空态/加载态/错误状态组件（13+ 预置图标、sm/md/lg 尺寸、紧凑/行内模式） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
@@ -489,6 +489,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 | ← | 上一曲 | 全局（非输入框） |
 | → | 下一曲 | 全局（非输入框） |
 | ESC | 退出沉浸式模式 | 沉浸式界面 |
+| Ctrl+K | 全局搜索 | 全局（非输入框） |
 
 #### 快捷键配置
 - 用户可在「设置 → 快捷键」中自定义快捷键
@@ -498,6 +499,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   - `prevTrack` — 上一曲
   - `nextTrack` — 下一曲
   - `exitImmersive` — 退出沉浸式
+  - `globalSearch` — 全局搜索
 - 配置存储在 `settings.shortcuts` 中，持久化到 db.json
 - 快捷键冲突检测：检测同一组合键被多个动作使用
 
@@ -559,6 +561,13 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 两种统计视图切换：趋势图 / 排行榜
 - 排行榜支持标签 / CV / 社团 / 作品分类切换
 - 数据在主进程聚合后返回渲染进程
+- **日期导航**：支持上一周期 / 下一周期 / 回到当前的日期切换
+  - 日度：切换具体日期
+  - 月度：切换月份
+  - 年度：切换年份
+  - 不能查看未来日期的数据（下一周期按钮在当前日期时禁用）
+- **刷新按钮**：手动刷新统计数据
+- `getUsageStats` 支持 `date` 参数指定统计的基准日期
 
 ### 18. 播放列表
 
