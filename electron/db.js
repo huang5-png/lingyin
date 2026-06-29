@@ -287,6 +287,25 @@ async function getAllHistory() {
   return dbData.history || []
 }
 
+// 删除指定作品的所有播放历史
+async function deleteHistoryByWorkId(workId) {
+  if (!dbData.history || !workId) return 0
+  const initialLen = dbData.history.length
+  dbData.history = dbData.history.filter((h) => h.workId !== workId)
+  const deleted = initialLen - dbData.history.length
+  if (deleted > 0) saveDB()
+  return deleted
+}
+
+// 清空全部播放历史
+async function clearAllHistory() {
+  if (!dbData.history) return 0
+  const count = dbData.history.length
+  dbData.history = []
+  saveDB()
+  return count
+}
+
 // 获取最近播放的作品（去重后按时间倒序），用于侧边栏快捷访问
 async function getRecentWorks(limit = 8) {
   const history = dbData.history || []
@@ -491,6 +510,8 @@ module.exports = {
   appendHistory,
   getUsageStats,
   getAllHistory,
+  deleteHistoryByWorkId,
+  clearAllHistory,
   getRecentWorks,
   getAllPlaylists,
   createPlaylist,

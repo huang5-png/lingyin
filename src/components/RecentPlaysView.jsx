@@ -5,6 +5,8 @@ import StateView from './StateView'
 export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onToast, onAutoPlay }) {
   const [recentList, setRecentList] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   const loadRecent = useCallback(async () => {
     try {
@@ -69,6 +71,36 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
     }
   }, [onSelectWork, onToast])
 
+  const handleDeleteItem = useCallback(async (item, e) => {
+    e.stopPropagation()
+    if (!item.workId) return
+    try {
+      setDeletingId(item.workId)
+      const deleted = await window.electronAPI.dbDeleteHistoryByWorkId(item.workId)
+      if (deleted > 0) {
+        setRecentList((prev) => prev.filter((rw) => rw.workId !== item.workId))
+        onToast?.(`已删除 ${deleted} 条播放记录`, 'success')
+      }
+    } catch (err) {
+      console.error('Failed to delete history:', err)
+      onToast?.('删除失败：' + (err.message || ''), 'error')
+    } finally {
+      setDeletingId(null)
+    }
+  }, [onToast])
+
+  const handleClearAll = useCallback(async () => {
+    try {
+      const count = await window.electronAPI.dbClearAllHistory()
+      setRecentList([])
+      setShowClearConfirm(false)
+      onToast?.(`已清空 ${count} 条播放记录`, 'success')
+    } catch (err) {
+      console.error('Failed to clear history:', err)
+      onToast?.('清空失败：' + (err.message || ''), 'error')
+    }
+  }, [onToast])
+
   return (
     <div className="recent-plays-view">
       <div className="rp-header">
@@ -77,6 +109,18 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
           <p className="rp-subtitle">共 {recentList.length} 条记录</p>
         </div>
         <div className="rp-actions">
+          {recentList.length > 0 && (
+            <button
+              className="rp-clear-btn"
+              onClick={() => setShowClearConfirm(true)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              清空记录
+            </button>
+          )}
         </div>
       </div>
 
@@ -124,26 +168,69 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
                     <span className="rp-time">{formatDate(item.timestamp)}</span>
                   </div>
                 </div>
-                {item.work && (
+                <div className="rp-item-actions">
                   <button
-                    className="rp-play-btn"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSelectWork?.(item.work)
-                      onAutoPlay?.(item)
-                    }}
-                    title="播放"
+                    className="rp-delete-btn"
+                    onClick={(e) => handleDeleteItem(item, e)}
+                    title="删除该作品的播放记录"
+                    disabled={deletingId === item.workId}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3"/>
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
                   </button>
-                )}
+                  {item.work && (
+                    <button
+                      className="rp-play-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSelectWork?.(item.work)
+                        onAutoPlay?.(item)
+                      }}
+                      title="播放"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {showClearConfirm && (
+        <div className="rp-confirm-overlay" onClick={() => setShowClearConfirm(false)}>
+          <div className="rp-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="rp-confirm-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 className="rp-confirm-title">确认清空全部播放记录？</h3>
+            <p className="rp-confirm-desc">此操作不可恢复，所有播放历史和统计数据都将被清除。</p>
+            <div className="rp-confirm-actions">
+              <button
+                className="rp-confirm-btn rp-confirm-cancel"
+                onClick={() => setShowClearConfirm(false)}
+              >
+                取消
+              </button>
+              <button
+                className="rp-confirm-btn rp-confirm-danger"
+                onClick={handleClearAll}
+              >
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

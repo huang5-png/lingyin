@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbGetUsageStats: (opts) => ipcRenderer.invoke('db:getUsageStats', opts),
   dbGetAllHistory: () => ipcRenderer.invoke('db:getAllHistory'),
   dbGetRecentWorks: (limit) => ipcRenderer.invoke('db:getRecentWorks', limit),
+  dbDeleteHistoryByWorkId: (workId) => ipcRenderer.invoke('db:deleteHistoryByWorkId', workId),
+  dbClearAllHistory: () => ipcRenderer.invoke('db:clearAllHistory'),
 
   // 播放列表
   playlistGetAll: () => ipcRenderer.invoke('playlist:getAll'),
