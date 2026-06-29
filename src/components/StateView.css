@@ -103,7 +103,65 @@
   color: var(--error-color);
 }
 
-/* 紧凑模式（小尺寸） */
+/* 尺寸变体 */
+.state-view-size-sm {
+  padding: 24px 16px;
+  min-height: 120px;
+}
+
+.state-view-size-sm .state-view-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+}
+
+.state-view-size-sm .state-view-title {
+  font-size: var(--font-size-sm);
+}
+
+.state-view-size-sm .state-view-description {
+  font-size: var(--font-size-xs);
+}
+
+.state-view-size-md {
+  padding: 36px 20px;
+  min-height: 160px;
+}
+
+.state-view-size-md .state-view-icon {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 14px;
+}
+
+.state-view-size-md .state-view-title {
+  font-size: var(--font-size-base);
+}
+
+.state-view-size-md .state-view-description {
+  font-size: var(--font-size-sm);
+}
+
+.state-view-size-lg {
+  padding: 48px 24px;
+  min-height: 200px;
+}
+
+.state-view-size-lg .state-view-icon {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+}
+
+.state-view-size-lg .state-view-title {
+  font-size: var(--font-size-lg);
+}
+
+.state-view-size-lg .state-view-description {
+  font-size: var(--font-size-sm);
+}
+
+/* 紧凑模式（别名，兼容旧代码） */
 .state-view-compact {
   padding: 24px 16px;
   min-height: 120px;

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import './Sidebar.css'
+import StateView from './StateView'
 
 export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -152,10 +153,13 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
 
       <div className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`} style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}>
         {filteredWorks.length === 0 ? (
-          <div className="empty-hint">
-            <p>{searchQuery ? '没有匹配的作品' : '还没有添加作品'}</p>
-            <p className="hint-text">{searchQuery ? '尝试其他关键词' : '点击上方按钮添加文件夹'}</p>
-          </div>
+          <StateView
+            type="empty"
+            iconType={searchQuery ? 'search' : 'music'}
+            title={searchQuery ? '没有匹配的作品' : '还没有添加作品'}
+            description={searchQuery ? '尝试其他关键词' : '点击上方按钮添加文件夹'}
+            className="sidebar-empty"
+          />
         ) : (
           filteredWorks.map((work) => (
             <div

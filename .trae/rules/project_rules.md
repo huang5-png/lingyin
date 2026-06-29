@@ -117,7 +117,7 @@
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/关于，六个 Tab） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
-| `components/StateView.jsx` | 统一空态/加载态/错误状态组件（支持预置图标、紧凑模式、行内模式） |
+| `components/StateView.jsx` | 统一空态/加载态/错误状态组件（支持预置图标、紧凑模式、行内模式、多种尺寸） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
@@ -216,6 +216,34 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 #### 高DPI适配
 - 使用 `@media (min-resolution: 1.5dppx/2dppx/2.5dppx)` 自动缩放字号和间距
 - 字号、侧边栏宽度、播放器高度随 DPI 自动调整
+
+### 3.1 统一空态/加载态/错误态（StateView）
+
+所有组件的空态、加载态、错误态必须使用统一的 `StateView` 组件，禁止自定义实现。
+
+#### 组件特性
+- **三种状态类型**：`empty`（空态）/ `loading`（加载中）/ `error`（错误）
+- **三种尺寸**：`sm` / `md`（默认）/ `lg`
+- **两种模式**：紧凑模式（`compact`）、行内模式（`inline`）
+- **13+ 预置图标**：empty / loading / error / playlist / download / folder / music / search / clock / chart / subtitle / queue / settings / warn / info
+
+#### 使用规范
+- 列表/网格为空时：`type="empty"`，配合对应的 iconType（音乐列表用 `music`，下载用 `download`，搜索用 `search` 等）
+- 数据加载中：`type="loading"`
+- 加载失败：`type="error"`，配合重试按钮（`action` 属性）
+- 卡片内小区域空态：`size="sm"` 或 `compact`
+- 页面级空态：默认尺寸或 `size="lg"`
+
+#### 已使用 StateView 的组件
+- WorkDetail（曲目加载/错误态）
+- Sidebar（作品列表空态）
+- DownloadView（下载任务空态）
+- UsageReport（统计数据空态 + 排行榜空态）
+- DiscoverView（标签加载/空态）
+- RecentPlaysView（最近播放空态）
+- QueuePanel（队列为空）
+- PlaylistView（播放列表为空）
+- GlobalSearchModal（搜索结果为空）
 
 ### 4. 数据持久化
 

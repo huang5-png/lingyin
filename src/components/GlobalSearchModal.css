@@ -72,9 +72,20 @@
 
 .global-search-empty {
   padding: 32px 16px;
-  text-align: center;
-  color: var(--text-secondary, #7a7570);
+  min-height: auto;
+}
+
+.global-search-empty .state-view-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+}
+
+.global-search-empty .state-view-title {
   font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary, #7a7570);
+  margin-bottom: 0;
 }
 
 .global-search-result-item {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import './DownloadView.css'
+import StateView from './StateView'
 
 function formatSize(bytes) {
   if (!bytes) return '--'
@@ -113,15 +114,13 @@ export default function DownloadView() {
 
       <div className="download-task-list">
         {allTasks.length === 0 ? (
-          <div className="download-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <p>暂无下载任务</p>
-            <p className="hint">去发现页选择作品下载吧</p>
-          </div>
+          <StateView
+            type="empty"
+            iconType="download"
+            title="暂无下载任务"
+            description="去发现页选择作品下载吧"
+            className="download-empty"
+          />
         ) : (
           allTasks.map((task) => {
             const isExpanded = expandedTasks.has(task.id)

@@ -468,10 +468,21 @@
 }
 
 .ranking-empty {
-  font-size: 13px;
-  color: var(--text-muted);
   padding: 24px 8px;
-  text-align: center;
+  min-height: auto;
+}
+
+.ranking-empty .state-view-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+}
+
+.ranking-empty .state-view-title {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-bottom: 0;
 }
 
 .ranking-list {

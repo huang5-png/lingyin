@@ -394,21 +394,25 @@
   padding: 8px;
 }
 
-.empty-hint {
+.sidebar-empty {
   padding: 48px 20px;
-  text-align: center;
-  color: var(--text-tertiary);
+  min-height: auto;
 }
 
-.empty-hint p {
-  margin-bottom: 6px;
+.sidebar-empty .state-view-icon {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 12px;
+}
+
+.sidebar-empty .state-view-title {
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 6px;
 }
 
-.empty-hint .hint-text {
+.sidebar-empty .state-view-description {
   font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
   opacity: 0.8;
 }
 

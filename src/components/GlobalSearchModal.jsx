@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import './GlobalSearchModal.css'
+import StateView from './StateView'
 
 // 搜索结果类型
 const RESULT_TYPE = {
@@ -175,9 +176,13 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
         {query.trim() && (
           <div className="global-search-results" ref={listRef}>
             {allResults.length === 0 ? (
-              <div className="global-search-empty">
-                <span>未找到匹配的结果</span>
-              </div>
+              <StateView
+                type="empty"
+                iconType="search"
+                title="未找到匹配的结果"
+                size="sm"
+                className="global-search-empty"
+              />
             ) : (
               allResults.map((result, index) => (
                 <div

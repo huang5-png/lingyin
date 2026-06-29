@@ -286,7 +286,13 @@ function RankingCard({ title, icon, items, color }) {
         <div className="ranking-title">{title}</div>
       </div>
       {items.length === 0 ? (
-        <div className="ranking-empty">暂无数据</div>
+        <StateView
+          type="empty"
+          iconType="chart"
+          title="暂无数据"
+          size="sm"
+          className="ranking-empty"
+        />
       ) : (
         <div className="ranking-list">
           {items.map((it, i) => (
