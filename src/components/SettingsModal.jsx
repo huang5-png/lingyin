@@ -29,7 +29,7 @@ const TABS = [
   { id: 'about', label: '关于' },
 ];
 
-function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
+function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab }) {
   const [activeTab, setActiveTab] = useState('basic');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isVisible, setIsVisible] = useState(false);
@@ -63,9 +63,9 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
         base = { ...base, ...currentSettings };
       }
       setSettings(base);
-      setActiveTab('basic');
+      setActiveTab(defaultTab || 'basic');
     }
-  }, [isOpen]);
+  }, [isOpen, defaultTab]);
 
   const handleToggle = (key) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -394,6 +394,56 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings }) {
             <ToggleSwitch
               checked={settings.autoScrollLyric}
               onChange={() => handleToggle('autoScrollLyric')}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-section-title">字幕</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">字幕语言优先级</div>
+            <div className="setting-desc">自动选择字幕后，优先使用的语言</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.subtitleLangPriority || 'auto'}
+              onChange={(e) => setSettings((p) => ({ ...p, subtitleLangPriority: e.target.value }))}
+            >
+              <option value="auto">自动</option>
+              <option value="zh">中文优先</option>
+              <option value="ja">日文优先</option>
+              <option value="en">英文优先</option>
+            </select>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">字幕字体大小</div>
+            <div className="setting-desc">歌词本中字幕的显示字号</div>
+          </div>
+          <div className="setting-control">
+            <div className="slider-control">
+              <div className="slider-value">{settings.subtitleFontSize || 14}px</div>
+              <Slider
+                value={settings.subtitleFontSize || 14}
+                min={12}
+                max={24}
+                onChange={(e) => handleSlider('subtitleFontSize', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">默认显示翻译</div>
+            <div className="setting-desc">加载字幕时自动显示双语（原文+译文）</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.autoTranslateSubtitle || false}
+              onChange={() => handleToggle('autoTranslateSubtitle')}
             />
           </div>
         </div>

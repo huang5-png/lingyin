@@ -787,8 +787,6 @@ export default function App() {
         if (String(clickedWorkId) !== String(loadingWorkIdRef.current)) return
 
         const audioFiles = extractAudiosFromTracks(tracks)
-        console.log('[调试] tracks原始数据:', tracks)
-        console.log('[调试] 提取出的音频文件:', audioFiles.length, '个')
         const rjCode = workInfo?.source_id || searchWork.rjCode
 
         // Build the enriched work object
@@ -828,14 +826,11 @@ export default function App() {
     if (!selectedWork?.isOnline || !selectedWork?.onlineId) return
     const workId = selectedWork.onlineId
     loadingWorkIdRef.current = workId
-    console.log('[调试] 重新加载曲目，workId:', workId)
     setSelectedWork(prev => prev ? { ...prev, _loadingTracks: true, _tracksError: false } : prev)
     try {
       const tracks = await window.electronAPI.asmrOneGetTracks(workId)
       if (String(workId) !== String(loadingWorkIdRef.current)) return
-      console.log('[调试] 重试 tracks原始数据:', tracks)
       const audioFiles = extractAudiosFromTracks(tracks)
-      console.log('[调试] 重试 提取出的音频文件:', audioFiles.length, '个')
       setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: false } : prev)
       setAudioFiles(audioFiles)
     } catch (e) {
@@ -1583,8 +1578,16 @@ export default function App() {
     }
   }, [subtitleOptions, currentAudio, selectedWork])
 
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState('basic')
+
+  const handleOpenSettings = useCallback(() => {
+    setSettingsDefaultTab('basic')
+    setShowSettingsModal(true)
+  }, [])
+
   const handleOpenSubtitleSettings = useCallback(() => {
-    // TODO: 打开字幕设置
+    setSettingsDefaultTab('player')
+    setShowSettingsModal(true)
   }, [])
 
   const handleEditMetadata = async (data) => {
@@ -1711,10 +1714,6 @@ export default function App() {
       return newSettings
     })
   }, [])
-
-  const handleOpenSettings = () => {
-    setShowSettingsModal(true)
-  }
 
   // ===== 播放列表：从曲目项「+」加入 =====
   const handleOpenAddToPlaylist = useCallback((audio) => {
@@ -2202,6 +2201,7 @@ export default function App() {
         onClose={() => setShowSettingsModal(false)}
         onSave={handleSaveSettings}
         currentSettings={settings}
+        defaultTab={settingsDefaultTab}
       />
 
       {showDownloadModal && selectedWork && selectedWork.isOnline && (
