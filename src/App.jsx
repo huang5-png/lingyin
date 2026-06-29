@@ -244,6 +244,111 @@ export default function App() {
   // 是否有任何文本正在翻译中（用于全局翻译按钮的转圈状态）
   const isAnyTranslating = translating.size > 0
 
+  // 是否有翻译内容（用于双语显示模式）
+  const hasTranslation = currentCues.some(cue => cue.translated)
+
+  // 切换字幕翻译：批量翻译当前所有字幕文本
+  const handleToggleTranslate = useCallback(async () => {
+    if (!selectedWork || !currentAudio || currentCues.length === 0) {
+      showToast('请先选择字幕', 'warning')
+      return
+    }
+
+    // 如果已有翻译，清除翻译并恢复原文
+    if (hasTranslation) {
+      setCurrentCues(prev => prev.map(cue => ({ ...cue, translated: undefined })))
+      // 清除内存缓存中的对应翻译
+      currentCues.forEach(cue => {
+        translateCacheRef.current.delete(cue.text)
+      })
+      setTranslateVersion(v => v + 1)
+      // 清除数据库缓存
+      try {
+        await window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, [])
+      } catch (e) {
+        console.error('Failed to clear translate cache:', e)
+      }
+      showToast('已关闭双语显示', 'info')
+      return
+    }
+
+    // 开始翻译：先从数据库读取缓存
+    try {
+      const cachedCues = await window.electronAPI.translateGetCache(selectedWork.id, currentAudio.path)
+      if (cachedCues && cachedCues.length > 0) {
+        // 使用缓存的翻译结果
+        setCurrentCues(prev => {
+          const cacheMap = new Map(cachedCues.map(c => [c.time, c.translated]))
+          return prev.map(cue => ({
+            ...cue,
+            translated: cacheMap.get(cue.time) || undefined
+          }))
+        })
+        // 同步到内存缓存
+        cachedCues.forEach(c => {
+          if (c.translated) {
+            const original = currentCues.find(cue => cue.time === c.time)
+            if (original) {
+              translateCacheRef.current.set(original.text, c.translated)
+            }
+          }
+        })
+        setTranslateVersion(v => v + 1)
+        showToast('已加载缓存翻译', 'success')
+        return
+      }
+    } catch (e) {
+      console.error('Failed to load translate cache:', e)
+    }
+
+    // 没有缓存，开始在线翻译
+    const texts = currentCues.map(cue => cue.text).filter(t => t && t.trim())
+    if (texts.length === 0) {
+      showToast('没有可翻译的文本', 'info')
+      return
+    }
+
+    setTranslating(new Set(texts))
+    showToast(`开始翻译 ${texts.length} 条字幕...`, 'info')
+
+    try {
+      const results = await window.electronAPI.translateBatch(texts, 'zh-CN')
+      const resultMap = new Map(texts.map((text, i) => [text, results[i]]))
+
+      const updatedCues = currentCues.map(cue => {
+        if (!cue.text || !cue.text.trim()) return cue
+        const translated = resultMap.get(cue.text)
+        if (translated && translated !== cue.text) {
+          translateCacheRef.current.set(cue.text, translated)
+          return { ...cue, translated }
+        }
+        return cue
+      })
+
+      setCurrentCues(updatedCues)
+      setTranslateVersion(v => v + 1)
+
+      // 保存到数据库缓存
+      try {
+        const cacheData = updatedCues.map(cue => ({
+          time: cue.time,
+          text: cue.text,
+          translated: cue.translated
+        }))
+        await window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, cacheData)
+      } catch (e) {
+        console.error('Failed to save translate cache:', e)
+      }
+
+      const translatedCount = updatedCues.filter(c => c.translated).length
+      showToast(`翻译完成！成功翻译 ${translatedCount} 条字幕`, 'success')
+    } catch (e) {
+      showToast('翻译失败: ' + (e.message || '未知错误'), 'error')
+    } finally {
+      setTranslating(new Set())
+    }
+  }, [selectedWork, currentAudio, currentCues, hasTranslation, showToast])
+
   const playerRef = useRef(null)
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
@@ -2000,6 +2105,9 @@ export default function App() {
                     selectedSubtitleIndex={selectedSubtitleIndex}
                     onSelectSubtitle={handleSelectSubtitle}
                     onAddSubtitleFile={handleAddSubtitleFile}
+                    onToggleTranslate={handleToggleTranslate}
+                    isTranslating={isAnyTranslating}
+                    hasTranslation={hasTranslation}
                   />
                 </div>
               </div>
@@ -2118,6 +2226,9 @@ export default function App() {
                     selectedSubtitleIndex={selectedSubtitleIndex}
                     onSelectSubtitle={handleSelectSubtitle}
                     onAddSubtitleFile={handleAddSubtitleFile}
+                    onToggleTranslate={handleToggleTranslate}
+                    isTranslating={isAnyTranslating}
+                    hasTranslation={hasTranslation}
                   />
                 </div>
               </div>

@@ -76,4 +76,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 翻译
   translateText: (text, targetLang) => ipcRenderer.invoke('translate:text', text, targetLang),
   translateBatch: (texts, targetLang) => ipcRenderer.invoke('translate:batch', texts, targetLang),
+  // 翻译缓存
+  translateGetCache: (workId, audioPath) => ipcRenderer.invoke('translate:getCache', workId, audioPath),
+  translateSaveCache: (workId, audioPath, cues) => ipcRenderer.invoke('translate:saveCache', workId, audioPath, cues),
+  translateClearCache: () => ipcRenderer.invoke('translate:clearCache'),
 })

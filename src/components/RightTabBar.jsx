@@ -13,6 +13,9 @@ export default function RightTabBar({
   selectedSubtitleIndex,
   onSelectSubtitle,
   onAddSubtitleFile,
+  onToggleTranslate,
+  isTranslating,
+  hasTranslation,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
@@ -99,6 +102,9 @@ export default function RightTabBar({
                 selectedSubtitleIndex={selectedSubtitleIndex}
                 onSelectSubtitle={onSelectSubtitle}
                 onAddSubtitleFile={onAddSubtitleFile}
+                onToggleTranslate={onToggleTranslate}
+                isTranslating={isTranslating}
+                hasTranslation={hasTranslation}
               />
             )}
             {!work && (

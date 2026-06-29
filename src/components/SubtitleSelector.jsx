@@ -24,7 +24,7 @@ const PRESET_COLORS = [
   '#ffffff',
 ]
 
-export default function SubtitleSelector({ subtitles, selectedIndex, onSelect, settings, onSettingsChange, onAddSubtitleFile }) {
+export default function SubtitleSelector({ subtitles, selectedIndex, onSelect, settings, onSettingsChange, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation }) {
   const [isOpen, setIsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -59,6 +59,17 @@ export default function SubtitleSelector({ subtitles, selectedIndex, onSelect, s
             {currentSubtitle ? currentSubtitle.displayName : '无字幕'}
           </span>
           <span className="selector-arrow">{isOpen ? '▲' : '▼'}</span>
+        </button>
+        <button
+          className={`translate-btn ${isTranslating ? 'translating' : ''} ${hasTranslation ? 'has-translation' : ''}`}
+          onClick={onToggleTranslate}
+          title={isTranslating ? '翻译中...' : hasTranslation ? '关闭双语显示' : '翻译字幕'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m22 10-7-7-2 2 5 5-5 5 2 2 7-7Z"/>
+            <path d="M21 12H3"/>
+          </svg>
+          {isTranslating && <span className="translate-spinner" />}
         </button>
         <button
           className={`settings-btn ${settingsOpen ? 'active' : ''}`}

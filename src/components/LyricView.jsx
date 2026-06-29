@@ -20,7 +20,7 @@ function loadSettings() {
   return { ...DEFAULT_SETTINGS }
 }
 
-export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, selectedSubtitleIndex, onSelectSubtitle, onAddSubtitleFile }) {
+export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, selectedSubtitleIndex, onSelectSubtitle, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation }) {
   const containerRef = useRef(null)
   const [settings, setSettings] = useState(loadSettings)
 
@@ -60,6 +60,9 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
           settings={settings}
           onSettingsChange={handleSettingsChange}
           onAddSubtitleFile={onAddSubtitleFile}
+          onToggleTranslate={onToggleTranslate}
+          isTranslating={isTranslating}
+          hasTranslation={hasTranslation}
         />
         <div className="empty-subtitle-content">
           <img src="/subtitle-illustration.png" alt="" className="subtitle-illustration" />
@@ -72,7 +75,7 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
 
   return (
     <div
-      className="lyric-view"
+      className={`lyric-view ${hasTranslation ? 'dual-mode' : ''}`}
       ref={containerRef}
       style={{
         '--lyric-font-size': `${settings.fontSize}px`,
@@ -86,6 +89,9 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
         settings={settings}
         onSettingsChange={handleSettingsChange}
         onAddSubtitleFile={onAddSubtitleFile}
+        onToggleTranslate={onToggleTranslate}
+        isTranslating={isTranslating}
+        hasTranslation={hasTranslation}
       />
       <div className="lyric-title">歌词本</div>
       <div className="lyric-divider"></div>
@@ -99,7 +105,12 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
           >
             <div className="lyric-indicator"></div>
             <span className="lyric-time">{formatTime(cue.time)}</span>
-            <span className="lyric-text">{cue.text}</span>
+            <div className="lyric-text-container">
+              <span className="lyric-text">{cue.text}</span>
+              {hasTranslation && cue.translated && (
+                <span className="lyric-translated">{cue.translated}</span>
+              )}
+            </div>
           </div>
         ))}
       </div>

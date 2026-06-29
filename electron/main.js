@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -401,6 +401,19 @@ ipcMain.handle('translate:batch', async (event, texts, targetLang) => {
     logger.error('[翻译] 批量翻译失败:', e.message)
     return texts
   }
+})
+
+// 翻译缓存 IPC
+ipcMain.handle('translate:getCache', async (_, workId, audioPath) => {
+  return await getTranslateCache(workId, audioPath)
+})
+
+ipcMain.handle('translate:saveCache', async (_, workId, audioPath, cues) => {
+  return await saveTranslateCache(workId, audioPath, cues)
+})
+
+ipcMain.handle('translate:clearCache', async () => {
+  return await clearTranslateCache()
 })
 
 const ASMR_ONE_API_BASE = 'https://api.asmr-200.com/api'

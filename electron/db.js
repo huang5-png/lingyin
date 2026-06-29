@@ -15,6 +15,7 @@ async function initDB() {
     settings: {},
     history: [],
     playlists: [],
+    translateCache: {},
   }
 
   try {
@@ -435,6 +436,45 @@ async function clearPlaylist(id) {
   return pl
 }
 
+// ===== 翻译缓存 =====
+// 缓存结构: { [key: `${workId}::${audioPath}`]: { cues: [{ time, text, translated }], updatedAt } }
+
+function ensureTranslateCache() {
+  if (!dbData.translateCache) dbData.translateCache = {}
+  return dbData.translateCache
+}
+
+async function getTranslateCache(workId, audioPath) {
+  const cache = ensureTranslateCache()
+  const key = `${workId}::${audioPath}`
+  const entry = cache[key]
+  if (!entry) return null
+  const expireDays = 30
+  if (entry.updatedAt && Date.now() - entry.updatedAt > expireDays * 24 * 60 * 60 * 1000) {
+    delete cache[key]
+    saveDB()
+    return null
+  }
+  return entry.cues || null
+}
+
+async function saveTranslateCache(workId, audioPath, cues) {
+  const cache = ensureTranslateCache()
+  const key = `${workId}::${audioPath}`
+  cache[key] = {
+    cues: cues,
+    updatedAt: Date.now(),
+  }
+  saveDB()
+  return true
+}
+
+async function clearTranslateCache() {
+  dbData.translateCache = {}
+  saveDB()
+  return true
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -460,4 +500,7 @@ module.exports = {
   removePlaylistItem,
   reorderPlaylistItems,
   clearPlaylist,
+  getTranslateCache,
+  saveTranslateCache,
+  clearTranslateCache,
 }

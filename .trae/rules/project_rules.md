@@ -256,7 +256,48 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - `detectLanguageFromContent(content)` — 内容字符分析
 - 异步检测在 App.jsx 的 `detectSubtitleLanguagesAsync` 中实现
 
-### 8. 视图模式
+### 8. 字幕翻译
+
+#### 功能概述
+- 支持将字幕文本实时翻译为中文，双语显示（原文 + 译文）
+- 翻译结果本地缓存（数据库 + 内存），30 天过期
+- 支持翻译引擎选择（Google/Baidu/Microsoft），在设置中配置
+
+#### 核心状态（App.jsx）
+- `translateCacheRef` — 内存翻译缓存（Map，key=原文，value=译文）
+- `translateVersion` — 翻译状态触发器，每次翻译完成后递增，触发组件重渲染
+- `translating` — 正在翻译中的文本集合（Set）
+- `hasTranslation` — 是否有翻译内容（用于双语显示模式判断）
+
+#### 翻译流程
+1. 用户点击字幕选择器中的翻译按钮（小地球图标）
+2. `handleToggleTranslate` 检查当前是否已有翻译
+3. 如有翻译：清除所有翻译，恢复原文显示，清除数据库和内存缓存
+4. 如无翻译：
+   - 先从数据库读取缓存（`translateGetCache`）
+   - 有缓存：加载缓存的翻译结果
+   - 无缓存：调用批量翻译 API（`translateBatch`），翻译完成后保存到缓存
+
+#### 翻译缓存
+- **数据库缓存**：存储在 `db.json.translateCache`，key 为 `${workId}::${audioPath}`
+- **内存缓存**：存储在 `translateCacheRef`（Map），关闭软件后清空
+- **过期策略**：30 天自动过期
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `translate:text` | 单条文本翻译 |
+| `translate:batch` | 批量文本翻译 |
+| `translate:getCache` | 获取翻译缓存 |
+| `translate:saveCache` | 保存翻译缓存 |
+| `translate:clearCache` | 清空所有翻译缓存 |
+
+#### 组件集成
+- **SubtitleSelector.jsx**：添加翻译按钮，显示翻译状态（翻译中/已有翻译）
+- **LyricView.jsx**：支持双语显示模式，原文在上，译文在下（斜体）
+- **RightTabBar.jsx**：传递翻译相关 props 到 LyricView
+
+### 9. 视图模式
 
 侧边栏支持两种视图，状态保存在 `settings.viewMode`：
 - `grid` — 卡片网格视图（默认，封面墙展示）
@@ -273,7 +314,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 卡片悬停时整体上移 2px + 阴影加深
 - 封面 `object-fit: cover`，悬停时轻微放大
 
-### 9. 在线 ASMR 发现（asmr.one）
+### 10. 在线 ASMR 发现（asmr.one）
 
 #### API 端点
 - `asmrOneGetWorks(params)` — 获取作品列表/搜索
@@ -326,7 +367,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 添加到下载队列 → 后台处理，不阻塞 UI
 - 下载的文件按 RJ 码命名文件夹保存，包含字幕文件
 
-### 10. 自定义标题栏与窗口控制
+### 11. 自定义标题栏与窗口控制
 
 - 使用 `frame: false` 完全移除系统标题栏
 - 自定义标题栏位于 `.title-bar`，透明背景，无分隔线
@@ -336,7 +377,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   - `windowClose()`
   - `windowIsMaximized()`
 
-### 11. 沉浸式播放模式
+### 12. 沉浸式播放模式
 
 - 触发：点击播放器的封面图
 - 状态：`isImmersive`
@@ -356,7 +397,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 所有行均可点击跳转到对应播放位置
 - 滚动区域带上下渐隐遮罩（mask-image）
 
-### 12. 封面翻转动画
+### 13. 封面翻转动画
 
 - 触发：切换作品时
 - 状态：`flipState`（idle/ready/invert/play）
@@ -364,7 +405,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 相关 ref：`flipRafRef`、`flipTimeoutRef`、`flipWorkIdRef`
 - 动画时长：400ms
 
-### 13. 设置面板
+### 14. 设置面板
 
 设置弹窗包含 6 个分类标签页：
 - **基本** — 播放设置（自动播放下一首、记住进度、启动时自动播放、默认音量、快进快退秒数）
@@ -376,7 +417,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 
 设置同时保存到 localStorage 和数据库。
 
-### 14. 快捷键
+### 15. 快捷键
 
 #### 默认快捷键
 | 快捷键 | 功能 | 作用域 |
@@ -403,7 +444,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - `DEFAULT_SHORTCUTS` — 默认快捷键常量
 - `matchShortcut(e, shortcutStr)` — 匹配按键事件与快捷键字符串
 
-### 15. 下载管理
+### 16. 下载管理
 
 #### 架构
 - 下载队列在 Electron 主进程管理（`electron/main.js`），不依赖渲染进程
@@ -432,7 +473,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 同一时间只有一个文件在下载
 - 文件下载顺序：API 获取 presigned URL → stream 下载 → 写入磁盘 → 播放下一个
 
-### 16. 使用统计
+### 17. 使用统计
 
 #### 数据来源
 - 每 30 秒记录一次播放历史到 `db.json.progressHistory`
@@ -456,7 +497,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 排行榜支持标签 / CV / 社团 / 作品分类切换
 - 数据在主进程聚合后返回渲染进程
 
-### 17. 播放列表
+### 18. 播放列表
 
 #### 数据结构
 - 存储位置：`db.json.playlists`（数组）
@@ -495,7 +536,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 从播放列表播放本地曲目时：根据 `workId` 在 `works` 中查找作品 → 切换到 library 视图 → 选中作品 → 轮询 `latestAudioFilesRef` 直到曲目加载完成 → 调用 `handleSelectAudio`
 - 在线曲目：提示用户回到「发现」视图重新打开作品
 
-### 18. 播放队列
+### 19. 播放队列
 
 #### 设计原则
 - **纯内存版**：队列仅存在于 React state，不写入 `db.json`，重启清空，避免磁盘 IO
@@ -580,7 +621,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 启动时从 `settings.loopMode / settings.shuffle` 初始化 state
 - 切换时同步写入两处（参考其他设置的持久化模式）
 
-### 19. 睡眠定时器
+### 20. 睡眠定时器
 
 #### 功能概述
 - 用户可设置播放一段时间后自动停止播放
