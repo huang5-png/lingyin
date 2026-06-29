@@ -427,7 +427,6 @@ export default function App() {
 
   useEffect(() => {
     loadWorks()
-    loadRecentWorks()
     async function loadDbSettings() {
       try {
         const dbSettings = await window.electronAPI.dbGetSettings()
@@ -491,15 +490,6 @@ export default function App() {
       setWorks(data || [])
     } catch (e) {
       console.error('Failed to load works:', e)
-    }
-  }
-
-  const loadRecentWorks = async () => {
-    try {
-      const data = await window.electronAPI.dbGetRecentWorks(8)
-      setRecentWorks(data || [])
-    } catch (e) {
-      console.error('Failed to load recent works:', e)
     }
   }
 
@@ -1083,8 +1073,6 @@ export default function App() {
       } catch (e) {
         console.warn('Failed to detect language for subtitle:', sub.file?.name, e)
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 50))
     }
   }, [])
 
@@ -1202,7 +1190,6 @@ export default function App() {
             cvs: selectedWork.cvs || [],
             tags: selectedWork.tags || [],
           }).catch(() => {})
-          loadRecentWorks()
         }
       }
     },
