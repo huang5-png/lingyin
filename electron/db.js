@@ -4,6 +4,20 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let saveQueue = Promise.resolve()
+
+function enqueueSave() {
+  saveQueue = saveQueue.then(() => {
+    try {
+      fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    } catch (e) {
+      console.error('Save DB error:', e)
+    }
+  }).catch((e) => {
+    console.error('Save queue error:', e)
+  })
+  return saveQueue
+}
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -35,11 +49,7 @@ async function initDB() {
 }
 
 function saveDB() {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
-  } catch (e) {
-    console.error('Save DB error:', e)
-  }
+  enqueueSave()
 }
 
 function getDB() {

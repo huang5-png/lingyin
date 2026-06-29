@@ -124,6 +124,7 @@ export default function App() {
   // ===== 睡眠定时器 =====
   const [sleepTimerMinutes, setSleepTimerMinutes] = useState(0) // 设置的分钟数，0 表示关闭
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState(0) // 剩余秒数
+  const sleepTimerRef = useRef(null)
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
   const [toasts, setToasts] = useState([])
@@ -395,6 +396,7 @@ export default function App() {
   const lastSaveTimeRef = useRef(0)
   const lastHistoryTimeRef = useRef(0)
   const loadingWorkIdRef = useRef(null)
+  const progressSeekRef = useRef(null)
 
   const currentCueIndex = useMemo(() => {
     return findCurrentCue(currentCues, currentTime)
@@ -910,7 +912,8 @@ export default function App() {
     async (audio) => {
       if (!selectedWork) return
 
-      setPlayingWork(selectedWork) // 记录当前正在播放的作品
+      const workId = selectedWork.id
+      setPlayingWork(selectedWork)
       setCurrentAudio(audio)
       setCurrentCues([])
 
@@ -926,7 +929,7 @@ export default function App() {
       let savedSubtitleIndex = -1
 
       try {
-        const savedSubtitle = await window.electronAPI.dbGetSubtitle(selectedWork.id, audio.path)
+        const savedSubtitle = await window.electronAPI.dbGetSubtitle(workId, audio.path)
         if (savedSubtitle && savedSubtitle.filePath) {
           const existingIndex = subtitleOptions.findIndex((s) => s.file.path === savedSubtitle.filePath)
           if (existingIndex >= 0) {
@@ -979,13 +982,11 @@ export default function App() {
             const ext = getExtension(sub.file.name)
             let cues = parseSubtitle(content, ext)
             
-            // 如果设置了自动翻译，且字幕语言不是中文，则自动翻译
             if (settings.autoTranslateSubtitle && sub.language !== 'zh' && sub.language !== 'dual') {
               const texts = cues.map(cue => cue.text).filter(t => t && t.trim())
               if (texts.length > 0) {
                 try {
-                  // 先从数据库读取缓存
-                  const cachedCues = await window.electronAPI.translateGetCache(selectedWork.id, audio.path)
+                  const cachedCues = await window.electronAPI.translateGetCache(workId, audio.path)
                   if (cachedCues && cachedCues.length > 0) {
                     const cacheMap = new Map(cachedCues.map(c => [c.time, c.translated]))
                     cues = cues.map(cue => ({
@@ -1022,14 +1023,13 @@ export default function App() {
                             }
                             return cue
                           })
-                          // 保存到数据库缓存
                           try {
                             const cacheData = updated.map(cue => ({
                               time: cue.time,
                               text: cue.text,
                               translated: cue.translated
                             }))
-                            window.electronAPI.translateSaveCache(selectedWork.id, audio.path, cacheData).catch(() => {})
+                            window.electronAPI.translateSaveCache(workId, audio.path, cacheData).catch(() => {})
                           } catch (e) {
                             console.error('Failed to save translate cache:', e)
                           }
@@ -1062,13 +1062,24 @@ export default function App() {
           const progress = await window.electronAPI.dbGetProgress(selectedWork.id, audio.path)
           if (progress && progress.currentTime > 5 && progress.duration > 0) {
             const targetTime = progress.currentTime
-            const checkAndSeek = setInterval(() => {
+            if (progressSeekRef.current) {
+              clearInterval(progressSeekRef.current)
+            }
+            progressSeekRef.current = setInterval(() => {
               if (playerRef.current && playerRef.current.getDuration() > 0) {
                 playerRef.current.seekTo(targetTime)
-                clearInterval(checkAndSeek)
+                if (progressSeekRef.current) {
+                  clearInterval(progressSeekRef.current)
+                  progressSeekRef.current = null
+                }
               }
             }, 200)
-            setTimeout(() => clearInterval(checkAndSeek), 10000)
+            setTimeout(() => {
+              if (progressSeekRef.current) {
+                clearInterval(progressSeekRef.current)
+                progressSeekRef.current = null
+              }
+            }, 10000)
           }
         } catch (e) {
           console.error('Failed to load progress:', e)
@@ -1401,23 +1412,37 @@ export default function App() {
 
   // 睡眠定时器倒计时逻辑
   useEffect(() => {
-    if (sleepTimerMinutes <= 0) return
-    const timer = setInterval(() => {
+    if (sleepTimerMinutes <= 0) {
+      if (sleepTimerRef.current) {
+        clearInterval(sleepTimerRef.current)
+        sleepTimerRef.current = null
+      }
+      return
+    }
+    sleepTimerRef.current = setInterval(() => {
       setSleepTimerRemaining((prev) => {
         if (prev <= 1) {
-          // 时间到，暂停播放
           if (playerRef.current) {
             playerRef.current.playPause()
           }
           setSleepTimerMinutes(0)
           showToast('睡眠定时器到时，播放已停止', 'info')
+          if (sleepTimerRef.current) {
+            clearInterval(sleepTimerRef.current)
+            sleepTimerRef.current = null
+          }
           return 0
         }
         return prev - 1
       })
     }, 1000)
-    return () => clearInterval(timer)
-  }, [sleepTimerMinutes, showToast])
+    return () => {
+      if (sleepTimerRef.current) {
+        clearInterval(sleepTimerRef.current)
+        sleepTimerRef.current = null
+      }
+    }
+  }, [sleepTimerMinutes])
 
   const handlePrevAudio = useCallback(() => {
     // 队列模式优先

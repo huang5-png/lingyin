@@ -147,8 +147,16 @@ ipcMain.handle('dialog:openDirectory', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
+function validateFilePath(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false
+  const normalized = path.normalize(filePath)
+  const resolved = path.resolve(normalized)
+  return normalized === resolved && !resolved.includes('..')
+}
+
 ipcMain.handle('fs:readDir', async (_, dirPath) => {
   try {
+    if (!validateFilePath(dirPath)) return []
     const files = fs.readdirSync(dirPath, { withFileTypes: true })
     return files.map((f) => ({
       name: f.name,
@@ -162,6 +170,7 @@ ipcMain.handle('fs:readDir', async (_, dirPath) => {
 
 ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
   try {
+    if (!validateFilePath(filePath)) return null
     return fs.readFileSync(filePath, encoding)
   } catch (e) {
     return null
@@ -190,11 +199,13 @@ ipcMain.handle('dialog:openSubtitleFile', async () => {
 })
 
 ipcMain.handle('fs:fileExists', async (_, filePath) => {
+  if (!validateFilePath(filePath)) return false
   return fs.existsSync(filePath)
 })
 
 ipcMain.handle('fs:stat', async (_, filePath) => {
   try {
+    if (!validateFilePath(filePath)) return null
     const stat = fs.statSync(filePath)
     return {
       size: stat.size,
@@ -632,6 +643,7 @@ ipcMain.handle('asmrOne:getTags', async () => {
 
 ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
   try {
+    if (!validateFilePath(filePath)) return null
     const buffer = fs.readFileSync(filePath)
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
     return arrayBuffer
@@ -643,6 +655,7 @@ ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
 
 ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
   try {
+    if (!validateFilePath(filePath)) return 0
     const pf = await getParseFile()
     const metadata = await pf(filePath, { duration: true })
     return metadata.format.duration || 0
