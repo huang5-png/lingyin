@@ -97,6 +97,7 @@
   --z-index-base: 1;
   --z-index-dropdown: 100;
   --z-index-sticky: 200;
+  --z-index-player: 250;
   --z-index-modal: 300;
   --z-index-popover: 400;
   --z-index-toast: 500;

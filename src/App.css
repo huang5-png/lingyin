@@ -301,7 +301,8 @@
   position: relative;
 }
 
-.player-bar {
+.player-bar,
+.global-player-bar {
   flex-shrink: 0;
   background: var(--card-bg);
   backdrop-filter: blur(8px);
@@ -312,6 +313,11 @@
   overflow: hidden;
   position: relative;
   z-index: 10;
+}
+
+.global-player-bar {
+  margin: 0 var(--spacing-card) var(--spacing-card) var(--spacing-card);
+  z-index: var(--z-index-player);
 }
 
 .immersive-overlay {

@@ -93,7 +93,8 @@ function loadSettings() {
 
 export default function App() {
   const [works, setWorks] = useState([])
-  const [selectedWork, setSelectedWork] = useState(null)
+  const [selectedWork, setSelectedWork] = useState(null) // 当前浏览的作品
+  const [playingWork, setPlayingWork] = useState(null) // 当前正在播放的作品
   const [currentAudio, setCurrentAudio] = useState(null)
   const [currentCues, setCurrentCues] = useState([])
   const [currentTime, setCurrentTime] = useState(0)
@@ -690,10 +691,8 @@ export default function App() {
       loadingWorkIdRef.current = null
 
       setSelectedWork(work)
-      setCurrentAudio(null)
-      setCurrentCues([])
-      setCurrentTime(0)
-      setDuration(0)
+      // 注意：切换作品时不重置 currentAudio，实现边听边选
+      // 只有当用户明确点击播放新曲目时才切换音频
     },
     [selectedWork],
   )
@@ -930,6 +929,7 @@ export default function App() {
     async (audio) => {
       if (!selectedWork) return
 
+      setPlayingWork(selectedWork) // 记录当前正在播放的作品
       setCurrentAudio(audio)
       setCurrentCues([])
 
@@ -1310,6 +1310,29 @@ export default function App() {
       showToast('睡眠定时器已取消', 'info')
     }
   }, [showToast])
+
+  // 点击播放栏封面：跳转到正在播放的作品，或切换沉浸式
+  const handlePlayerCoverClick = useCallback(() => {
+    if (!playingWork) return
+
+    // 如果当前浏览的作品不是正在播放的作品，先切换过去
+    if (selectedWork?.id !== playingWork.id) {
+      // 判断是本地还是在线作品
+      if (playingWork.isOnline) {
+        setCurrentView('discover')
+        // 在线作品需要重新加载详情，先设置 selectedWork
+        setSelectedWork(playingWork)
+      } else {
+        // 本地作品：先切到 library 视图，再选中作品
+        setCurrentView('library')
+        setSelectedWork(playingWork)
+      }
+      return
+    }
+
+    // 已经在播放的作品，切换沉浸式
+    setIsImmersive(!isImmersive)
+  }, [playingWork, selectedWork, isImmersive])
 
   // 睡眠定时器倒计时逻辑
   useEffect(() => {
@@ -1969,40 +1992,6 @@ export default function App() {
                   />
                 </div>
               </div>
-              <div className="player-bar">
-                <AudioPlayer
-                  ref={playerRef}
-                  audioPath={currentAudio?.path}
-                  title={currentAudio?.name}
-                  cover={selectedWork?.cover}
-                  onTimeUpdate={handleTimeUpdate}
-                  onReady={handleReady}
-                  onFinish={handleFinish}
-                  onPrev={handlePrevAudio}
-                  onNext={handleNextAudio}
-                  workId={selectedWork?.id}
-                  waveformHeight={settings.waveformHeight}
-                  defaultVolume={settings.defaultVolume}
-                  skipSeconds={settings.skipSeconds || 5}
-                  onToggleImmersive={() => setIsImmersive(!isImmersive)}
-                  queue={playQueue}
-                  queueIndex={queueIndex}
-                  loopMode={loopMode}
-                  shuffle={shuffle}
-                  showQueuePanel={showQueuePanel}
-                  onToggleQueue={handleToggleQueuePanel}
-                  onToggleLoop={handleToggleLoopMode}
-                  onToggleShuffle={handleToggleShuffle}
-                  onPlayFromQueue={handlePlayFromQueue}
-                  onRemoveFromQueue={handleRemoveFromQueue}
-                  onClearQueue={handleClearQueue}
-                  onReorderQueue={handleReorderQueue}
-                  onCloseQueuePanel={() => setShowQueuePanel(false)}
-                  sleepTimerMinutes={sleepTimerMinutes}
-                  sleepTimerRemaining={sleepTimerRemaining}
-                  onSetSleepTimer={handleSetSleepTimer}
-                />
-              </div>
             </div>
           )}
         </div>
@@ -2091,40 +2080,6 @@ export default function App() {
                   />
                 </div>
               </div>
-              <div className="player-bar">
-                <AudioPlayer
-                  ref={playerRef}
-                  audioPath={currentAudio?.path}
-                  title={currentAudio?.name}
-                  cover={selectedWork?.cover}
-                  onTimeUpdate={handleTimeUpdate}
-                  onReady={handleReady}
-                  onFinish={handleFinish}
-                  onPrev={handlePrevAudio}
-                  onNext={handleNextAudio}
-                  workId={selectedWork?.id}
-                  waveformHeight={settings.waveformHeight}
-                  defaultVolume={settings.defaultVolume}
-                  skipSeconds={settings.skipSeconds || 5}
-                  onToggleImmersive={() => setIsImmersive(!isImmersive)}
-                  queue={playQueue}
-                  queueIndex={queueIndex}
-                  loopMode={loopMode}
-                  shuffle={shuffle}
-                  showQueuePanel={showQueuePanel}
-                  onToggleQueue={handleToggleQueuePanel}
-                  onToggleLoop={handleToggleLoopMode}
-                  onToggleShuffle={handleToggleShuffle}
-                  onPlayFromQueue={handlePlayFromQueue}
-                  onRemoveFromQueue={handleRemoveFromQueue}
-                  onClearQueue={handleClearQueue}
-                  onReorderQueue={handleReorderQueue}
-                  onCloseQueuePanel={() => setShowQueuePanel(false)}
-                  sleepTimerMinutes={sleepTimerMinutes}
-                  sleepTimerRemaining={sleepTimerRemaining}
-                  onSetSleepTimer={handleSetSleepTimer}
-                />
-              </div>
             </div>
           )}
         </div>
@@ -2170,9 +2125,47 @@ export default function App() {
 
       </div>
 
-      {isImmersive && selectedWork && (
+      {/* 全局播放栏 - 常驻底部 */}
+      {currentAudio && (
+        <div className="global-player-bar">
+          <AudioPlayer
+            ref={playerRef}
+            audioPath={currentAudio?.path}
+            title={currentAudio?.name}
+            cover={playingWork?.cover}
+            onTimeUpdate={handleTimeUpdate}
+            onReady={handleReady}
+            onFinish={handleFinish}
+            onPrev={handlePrevAudio}
+            onNext={handleNextAudio}
+            workId={playingWork?.id}
+            waveformHeight={settings.waveformHeight}
+            defaultVolume={settings.defaultVolume}
+            skipSeconds={settings.skipSeconds || 5}
+            onToggleImmersive={handlePlayerCoverClick}
+            queue={playQueue}
+            queueIndex={queueIndex}
+            loopMode={loopMode}
+            shuffle={shuffle}
+            showQueuePanel={showQueuePanel}
+            onToggleQueue={handleToggleQueuePanel}
+            onToggleLoop={handleToggleLoopMode}
+            onToggleShuffle={handleToggleShuffle}
+            onPlayFromQueue={handlePlayFromQueue}
+            onRemoveFromQueue={handleRemoveFromQueue}
+            onClearQueue={handleClearQueue}
+            onReorderQueue={handleReorderQueue}
+            onCloseQueuePanel={() => setShowQueuePanel(false)}
+            sleepTimerMinutes={sleepTimerMinutes}
+            sleepTimerRemaining={sleepTimerRemaining}
+            onSetSleepTimer={handleSetSleepTimer}
+          />
+        </div>
+      )}
+
+      {isImmersive && playingWork && (
         <div className="immersive-overlay">
-          <div className="immersive-bg" style={{ backgroundImage: `url(${selectedWork.cover})` }} />
+          <div className="immersive-bg" style={{ backgroundImage: `url(${playingWork.cover})` }} />
           <button className="immersive-close-btn" onClick={handleCloseImmersive} title="关闭 (ESC)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -2180,11 +2173,11 @@ export default function App() {
             </svg>
           </button>
           <div className="immersive-cover-wrapper">
-            <img src={selectedWork.cover} alt="" className="immersive-cover" />
+            <img src={playingWork.cover} alt="" className="immersive-cover" />
           </div>
           <div className="immersive-bottom">
-            <div className="immersive-title">{selectedWork.title || selectedWork.folderName}</div>
-            <div className="immersive-subtitle">{selectedWork.circle || ''}</div>
+            <div className="immersive-title">{playingWork.title || playingWork.folderName}</div>
+            <div className="immersive-subtitle">{playingWork.circle || ''}</div>
             {immersiveLyricCues.length > 0 && (
               <div className="immersive-lyrics-container" ref={immersiveLyricRef}>
                 {immersiveLyricCues.map((cue) => (
