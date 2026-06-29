@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react'
 import './Sidebar.css'
 
-export default function Sidebar({ works, recentWorks, onSelectRecentWork, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }) {
+export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [showRecent, setShowRecent] = useState(true)
 
   const filteredWorks = useMemo(() => {
     const query = searchQuery.toLowerCase().trim()
@@ -153,46 +152,6 @@ export default function Sidebar({ works, recentWorks, onSelectRecentWork, select
           </select>
         </div>
       </div>
-
-      {recentWorks && recentWorks.length > 0 && (
-        <div className="recent-plays-section">
-          <div className="recent-plays-header" onClick={() => setShowRecent((v) => !v)}>
-            <span className="recent-plays-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-              </svg>
-              最近播放
-            </span>
-            <span className="recent-plays-toggle">{showRecent ? '▲' : '▼'}</span>
-          </div>
-          {showRecent && (
-            <div className="recent-plays-list">
-              {recentWorks.map((rw) => (
-                <div
-                  key={rw.workId}
-                  className={`recent-play-item ${selectedWorkId === rw.workId ? 'active' : ''}`}
-                  onClick={() => onSelectRecentWork(rw)}
-                  title={rw.title}
-                >
-                  {rw.cover ? (
-                    <img src={rw.cover} alt="" loading="lazy" decoding="async" className="recent-play-cover" />
-                  ) : (
-                    <div className="recent-play-cover-placeholder">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 18V5l12-2v13"/>
-                        <circle cx="6" cy="18" r="3"/>
-                        <circle cx="18" cy="16" r="3"/>
-                      </svg>
-                    </div>
-                  )}
-                  <span className="recent-play-title">{rw.title || '未知作品'}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       <div className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`} style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}>
         {filteredWorks.length === 0 ? (

@@ -11,6 +11,7 @@ import UsageReport from './components/UsageReport'
 import DownloadView from './components/DownloadView'
 import DownloadModal from './components/DownloadModal'
 import PlaylistView from './components/PlaylistView'
+import RecentPlaysView from './components/RecentPlaysView'
 import GlobalSearchModal from './components/GlobalSearchModal'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
@@ -91,7 +92,6 @@ function loadSettings() {
 
 export default function App() {
   const [works, setWorks] = useState([])
-  const [recentWorks, setRecentWorks] = useState([])
   const [selectedWork, setSelectedWork] = useState(null)
   const [currentAudio, setCurrentAudio] = useState(null)
   const [currentCues, setCurrentCues] = useState([])
@@ -1840,20 +1840,6 @@ export default function App() {
     setAddToPlaylistTarget(null)
   }, [])
 
-  // 从最近播放列表选择作品
-  const handleSelectRecentWork = useCallback((recentWork) => {
-    if (!recentWork?.workId) return
-    // 在 works 中查找匹配的作品
-    const target = works.find((w) => w.id === recentWork.workId)
-    if (target) {
-      setCurrentView('library')
-      handleSelectWork(target)
-    } else {
-      // 如果本地找不到（可能是在线作品），尝试切换到发现视图
-      showToast('该作品不在本地库中', 'info')
-    }
-  }, [works, handleSelectWork, showToast])
-
   // 从播放列表点击播放某项：根据 workId 找到本地作品，切换视图并播放
   const handlePlayPlaylistItem = useCallback(async (item) => {
     if (!item) return
@@ -1981,6 +1967,16 @@ export default function App() {
               </svg>
             </div>
             <div
+              className={`nav-item ${currentView === 'recent-plays' ? 'active' : ''}`}
+              title="最近播放"
+              onClick={() => setCurrentView('recent-plays')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div
               className={`nav-item ${currentView === 'annual-report' ? 'active' : ''}`}
               title="使用报告"
               onClick={() => setCurrentView('annual-report')}
@@ -2033,8 +2029,6 @@ export default function App() {
           <div className="library-main">
             <Sidebar
               works={filteredWorks}
-              recentWorks={recentWorks}
-              onSelectRecentWork={handleSelectRecentWork}
               selectedWorkId={selectedWork?.id}
               onSelectWork={handleSelectWork}
               onAddFolder={handleAddFolder}
@@ -2288,6 +2282,16 @@ export default function App() {
           onNavigateToWork={handleNavigateToWorkFromPlaylist}
           onToast={showToast}
         />
+      )}
+
+      {currentView === 'recent-plays' && (
+        <div className="recent-plays-wrapper">
+          <RecentPlaysView
+            works={works}
+            onSelectWork={handleSelectWork}
+            onToast={showToast}
+          />
+        </div>
       )}
 
       {toasts.length > 0 && (
