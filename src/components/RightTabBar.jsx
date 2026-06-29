@@ -16,6 +16,7 @@ export default function RightTabBar({
   onToggleTranslate,
   isTranslating,
   hasTranslation,
+  subtitleFontSize,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
@@ -105,6 +106,7 @@ export default function RightTabBar({
                 onToggleTranslate={onToggleTranslate}
                 isTranslating={isTranslating}
                 hasTranslation={hasTranslation}
+                subtitleFontSize={subtitleFontSize}
               />
             )}
             {!work && (

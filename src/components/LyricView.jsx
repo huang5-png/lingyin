@@ -20,9 +20,12 @@ function loadSettings() {
   return { ...DEFAULT_SETTINGS }
 }
 
-export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, selectedSubtitleIndex, onSelectSubtitle, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation }) {
+export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, selectedSubtitleIndex, onSelectSubtitle, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation, subtitleFontSize }) {
   const containerRef = useRef(null)
   const [settings, setSettings] = useState(loadSettings)
+
+  // 实际使用的字体大小：优先使用全局设置，否则使用本地设置
+  const effectiveFontSize = subtitleFontSize || settings.fontSize
 
   const adjustedTime = currentTime + settings.timeOffset
   const currentIndex = findCurrentCue(cues, adjustedTime)
@@ -78,7 +81,7 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
       className={`lyric-view ${hasTranslation ? 'dual-mode' : ''}`}
       ref={containerRef}
       style={{
-        '--lyric-font-size': `${settings.fontSize}px`,
+        '--lyric-font-size': `${effectiveFontSize}px`,
         '--lyric-active-color': settings.color,
       }}
     >

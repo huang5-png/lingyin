@@ -476,7 +476,7 @@
 }
 
 .immersive-lyric-line {
-  font-size: 22px;
+  font-size: var(--immersive-lyric-font-size, 22px);
   line-height: 1.65;
   color: #ffffff;
   text-align: center;
@@ -497,7 +497,7 @@
 }
 
 .immersive-lyric-line.active {
-  font-size: 34px;
+  font-size: var(--immersive-lyric-active-font-size, 34px);
   font-weight: 700;
   color: #ffffff;
   opacity: 1;

@@ -937,7 +937,7 @@ export default function App() {
       
       setSubtitleOptions(subtitleOptions)
 
-      let savedSubtitleIndex = subtitleOptions.length > 0 ? 0 : -1
+      let savedSubtitleIndex = -1
 
       try {
         const savedSubtitle = await window.electronAPI.dbGetSubtitle(selectedWork.id, audio.path)
@@ -968,6 +968,21 @@ export default function App() {
         console.error('Failed to load saved subtitle:', e)
       }
 
+      // 如果没有保存的字幕选择，且设置了语言优先级，则按优先级选择
+      if (savedSubtitleIndex < 0 && subtitleOptions.length > 0) {
+        const langPriority = settings.subtitleLangPriority || 'auto'
+        if (langPriority !== 'auto') {
+          const priorityIndex = subtitleOptions.findIndex((s) => s.language === langPriority)
+          if (priorityIndex >= 0) {
+            savedSubtitleIndex = priorityIndex
+          } else {
+            savedSubtitleIndex = 0
+          }
+        } else {
+          savedSubtitleIndex = 0
+        }
+      }
+
       setSelectedSubtitleIndex(savedSubtitleIndex)
 
       if (savedSubtitleIndex >= 0 && subtitleOptions[savedSubtitleIndex]) {
@@ -976,7 +991,76 @@ export default function App() {
           const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
           if (content) {
             const ext = getExtension(sub.file.name)
-            const cues = parseSubtitle(content, ext)
+            let cues = parseSubtitle(content, ext)
+            
+            // 如果设置了自动翻译，且字幕语言不是中文，则自动翻译
+            if (settings.autoTranslateSubtitle && sub.language !== 'zh' && sub.language !== 'dual') {
+              const texts = cues.map(cue => cue.text).filter(t => t && t.trim())
+              if (texts.length > 0) {
+                try {
+                  // 先从数据库读取缓存
+                  const cachedCues = await window.electronAPI.translateGetCache(selectedWork.id, audio.path)
+                  if (cachedCues && cachedCues.length > 0) {
+                    const cacheMap = new Map(cachedCues.map(c => [c.time, c.translated]))
+                    cues = cues.map(cue => ({
+                      ...cue,
+                      translated: cacheMap.get(cue.time) || undefined
+                    }))
+                    // 同步到内存缓存
+                    cachedCues.forEach(c => {
+                      if (c.translated) {
+                        const original = cues.find(cue => cue.time === c.time)
+                        if (original) {
+                          translateCacheRef.current.set(original.text, c.translated)
+                        }
+                      }
+                    })
+                  } else {
+                    // 没有缓存，异步翻译（不阻塞播放，先显示原文，翻译完成后更新）
+                    ;(async () => {
+                      try {
+                        const results = await window.electronAPI.translateBatch(texts, 'zh-CN')
+                        const resultMap = new Map()
+                        texts.forEach((text, i) => {
+                          if (results[i] && results[i] !== text) {
+                            resultMap.set(text, results[i])
+                            translateCacheRef.current.set(text, results[i])
+                          }
+                        })
+                        setCurrentCues(prevCues => {
+                          const updated = prevCues.map(cue => {
+                            if (!cue.text || !cue.text.trim()) return cue
+                            const translated = resultMap.get(cue.text)
+                            if (translated) {
+                              return { ...cue, translated }
+                            }
+                            return cue
+                          })
+                          // 保存到数据库缓存
+                          try {
+                            const cacheData = updated.map(cue => ({
+                              time: cue.time,
+                              text: cue.text,
+                              translated: cue.translated
+                            }))
+                            window.electronAPI.translateSaveCache(selectedWork.id, audio.path, cacheData).catch(() => {})
+                          } catch (e) {
+                            console.error('Failed to save translate cache:', e)
+                          }
+                          return updated
+                        })
+                        setTranslateVersion(v => v + 1)
+                      } catch (e) {
+                        console.error('Auto translate failed:', e)
+                      }
+                    })()
+                  }
+                } catch (e) {
+                  console.error('Auto translate init failed:', e)
+                }
+              }
+            }
+            
             setCurrentCues(cues)
           }
         } catch (e) {
@@ -1005,7 +1089,7 @@ export default function App() {
         }
       }
     },
-    [selectedWork, allSubtitleFiles],
+    [selectedWork, allSubtitleFiles, settings.subtitleLangPriority, settings.autoTranslateSubtitle],
   )
 
   // 监听 audioFiles 加载完成后自动播放（最近播放）
@@ -1988,6 +2072,7 @@ export default function App() {
                     onToggleTranslate={handleToggleTranslate}
                     isTranslating={isAnyTranslating}
                     hasTranslation={hasTranslation}
+                    subtitleFontSize={settings.subtitleFontSize}
                   />
                 </div>
               </div>
@@ -2076,6 +2161,7 @@ export default function App() {
                     onToggleTranslate={handleToggleTranslate}
                     isTranslating={isAnyTranslating}
                     hasTranslation={hasTranslation}
+                    subtitleFontSize={settings.subtitleFontSize}
                   />
                 </div>
               </div>
@@ -2163,7 +2249,13 @@ export default function App() {
       )}
 
       {isImmersive && playingWork && (
-        <div className="immersive-overlay">
+        <div 
+          className="immersive-overlay"
+          style={{
+            '--immersive-lyric-font-size': `${settings.subtitleFontSize ? settings.subtitleFontSize * 1.2 : 22}px`,
+            '--immersive-lyric-active-font-size': `${settings.subtitleFontSize ? settings.subtitleFontSize * 1.8 : 34}px`,
+          }}
+        >
           <div className="immersive-bg" style={{ backgroundImage: `url(${playingWork.cover})` }} />
           <button className="immersive-close-btn" onClick={handleCloseImmersive} title="关闭 (ESC)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
