@@ -144,7 +144,7 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
       <div className="work-detail-content" key={work?.id}>
       <div className="work-hero">
         <div className="hero-content">
-          <div className="work-cover-large" data-work-cover-target>
+          <div className="work-cover-large">
             {work.cover ? (
               <img ref={coverImgRef} src={work.cover} alt="" />
             ) : (

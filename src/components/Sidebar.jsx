@@ -164,13 +164,13 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
             <div
               key={work.id}
               className={`work-item ${viewMode === 'grid' ? 'card' : 'row'} ${selectedWorkId === work.id ? 'active' : ''}`}
-              onClick={(e) => onSelectWork(work, e)}
+              onClick={() => onSelectWork(work)}
             >
               {viewMode === 'grid' ? (
                 <>
                   <div className="card-cover">
                     {work.cover ? (
-                      <img src={work.cover} alt="" data-work-cover data-work-id={work.id} loading="lazy" decoding="async" />
+                      <img src={work.cover} alt="" loading="lazy" decoding="async" />
                     ) : (
                       <div className="card-cover-placeholder">
                         <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -213,7 +213,7 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
               ) : (
                 <>
                   {work.cover ? (
-                    <img src={work.cover} alt="" className="work-cover" data-work-cover data-work-id={work.id} loading="lazy" decoding="async" />
+                    <img src={work.cover} alt="" className="work-cover" loading="lazy" decoding="async" />
                   ) : (
                     <div className="work-cover-placeholder">
                       <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

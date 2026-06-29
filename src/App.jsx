@@ -125,14 +125,6 @@ export default function App() {
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState(0) // 剩余秒数
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
-  const [flipState, setFlipState] = useState({
-    phase: 'idle',
-    src: '',
-    startRect: null,
-    endRect: null,
-    startBorderRadius: 0,
-    endBorderRadius: 0,
-  })
   const [toasts, setToasts] = useState([])
 
   // 翻译缓存：内存中存储，关闭软件后清空。key = 原文, value = 译文
@@ -354,9 +346,6 @@ export default function App() {
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
   const lastHistoryTimeRef = useRef(0)
-  const flipRafRef = useRef(null)
-  const flipTimeoutRef = useRef(null)
-  const flipWorkIdRef = useRef(null)
   const loadingWorkIdRef = useRef(null)
 
   const currentCueIndex = useMemo(() => {
@@ -648,67 +637,16 @@ export default function App() {
   }
 
   const handleSelectWork = useCallback(
-    (work, event) => {
+    (work) => {
       if (work?.id === selectedWork?.id) return
 
-      if (flipTimeoutRef.current) {
-        clearTimeout(flipTimeoutRef.current)
-        flipTimeoutRef.current = null
-      }
-      if (flipRafRef.current) {
-        cancelAnimationFrame(flipRafRef.current)
-        flipRafRef.current = null
-      }
-
-      setFlipState({ phase: 'idle', src: '', startRect: null, endRect: null, startBorderRadius: 0, endBorderRadius: 0 })
       loadingWorkIdRef.current = null
-
-      let startRect = null
-      let startBorderRadius = 0
-      let sourceEl = null
-
-      if (event && work?.cover) {
-        sourceEl = event.target.closest('[data-work-cover]')
-        if (!sourceEl && event.currentTarget) {
-          sourceEl = event.currentTarget.querySelector('[data-work-cover]')
-        }
-        if (!sourceEl) {
-          sourceEl = document.querySelector(`[data-work-cover][data-work-id="${work.id}"]`)
-        }
-      }
-
-      if (work?.cover && sourceEl) {
-        const rect = sourceEl.getBoundingClientRect()
-        const zoom = zoomRef.current || 1
-        const styles = window.getComputedStyle(sourceEl)
-        startBorderRadius = parseFloat(styles.borderRadius) || 0
-        startRect = {
-          left: rect.left / zoom,
-          top: rect.top / zoom,
-          width: rect.width / zoom,
-          height: rect.height / zoom,
-        }
-        flipWorkIdRef.current = work.id
-      } else {
-        flipWorkIdRef.current = null
-      }
 
       setSelectedWork(work)
       setCurrentAudio(null)
       setCurrentCues([])
       setCurrentTime(0)
       setDuration(0)
-
-      if (startRect) {
-        setFlipState({
-          phase: 'ready',
-          src: work.cover,
-          startRect,
-          endRect: null,
-          startBorderRadius,
-          endBorderRadius: 0,
-        })
-      }
     },
     [selectedWork],
   )
@@ -754,44 +692,8 @@ export default function App() {
   }, [])
 
   const handleSelectOnlineWork = useCallback(
-    async (workSummary, event) => {
+    async (workSummary) => {
       try {
-        if (flipTimeoutRef.current) {
-          clearTimeout(flipTimeoutRef.current)
-          flipTimeoutRef.current = null
-        }
-        if (flipRafRef.current) {
-          cancelAnimationFrame(flipRafRef.current)
-          flipRafRef.current = null
-        }
-
-        let startRect = null
-        let startBorderRadius = 0
-        let sourceEl = null
-
-        if (event && workSummary?.mainCoverUrl) {
-          sourceEl = event.target.closest('[data-work-cover]')
-          if (!sourceEl && event.currentTarget) {
-            sourceEl = event.currentTarget.querySelector('[data-work-cover]')
-          }
-          if (!sourceEl) {
-            sourceEl = document.querySelector(`[data-work-cover][data-work-id="online_${workSummary.id}"]`)
-          }
-        }
-
-        if (workSummary?.mainCoverUrl && sourceEl) {
-          const rect = sourceEl.getBoundingClientRect()
-          const styles = window.getComputedStyle(sourceEl)
-          startBorderRadius = parseFloat(styles.borderRadius) || 0
-          startRect = {
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
-          }
-        }
-        // Always track which work was clicked (used for stale-response guard)
-        flipWorkIdRef.current = `online_${workSummary.id}`
         loadingWorkIdRef.current = workSummary.id
 
         const clickedWorkId = workSummary.id
@@ -827,20 +729,6 @@ export default function App() {
         setAllSubtitleFiles([])
         setSubtitleOptions([])
         setSelectedSubtitleIndex(-1)
-
-        // Start FLIP animation after the detail panel is committed to the DOM
-        if (startRect) {
-          flipTimeoutRef.current = setTimeout(() => {
-            setFlipState({
-              phase: 'ready',
-              src: searchWork.cover,
-              startRect,
-              endRect: null,
-              startBorderRadius,
-              endBorderRadius: 0,
-            })
-          }, 100)
-        }
 
         // Fetch tracks in background (essential for playback)
         // Also fetch workInfo in background for additional metadata (RJ code etc.)
@@ -910,92 +798,6 @@ export default function App() {
       setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: true } : prev)
     }
   }, [selectedWork, extractAudiosFromTracks])
-
-  useEffect(() => {
-    if (flipState.phase !== 'ready') return
-
-    let attempts = 0
-    const maxAttempts = 40
-
-    const poll = () => {
-      attempts++
-      if (attempts > maxAttempts) {
-        setFlipState({ phase: 'idle', src: '', startRect: null, endRect: null, startBorderRadius: 0, endBorderRadius: 0 })
-        return
-      }
-
-      const targetEl = document.querySelector('[data-work-cover-target]')
-      if (!targetEl) {
-        flipRafRef.current = requestAnimationFrame(poll)
-        return
-      }
-
-      const endRect = targetEl.getBoundingClientRect()
-      if (endRect.width === 0 || endRect.height === 0) {
-        flipRafRef.current = requestAnimationFrame(poll)
-        return
-      }
-
-      const endStyles = window.getComputedStyle(targetEl)
-      const endBorderRadius = parseFloat(endStyles.borderRadius) || 0
-      const zoom = zoomRef.current || 1
-
-      setFlipState((prev) => ({
-        ...prev,
-        phase: 'invert',
-        endRect: {
-          left: endRect.left / zoom,
-          top: endRect.top / zoom,
-          width: endRect.width / zoom,
-          height: endRect.height / zoom,
-        },
-        endBorderRadius,
-      }))
-    }
-
-    flipRafRef.current = requestAnimationFrame(poll)
-
-    return () => {
-      if (flipRafRef.current) {
-        cancelAnimationFrame(flipRafRef.current)
-        flipRafRef.current = null
-      }
-    }
-  }, [flipState.phase])
-
-  useEffect(() => {
-    if (flipState.phase !== 'invert') return
-
-    flipRafRef.current = requestAnimationFrame(() => {
-      flipRafRef.current = requestAnimationFrame(() => {
-        setFlipState((prev) => ({ ...prev, phase: 'play' }))
-      })
-    })
-
-    return () => {
-      if (flipRafRef.current) {
-        cancelAnimationFrame(flipRafRef.current)
-        flipRafRef.current = null
-      }
-    }
-  }, [flipState.phase])
-
-  useEffect(() => {
-    if (flipState.phase !== 'play') return
-
-    flipTimeoutRef.current = setTimeout(() => {
-      setFlipState({ phase: 'idle', src: '', startRect: null, endRect: null, startBorderRadius: 0, endBorderRadius: 0 })
-      flipTimeoutRef.current = null
-      flipWorkIdRef.current = null
-    }, 400)
-
-    return () => {
-      if (flipTimeoutRef.current) {
-        clearTimeout(flipTimeoutRef.current)
-        flipTimeoutRef.current = null
-      }
-    }
-  }, [flipState.phase])
 
   const handleDeleteWork = useCallback(async (work) => {
     const confirmed = window.confirm(`确定要删除「${work.title || work.folderName}」吗？\n\n（只会删除记录，不会删除本地文件）`)
@@ -2323,26 +2125,6 @@ export default function App() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {(flipState.phase === 'invert' || flipState.phase === 'play') && flipState.startRect && flipState.endRect && (
-        <div
-          className={`flip-cover ${flipState.phase === 'play' ? 'animating' : ''}`}
-          style={{
-            left: flipState.startRect.left,
-            top: flipState.startRect.top,
-            width: flipState.startRect.width,
-            height: flipState.startRect.height,
-            borderRadius: `${flipState.startBorderRadius}px`,
-            '--translate-x': `${flipState.endRect.left - flipState.startRect.left}px`,
-            '--translate-y': `${flipState.endRect.top - flipState.startRect.top}px`,
-            '--scale-x': flipState.endRect.width / flipState.startRect.width,
-            '--scale-y': flipState.endRect.height / flipState.startRect.height,
-            '--end-border-radius': `${flipState.endBorderRadius}px`,
-          }}
-        >
-          <img src={flipState.src} alt="" />
         </div>
       )}
 

@@ -57,9 +57,9 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
   return (
     <div
       className={`discover-work-card ${selectedWorkId === `online_${work.id}` ? 'selected' : ''}`}
-      onClick={(e) => {
+      onClick={() => {
         if (onSelectWork) {
-          onSelectWork(work, e)
+          onSelectWork(work)
         } else {
           window.electronAPI.openExternal(`https://asmr.one/work/${work.id}`)
         }
@@ -67,7 +67,7 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
     >
       <div className="discover-card-cover">
         {work.mainCoverUrl ? (
-          <img src={work.mainCoverUrl} alt={work.title} loading="lazy" decoding="async" data-work-cover data-work-id={`online_${work.id}`} />
+          <img src={work.mainCoverUrl} alt={work.title} loading="lazy" decoding="async" />
         ) : (
           <div className="cover-placeholder">
             <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -487,35 +487,6 @@
   opacity: 0.6;
 }
 
-.flip-cover {
-  position: fixed;
-  z-index: 9999;
-  pointer-events: none;
-  overflow: hidden;
-  will-change: transform, border-radius, box-shadow, opacity;
-  transition: transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
-              border-radius 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
-              box-shadow 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
-              opacity 200ms ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  transform-origin: top left;
-  opacity: 1;
-  background: var(--bg-tertiary);
-}
-
-.flip-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.flip-cover.animating {
-  transform: translate(var(--translate-x), var(--translate-y)) scale(var(--scale-x), var(--scale-y));
-  border-radius: var(--end-border-radius) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 30px rgba(201, 100, 66, 0.15);
-}
-
 .discover-wrapper {
   flex: 1;
   display: flex;
@@ -580,38 +551,6 @@
   display: none;
 }
 
-.library-layout.hide-sidebar .library-main {
-  flex: 0 0 0;
-  min-width: 0;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-  margin-right: -16px;
-  transition: flex-basis var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow), opacity var(--transition-normal), margin-right var(--transition-slow);
-}
-
-.library-layout.hide-sidebar > .main-content {
-  flex: 1 1 100%;
-  min-width: 0;
-}
-
-.discover-layout.hide-sidebar .discover-main {
-  flex: 0 0 0;
-  min-width: 0;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-  margin-right: -16px;
-  transition: flex-basis var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow), opacity var(--transition-normal), margin-right var(--transition-slow);
-}
-
-.discover-layout.hide-sidebar > .discover-detail-content {
-  flex: 1 1 100%;
-  min-width: 0;
-}
-
 .discover-layout {
   flex: 1;
   display: flex;
@@ -671,6 +610,38 @@
   min-width: 220px;
 }
 
+.library-layout.hide-sidebar .library-main {
+  flex: 0 0 0;
+  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-right: -16px;
+  transition: flex-basis var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow), opacity var(--transition-normal), margin-right var(--transition-slow);
+}
+
+.library-layout.hide-sidebar > .main-content {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.discover-layout.hide-sidebar .discover-main {
+  flex: 0 0 0;
+  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-right: -16px;
+  transition: flex-basis var(--transition-slow), min-width var(--transition-slow), max-width var(--transition-slow), opacity var(--transition-normal), margin-right var(--transition-slow);
+}
+
+.discover-layout.hide-sidebar > .discover-detail-content {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
 .detail-close-btn {
   position: absolute;
   top: 12px;
@@ -695,15 +666,6 @@
   background: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
   transform: scale(1.1);
-}
-
-.flip-cover.fading-out {
-  opacity: 0;
-  transition: opacity 120ms ease-out;
-}
-
-.cover-target-hidden {
-  opacity: 0 !important;
 }
 
 /* Toast 通知 */
