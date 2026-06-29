@@ -30,6 +30,17 @@
   --accent-gradient-soft: linear-gradient(135deg, rgba(201, 100, 66, 0.12) 0%, rgba(201, 100, 66, 0.08) 100%);
   --accent-glow: rgba(201, 100, 66, 0.2);
 
+  /* Accent color scale (light mode) */
+  --accent-100: #fdf1ed;
+  --accent-200: #fbe0d6;
+  --accent-300: #edc4b0;
+  --accent-400: #e0a893;
+  --accent-500: #d48c73;
+  --accent-600: #c96442;
+  --accent-700: #a84d30;
+  --accent-800: #8a3f28;
+  --accent-900: #6b3320;
+
   --tag-bg: rgba(110, 109, 104, 0.1);
   --tag-border: rgba(110, 109, 104, 0.15);
   --tag-text: #6e6d68;
@@ -123,6 +134,17 @@
   --accent-gradient: linear-gradient(135deg, #d97757 0%, #e08d6f 100%);
   --accent-gradient-soft: linear-gradient(135deg, rgba(217, 119, 87, 0.15) 0%, rgba(217, 119, 87, 0.1) 100%);
   --accent-glow: rgba(217, 119, 87, 0.25);
+
+  /* Accent color scale (dark mode) */
+  --accent-100: #fef6f3;
+  --accent-200: #fde8e0;
+  --accent-300: #f0cfc1;
+  --accent-400: #e0a893;
+  --accent-500: #d48873;
+  --accent-600: #d97757;
+  --accent-700: #c4624a;
+  --accent-800: #a04d3b;
+  --accent-900: #7a3a2e;
 
   --tag-bg: rgba(183, 181, 169, 0.15);
   --tag-border: rgba(183, 181, 169, 0.25);
