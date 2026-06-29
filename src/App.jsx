@@ -516,15 +516,16 @@ export default function App() {
     }
   }
 
-  const allCVs = [...new Set(works.flatMap((w) => w.cvs || []))].sort()
-  const allCircles = [...new Set(works.map((w) => w.circle).filter(Boolean))].sort()
+  // useMemo 缓存计算结果，减少重渲染
+  const allCVs = useMemo(() => [...new Set(works.flatMap((w) => w.cvs || []))].sort(), [works])
+  const allCircles = useMemo(() => [...new Set(works.map((w) => w.circle).filter(Boolean))].sort(), [works])
 
-  const filteredWorks = works.filter((w) => {
+  const filteredWorks = useMemo(() => works.filter((w) => {
     if (cvFilter && !(w.cvs || []).includes(cvFilter)) return false
     if (circleFilter && w.circle !== circleFilter) return false
     if (tagFilter && !(w.tags || []).includes(tagFilter)) return false
     return true
-  })
+  }), [works, cvFilter, circleFilter, tagFilter])
 
   const fetchDlsiteMetadataAsync = useCallback(async (workId, folderName, rjCode) => {
     try {
