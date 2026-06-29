@@ -190,6 +190,104 @@
   gap: 10px;
 }
 
+/* ===== 最近播放区域 ===== */
+.recent-plays-section {
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.recent-plays-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.recent-plays-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.recent-plays-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.recent-plays-toggle {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.recent-plays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.recent-play-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.recent-play-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.recent-play-item.active {
+  background: var(--accent-gradient-soft);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.recent-play-cover {
+  width: 32px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
+}
+
+.recent-play-cover-placeholder {
+  width: 32px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  color: var(--text-tertiary);
+}
+
+.recent-play-title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
 .filter-group {
   display: flex;
   flex-direction: column;

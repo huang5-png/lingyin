@@ -286,6 +286,31 @@ async function getAllHistory() {
   return dbData.history || []
 }
 
+// 获取最近播放的作品（去重后按时间倒序），用于侧边栏快捷访问
+async function getRecentWorks(limit = 8) {
+  const history = dbData.history || []
+  // 从后往前遍历，取最早出现的 workId（最近播放的排在最后）
+  const seen = new Set()
+  const recent = []
+  for (let i = history.length - 1; i >= 0; i--) {
+    const h = history[i]
+    if (!h || !h.workId) continue
+    if (seen.has(h.workId)) continue
+    seen.add(h.workId)
+    recent.push({
+      workId: h.workId,
+      title: h.title || '',
+      cover: h.cover || '',
+      circle: h.circle || '',
+      cvs: h.cvs || [],
+      tags: h.tags || [],
+      lastPlayed: h.ts,
+    })
+    if (recent.length >= limit) break
+  }
+  return recent
+}
+
 // ===== Playlists =====
 // Playlist 结构：{ id, name, createdAt, updatedAt, items: [PlaylistItem] }
 // PlaylistItem 结构：{ id, workId, workTitle, workCover, audioPath, audioName, isOnline, addedAt }
@@ -426,6 +451,7 @@ module.exports = {
   appendHistory,
   getUsageStats,
   getAllHistory,
+  getRecentWorks,
   getAllPlaylists,
   createPlaylist,
   renamePlaylist,

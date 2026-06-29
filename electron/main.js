@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -281,6 +281,10 @@ ipcMain.handle('db:getUsageStats', async (_, opts) => {
 
 ipcMain.handle('db:getAllHistory', async () => {
   return getAllHistory()
+})
+
+ipcMain.handle('db:getRecentWorks', async (_, limit) => {
+  return getRecentWorks(limit)
 })
 
 // ===== 播放列表 IPC =====

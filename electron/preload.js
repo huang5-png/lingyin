@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbAppendHistory: (entry) => ipcRenderer.invoke('db:appendHistory', entry),
   dbGetUsageStats: (opts) => ipcRenderer.invoke('db:getUsageStats', opts),
   dbGetAllHistory: () => ipcRenderer.invoke('db:getAllHistory'),
+  dbGetRecentWorks: (limit) => ipcRenderer.invoke('db:getRecentWorks', limit),
 
   // 播放列表
   playlistGetAll: () => ipcRenderer.invoke('playlist:getAll'),

@@ -91,6 +91,7 @@ function loadSettings() {
 
 export default function App() {
   const [works, setWorks] = useState([])
+  const [recentWorks, setRecentWorks] = useState([])
   const [selectedWork, setSelectedWork] = useState(null)
   const [currentAudio, setCurrentAudio] = useState(null)
   const [currentCues, setCurrentCues] = useState([])
@@ -321,6 +322,7 @@ export default function App() {
 
   useEffect(() => {
     loadWorks()
+    loadRecentWorks()
     async function loadDbSettings() {
       try {
         const dbSettings = await window.electronAPI.dbGetSettings()
@@ -384,6 +386,15 @@ export default function App() {
       setWorks(data || [])
     } catch (e) {
       console.error('Failed to load works:', e)
+    }
+  }
+
+  const loadRecentWorks = async () => {
+    try {
+      const data = await window.electronAPI.dbGetRecentWorks(8)
+      setRecentWorks(data || [])
+    } catch (e) {
+      console.error('Failed to load recent works:', e)
     }
   }
 
@@ -1086,6 +1097,7 @@ export default function App() {
             cvs: selectedWork.cvs || [],
             tags: selectedWork.tags || [],
           }).catch(() => {})
+          loadRecentWorks()
         }
       }
     },
@@ -1723,6 +1735,20 @@ export default function App() {
     setAddToPlaylistTarget(null)
   }, [])
 
+  // 从最近播放列表选择作品
+  const handleSelectRecentWork = useCallback((recentWork) => {
+    if (!recentWork?.workId) return
+    // 在 works 中查找匹配的作品
+    const target = works.find((w) => w.id === recentWork.workId)
+    if (target) {
+      setCurrentView('library')
+      handleSelectWork(target)
+    } else {
+      // 如果本地找不到（可能是在线作品），尝试切换到发现视图
+      showToast('该作品不在本地库中', 'info')
+    }
+  }, [works, handleSelectWork, showToast])
+
   // 从播放列表点击播放某项：根据 workId 找到本地作品，切换视图并播放
   const handlePlayPlaylistItem = useCallback(async (item) => {
     if (!item) return
@@ -1902,6 +1928,8 @@ export default function App() {
           <div className="library-main">
             <Sidebar
               works={filteredWorks}
+              recentWorks={recentWorks}
+              onSelectRecentWork={handleSelectRecentWork}
               selectedWorkId={selectedWork?.id}
               onSelectWork={handleSelectWork}
               onAddFolder={handleAddFolder}
