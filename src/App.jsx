@@ -13,35 +13,13 @@ import DownloadModal from './components/DownloadModal'
 import PlaylistView from './components/PlaylistView'
 import RecentPlaysView from './components/RecentPlaysView'
 import GlobalSearchModal from './components/GlobalSearchModal'
+import Toast from './components/Toast'
+import AddToPlaylistModal from './components/AddToPlaylistModal'
+import LeftNavBar from './components/LeftNavBar'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
-
-// Toast 通知组件
-const Toast = ({ message, type = 'info', onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3500)
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  const icons = {
-    success: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-    error: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
-    info: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
-    warning: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-  }
-
-  return (
-    <div className={`toast toast-${type}`}>
-      <span className="toast-icon">{icons[type]}</span>
-      <span className="toast-message">{message}</span>
-      <button className="toast-close" onClick={onClose}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-  )
-}
 
 const DEFAULT_SETTINGS = {
   autoPlayNext: true,
@@ -1989,86 +1967,11 @@ export default function App() {
           </div>
         </div>
         <div className="app-main">
-        <div className="left-nav-bar">
-          <div className="nav-items">
-            <div
-              className={`nav-item ${currentView === 'library' ? 'active' : ''}`}
-              title="我的库"
-              onClick={() => setCurrentView('library')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <div
-              className={`nav-item ${currentView === 'discover' ? 'active' : ''}`}
-              title="发现"
-              onClick={() => setCurrentView('discover')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-              </svg>
-            </div>
-            <div
-              className={`nav-item ${currentView === 'recent-plays' ? 'active' : ''}`}
-              title="最近播放"
-              onClick={() => setCurrentView('recent-plays')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-              </svg>
-            </div>
-            <div
-              className={`nav-item ${currentView === 'annual-report' ? 'active' : ''}`}
-              title="使用报告"
-              onClick={() => setCurrentView('annual-report')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-                <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
-              </svg>
-            </div>
-            <div
-              className={`nav-item ${currentView === 'download' ? 'active' : ''}`}
-              title="下载管理"
-              onClick={() => setCurrentView('download')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </div>
-            <div
-              className={`nav-item ${currentView === 'playlist' ? 'active' : ''}`}
-              title="播放列表"
-              onClick={() => setCurrentView('playlist')}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </div>
-          </div>
-          <div className="nav-bottom">
-            <div className="nav-item" title="设置" onClick={handleOpenSettings}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </div>
-          </div>
-        </div>
+        <LeftNavBar
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          onOpenSettings={handleOpenSettings}
+        />
 
         <div className="right-content-area">
       {currentView === 'library' && (
@@ -2419,162 +2322,5 @@ export default function App() {
       )}
       </div>
     </ErrorBoundary>
-  )
-}
-
-// 加入播放列表弹窗
-function AddToPlaylistModal({ target, onClose, onToast }) {
-  const [playlists, setPlaylists] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState(null)
-  const [creatingName, setCreatingName] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  const refresh = useCallback(async () => {
-    try {
-      const data = await window.electronAPI.playlistGetAll()
-      setPlaylists(data || [])
-      if (data && data.length > 0) setSelectedId(data[0].id)
-    } catch (e) {
-      console.error('Failed to load playlists:', e)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
-
-  const handleConfirm = useCallback(async () => {
-    if (!selectedId || !target?.audio) return
-    setSubmitting(true)
-    try {
-      const { audio, work } = target
-      const item = {
-        workId: work?.id || '',
-        workTitle: work?.title || work?.folderName || '',
-        workCover: work?.cover || '',
-        audioPath: audio.path,
-        audioName: audio.name || '',
-        isOnline: !!audio.isOnline,
-      }
-      const updated = await window.electronAPI.playlistAddItem(selectedId, item)
-      if (updated) {
-        // 检查是否真的加入（去重时 items 不变）
-        const existsBefore = playlists.find((p) => p.id === selectedId)?.items?.some((it) => it.audioPath === audio.path)
-        onToast?.(existsBefore ? '该曲目已在播放列表中' : `已加入播放列表`, existsBefore ? 'info' : 'success')
-      }
-      onClose()
-    } catch (e) {
-      onToast?.('加入失败：' + (e.message || ''), 'error')
-    } finally {
-      setSubmitting(false)
-    }
-  }, [selectedId, target, playlists, onToast, onClose])
-
-  const handleCreateAndAdd = useCallback(async () => {
-    const name = (creatingName || '').trim()
-    if (!name) {
-      setShowCreate(false)
-      setCreatingName('')
-      return
-    }
-    setSubmitting(true)
-    try {
-      const created = await window.electronAPI.playlistCreate(name)
-      const { audio, work } = target
-      const item = {
-        workId: work?.id || '',
-        workTitle: work?.title || work?.folderName || '',
-        workCover: work?.cover || '',
-        audioPath: audio.path,
-        audioName: audio.name || '',
-        isOnline: !!audio.isOnline,
-      }
-      await window.electronAPI.playlistAddItem(created.id, item)
-      onToast?.(`已创建并加入「${created.name}」`, 'success')
-      onClose()
-    } catch (e) {
-      onToast?.('创建失败：' + (e.message || ''), 'error')
-    } finally {
-      setSubmitting(false)
-    }
-  }, [creatingName, target, onToast, onClose])
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal add-to-playlist-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>加入播放列表</h3>
-          <button className="close-btn" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body">
-          <div className="add-to-playlist-target-info">
-            <span className="add-to-playlist-target-name">{target?.audio?.name || '未知曲目'}</span>
-            {target?.work?.title && <span className="add-to-playlist-target-work">{target.work.title}</span>}
-          </div>
-          {loading ? (
-            <div className="add-to-playlist-loading">加载中...</div>
-          ) : playlists.length === 0 && !showCreate ? (
-            <div className="add-to-playlist-empty">
-              <p>还没有播放列表</p>
-              <button className="btn-primary" onClick={() => setShowCreate(true)}>新建播放列表</button>
-            </div>
-          ) : (
-            <div className="add-to-playlist-list">
-              {playlists.map((pl) => (
-                <label
-                  key={pl.id}
-                  className={`add-to-playlist-option ${selectedId === pl.id ? 'selected' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="playlist-target"
-                    checked={selectedId === pl.id}
-                    onChange={() => setSelectedId(pl.id)}
-                  />
-                  <span className="add-to-playlist-option-name">{pl.name}</span>
-                  <span className="add-to-playlist-option-count">{(pl.items || []).length} 首</span>
-                </label>
-              ))}
-              {showCreate ? (
-                <div className="add-to-playlist-create">
-                  <input
-                    type="text"
-                    className="playlist-name-input"
-                    placeholder="新播放列表名称"
-                    value={creatingName}
-                    autoFocus
-                    onChange={(e) => setCreatingName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCreateAndAdd()
-                      else if (e.key === 'Escape') { setShowCreate(false); setCreatingName('') }
-                    }}
-                    maxLength={50}
-                  />
-                  <button className="btn-primary" onClick={handleCreateAndAdd} disabled={submitting}>创建并加入</button>
-                </div>
-              ) : (
-                <button className="add-to-playlist-new-btn" onClick={() => setShowCreate(true)}>
-                  + 新建播放列表
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose}>取消</button>
-          <button
-            className="btn-primary"
-            onClick={handleConfirm}
-            disabled={!selectedId || submitting || loading}
-          >
-            {submitting ? '处理中...' : '加入'}
-          </button>
-        </div>
-      </div>
-    </div>
   )
 }

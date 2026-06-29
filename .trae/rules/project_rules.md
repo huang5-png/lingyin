@@ -127,6 +127,9 @@
 | `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索作品/播放列表/CV/社团/标签，快捷键唤起，方向键选择+回车跳转） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
 | `components/StateView.jsx` | 统一空态/加载态/错误状态组件（13+ 预置图标、sm/md/lg 尺寸、紧凑/行内模式） |
+| `components/LeftNavBar.jsx` | 左侧导航栏（64px 宽，卡片样式，包含我的库/发现/最近播放/使用报告/下载/播放列表/设置入口） |
+| `components/Toast.jsx` | Toast 通知组件（success/error/info/warning 四种类型，自动消失，带动画） |
+| `components/AddToPlaylistModal.jsx` | 加入播放列表弹窗（选择已有列表或新建列表并加入） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
