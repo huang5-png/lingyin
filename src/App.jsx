@@ -174,32 +174,6 @@ export default function App() {
     pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
   }, [])
 
-  // 监听 audioFiles 加载完成后自动播放
-  useEffect(() => {
-    if (!pendingAutoPlayRef.current || !audioFiles.length) return
-
-    const pending = pendingAutoPlayRef.current
-    const timeout = Date.now() - pending.startedAt > 10000 // 10秒超时
-    if (timeout) {
-      pendingAutoPlayRef.current = null
-      return
-    }
-
-    // 尝试找到匹配的音频
-    let targetAudio = null
-    if (pending.audioPath) {
-      targetAudio = audioFiles.find(a => a.path === pending.audioPath)
-    }
-    if (!targetAudio && audioFiles.length > 0) {
-      targetAudio = audioFiles[0]
-    }
-
-    if (targetAudio) {
-      pendingAutoPlayRef.current = null
-      handleSelectAudio(targetAudio)
-    }
-  }, [audioFiles, handleSelectAudio])
-
   // 翻译缓存：内存中存储，关闭软件后清空。key = 原文, value = 译文
   const translateCacheRef = useRef(new Map())
   // 翻译状态触发器：每次翻译完成后递增，触发组件重渲染
@@ -1038,6 +1012,32 @@ export default function App() {
     },
     [selectedWork, allSubtitleFiles],
   )
+
+  // 监听 audioFiles 加载完成后自动播放（最近播放）
+  useEffect(() => {
+    if (!pendingAutoPlayRef.current || !audioFiles.length) return
+
+    const pending = pendingAutoPlayRef.current
+    const timeout = Date.now() - pending.startedAt > 10000 // 10秒超时
+    if (timeout) {
+      pendingAutoPlayRef.current = null
+      return
+    }
+
+    // 尝试找到匹配的音频
+    let targetAudio = null
+    if (pending.audioPath) {
+      targetAudio = audioFiles.find(a => a.path === pending.audioPath)
+    }
+    if (!targetAudio && audioFiles.length > 0) {
+      targetAudio = audioFiles[0]
+    }
+
+    if (targetAudio) {
+      pendingAutoPlayRef.current = null
+      handleSelectAudio(targetAudio)
+    }
+  }, [audioFiles, handleSelectAudio])
 
   const handleTimeUpdate = useCallback(
     (time) => {
