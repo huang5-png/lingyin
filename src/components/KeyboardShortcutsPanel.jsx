@@ -6,6 +6,7 @@ const DEFAULT_SHORTCUTS = {
   prevTrack: 'ArrowLeft',
   nextTrack: 'ArrowRight',
   exitImmersive: 'Escape',
+  globalSearch: 'Ctrl+K',
 };
 
 const ACTION_LABELS = {
@@ -13,6 +14,7 @@ const ACTION_LABELS = {
   prevTrack: '上一曲',
   nextTrack: '下一曲',
   exitImmersive: '退出沉浸式',
+  globalSearch: '全局搜索',
 };
 
 const ACTION_DESCS = {
@@ -20,6 +22,7 @@ const ACTION_DESCS = {
   prevTrack: '跳转到上一首曲目',
   nextTrack: '跳转到下一首曲目',
   exitImmersive: '关闭沉浸式播放模式',
+  globalSearch: '打开/关闭全局搜索弹窗',
 };
 
 function KeyboardShortcutsPanel({ settings, onSettingsChange }) {

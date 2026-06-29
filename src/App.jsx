@@ -481,22 +481,7 @@ export default function App() {
     loadDbSettings()
   }, [])
 
-  // 全局快捷键：Ctrl+K 打开快速搜索
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // 忽略输入框中的 Ctrl+K
-      if (e.ctrlKey && e.key === 'k') {
-        const tag = document.activeElement?.tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) {
-          return
-        }
-        e.preventDefault()
-        setShowGlobalSearch((prev) => !prev)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+
 
   // 记住上一次的主题，用于检测主题变化
   const prevThemeRef = useRef(settings.theme)
@@ -1525,6 +1510,12 @@ export default function App() {
         }
         return
       }
+
+      if (matchShortcut(e, shortcuts.globalSearch)) {
+        e.preventDefault()
+        setShowGlobalSearch((prev) => !prev)
+        return
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -2327,6 +2318,10 @@ export default function App() {
               handleSelectWork(work)
             }
           }
+        }}
+        onSelectPlaylist={(playlist) => {
+          setCurrentView('playlist')
+          setShowGlobalSearch(false)
         }}
       />
 
