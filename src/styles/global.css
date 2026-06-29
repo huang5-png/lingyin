@@ -89,7 +89,7 @@
   --line-height-relaxed: 1.7;
 
   --sidebar-width: 280px;
-  --player-height: 100px;
+  --player-height: 80px;
   --lyric-width: 320px;
 
   --spacing-card: 16px;
@@ -335,7 +335,7 @@ a:hover {
     --font-size-2xl: 26px;
     --font-size-3xl: 36px;
     --sidebar-width: 300px;
-    --player-height: 112px;
+    --player-height: 90px;
   }
 }
 
@@ -350,7 +350,7 @@ a:hover {
     --font-size-2xl: 28px;
     --font-size-3xl: 40px;
     --sidebar-width: 320px;
-  --player-height: 120px;
+    --player-height: 96px;
   }
 }
 

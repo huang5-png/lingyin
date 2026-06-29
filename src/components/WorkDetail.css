@@ -484,52 +484,45 @@
 .action-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 8px 16px;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 12px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-sm);
 }
 
 .action-btn:hover {
   background: rgba(255, 255, 255, 0.9);
   border-color: var(--border-hover);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-md);
+  color: var(--accent-primary);
 }
 
 .action-btn.primary {
-  background: var(--accent-gradient);
-  border-color: transparent;
-  color: var(--text-on-accent);
-  font-weight: 600;
-  padding: 8px 20px;
-  box-shadow: 0 4px 12px rgba(201, 100, 66, 0.3);
+  background: rgba(201, 100, 66, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 .action-btn.primary:hover {
-  filter: brightness(1.05);
-  box-shadow: var(--shadow-glow);
+  background: rgba(201, 100, 66, 0.18);
 }
 
 .btn-icon {
-  width: 14px;
-  height: 14px;
-  vertical-align: middle;
-  margin-right: 4px;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .action-btn.primary .btn-icon {
-  filter: brightness(0) invert(1);
+  filter: none;
 }
 
 .star-icon {

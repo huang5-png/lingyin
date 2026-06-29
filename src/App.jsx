@@ -126,6 +126,79 @@ export default function App() {
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
   const [toasts, setToasts] = useState([])
+  // ===== 右侧面板宽度拖拽调整 =====
+  const [rightPanelWidth, setRightPanelWidth] = useState(320) // 默认宽度
+  const [isDraggingSplitter, setIsDraggingSplitter] = useState(false)
+  const contentAreaRef = useRef(null)
+
+  // 右侧面板宽度拖拽调整
+  const handleSplitterMouseDown = useCallback((e) => {
+    e.preventDefault()
+    setIsDraggingSplitter(true)
+  }, [])
+
+  const handleSplitterMouseMove = useCallback((e) => {
+    if (!isDraggingSplitter || !contentAreaRef.current) return
+    const rect = contentAreaRef.current.getBoundingClientRect()
+    const newWidth = rect.right - e.clientX
+    // 限制宽度范围 240px - 600px
+    const clampedWidth = Math.min(600, Math.max(240, newWidth))
+    setRightPanelWidth(clampedWidth)
+  }, [isDraggingSplitter])
+
+  const handleSplitterMouseUp = useCallback(() => {
+    setIsDraggingSplitter(false)
+  }, [])
+
+  // 全局鼠标事件用于 splitter 拖拽
+  useEffect(() => {
+    if (isDraggingSplitter) {
+      document.addEventListener('mousemove', handleSplitterMouseMove)
+      document.addEventListener('mouseup', handleSplitterMouseUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleSplitterMouseMove)
+      document.removeEventListener('mouseup', handleSplitterMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isDraggingSplitter, handleSplitterMouseMove, handleSplitterMouseUp])
+
+  // 最近播放自动播放：记录待播放的音频路径，audioFiles 加载后自动播放
+  const pendingAutoPlayRef = useRef(null)
+
+  // 最近播放自动播放处理
+  const handleRecentPlayAutoPlay = useCallback((item) => {
+    pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
+  }, [])
+
+  // 监听 audioFiles 加载完成后自动播放
+  useEffect(() => {
+    if (!pendingAutoPlayRef.current || !audioFiles.length) return
+
+    const pending = pendingAutoPlayRef.current
+    const timeout = Date.now() - pending.startedAt > 10000 // 10秒超时
+    if (timeout) {
+      pendingAutoPlayRef.current = null
+      return
+    }
+
+    // 尝试找到匹配的音频
+    let targetAudio = null
+    if (pending.audioPath) {
+      targetAudio = audioFiles.find(a => a.path === pending.audioPath)
+    }
+    if (!targetAudio && audioFiles.length > 0) {
+      targetAudio = audioFiles[0]
+    }
+
+    if (targetAudio) {
+      pendingAutoPlayRef.current = null
+      handleSelectAudio(targetAudio)
+    }
+  }, [audioFiles, handleSelectAudio])
 
   // 翻译缓存：内存中存储，关闭软件后清空。key = 原文, value = 译文
   const translateCacheRef = useRef(new Map())
@@ -1842,7 +1915,7 @@ export default function App() {
           </div>
           {selectedWork && (
             <div className="main-content">
-              <div className="content-area">
+              <div className="content-area" ref={contentAreaRef}>
                 <div className="work-detail-wrapper library-work-detail">
                   <button
                     className="detail-close-btn"
@@ -1877,7 +1950,8 @@ export default function App() {
                     onPlayNext={handlePlayNext}
                   />
                 </div>
-                <div className="right-tab-wrapper">
+                <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />
+                <div className="right-tab-wrapper" style={{ width: rightPanelWidth }}>
                   <RightTabBar
                     activeTab={rightTab}
                     onTabChange={setRightTab}
@@ -1949,7 +2023,7 @@ export default function App() {
           </div>
           {selectedWork && selectedWork.isOnline && (
             <div className="main-content discover-detail-content">
-              <div className="content-area">
+              <div className="content-area" ref={contentAreaRef}>
                 <div className="work-detail-wrapper discover-work-detail">
                   <button
                     className="detail-close-btn"
@@ -1998,7 +2072,8 @@ export default function App() {
                     onPlayNext={handlePlayNext}
                   />
                 </div>
-                <div className="right-tab-wrapper discover-right-tab">
+                <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />
+                <div className="right-tab-wrapper discover-right-tab" style={{ width: rightPanelWidth }}>
                   <RightTabBar
                     activeTab={rightTab}
                     onTabChange={setRightTab}
@@ -2079,6 +2154,7 @@ export default function App() {
           <RecentPlaysView
             works={works}
             onSelectWork={handleSelectWork}
+            onAutoPlay={handleRecentPlayAutoPlay}
             onToast={showToast}
           />
         </div>

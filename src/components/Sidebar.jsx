@@ -77,6 +77,14 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </button>
             </div>
+            <button className="header-add-btn" onClick={onAddFolder} title="添加文件夹">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>添加</span>
+            </button>
+            <button className="header-add-btn" onClick={onAddMediaLibrary} title="添加媒体库">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>媒体库</span>
+            </button>
             <button className="settings-btn-icon" onClick={onOpenSettings} title="设置">
               <svg className="settings-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
@@ -107,51 +115,40 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
             )}
           </div>
         </div>
-        <div className="add-buttons-row">
-          <button className="add-btn" onClick={onAddFolder}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            添加文件夹
-          </button>
-          <button className="add-media-library-btn" onClick={onAddMediaLibrary}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            添加媒体库
-          </button>
+        <div className="sidebar-filters">
+          <div className="filter-group search-group">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="搜索作品名称 / RJ号 / CV / 社团..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>CV 筛选</label>
+            <select value={cvFilter} onChange={(e) => onFilterChange('cv', e.target.value)}>
+              <option value="">全部 CV</option>
+              {allCVs.map((cv) => (
+                <option key={cv} value={cv}>
+                  {cv}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>社团筛选</label>
+            <select value={circleFilter} onChange={(e) => onFilterChange('circle', e.target.value)}>
+              <option value="">全部社团</option>
+              {allCircles.map((circle) => (
+                <option key={circle} value={circle}>
+                  {circle}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
-
-      <div className="sidebar-filters">
-        <div className="filter-group search-group">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="搜索作品名称 / RJ号 / CV / 社团..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
         </div>
-        <div className="filter-group">
-          <label>CV 筛选</label>
-          <select value={cvFilter} onChange={(e) => onFilterChange('cv', e.target.value)}>
-            <option value="">全部 CV</option>
-            {allCVs.map((cv) => (
-              <option key={cv} value={cv}>
-                {cv}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-group">
-          <label>社团筛选</label>
-          <select value={circleFilter} onChange={(e) => onFilterChange('circle', e.target.value)}>
-            <option value="">全部社团</option>
-            {allCircles.map((circle) => (
-              <option key={circle} value={circle}>
-                {circle}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
       <div className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`} style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}>
         {filteredWorks.length === 0 ? (
