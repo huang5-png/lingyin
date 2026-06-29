@@ -30,15 +30,16 @@ function formatShortDuration(totalSeconds) {
 
 export default function UsageReport() {
   const [range, setRange] = useState('month')
+  const [refDate, setRefDate] = useState(null) // null 表示当前日期
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const loadStats = useCallback(async (r) => {
+  const loadStats = useCallback(async (r, date) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await window.electronAPI.dbGetUsageStats({ range: r })
+      const data = await window.electronAPI.dbGetUsageStats({ range: r, date })
       setStats(data)
     } catch (e) {
       setError(e.message || '加载失败')
@@ -48,13 +49,73 @@ export default function UsageReport() {
   }, [])
 
   useEffect(() => {
-    loadStats(range)
-  }, [range, loadStats])
+    loadStats(range, refDate)
+  }, [range, refDate, loadStats])
+
+  const handleRefresh = useCallback(() => {
+    loadStats(range, refDate)
+  }, [range, refDate, loadStats])
+
+  const handlePrevPeriod = useCallback(() => {
+    const base = refDate ? new Date(refDate) : new Date()
+    if (range === 'day') {
+      base.setDate(base.getDate() - 1)
+    } else if (range === 'month') {
+      base.setMonth(base.getMonth() - 1)
+    } else {
+      base.setFullYear(base.getFullYear() - 1)
+    }
+    setRefDate(base.getTime())
+  }, [range, refDate])
+
+  const handleNextPeriod = useCallback(() => {
+    const base = refDate ? new Date(refDate) : new Date()
+    if (range === 'day') {
+      base.setDate(base.getDate() + 1)
+    } else if (range === 'month') {
+      base.setMonth(base.getMonth() + 1)
+    } else {
+      base.setFullYear(base.getFullYear() + 1)
+    }
+    const now = new Date()
+    if (base.getTime() > now.getTime()) {
+      setRefDate(null)
+    } else {
+      setRefDate(base.getTime())
+    }
+  }, [range, refDate])
+
+  const handleResetToNow = useCallback(() => {
+    setRefDate(null)
+  }, [])
+
+  const isCurrentPeriod = refDate === null
 
   const rangeLabel = useMemo(() => {
     const r = RANGES.find((x) => x.key === range)
     return r ? r.short : ''
   }, [range])
+
+  const periodLabel = useMemo(() => {
+    const d = refDate ? new Date(refDate) : new Date()
+    if (range === 'day') {
+      const today = new Date()
+      const isToday = d.toDateString() === today.toDateString()
+      if (isToday) return '今日'
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      if (d.toDateString() === yesterday.toDateString()) return '昨日'
+      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+    } else if (range === 'month') {
+      const now = new Date()
+      if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) return '本月'
+      return `${d.getFullYear()}年${d.getMonth() + 1}月`
+    } else {
+      const now = new Date()
+      if (d.getFullYear() === now.getFullYear()) return '本年'
+      return `${d.getFullYear()}年`
+    }
+  }, [range, refDate])
 
   const hasData = stats && stats.totalSeconds > 0
 
@@ -68,23 +129,56 @@ export default function UsageReport() {
               <span className="dot" />
               <span>聆音 · 使用报告</span>
             </div>
-            <h1 className="report-title">
-              你的<span className="accent-text">{rangeLabel}</span>聆听
-            </h1>
+            <div className="report-title-row">
+              <h1 className="report-title">
+                你的<span className="accent-text">{periodLabel}</span>聆听
+              </h1>
+              <div className="period-nav">
+                <button
+                  className="period-nav-btn"
+                  onClick={handlePrevPeriod}
+                  title="上一周期"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                {!isCurrentPeriod && (
+                  <button
+                    className="period-nav-btn reset-btn"
+                    onClick={handleResetToNow}
+                    title="回到当前"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                  </button>
+                )}
+                <button
+                  className="period-nav-btn"
+                  onClick={handleNextPeriod}
+                  title="下一周期"
+                  disabled={isCurrentPeriod}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
             <p className="report-subtitle">
               基于本地播放记录的真实统计 —— 你在声音里停留过的每一秒，都被认真记下。
             </p>
           </div>
-          <div className="range-tabs">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                className={`range-tab ${range === r.key ? 'active' : ''}`}
-                onClick={() => setRange(r.key)}
-              >
-                {r.label}
-              </button>
-            ))}
+          <div className="report-header-right">
+            <div className="range-tabs">
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  className={`range-tab ${range === r.key ? 'active' : ''}`}
+                  onClick={() => { setRange(r.key); setRefDate(null) }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <button className="refresh-btn" onClick={handleRefresh} title="刷新统计">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
           </div>
         </div>
 
@@ -107,7 +201,7 @@ export default function UsageReport() {
           <StateView
             type="empty"
             iconType="empty"
-            title={`${rangeLabel}还没有聆听记录`}
+            title={`${periodLabel}还没有聆听记录`}
             description="在「我的库」或「发现」中播放一段声音，让聆听被记录下来，回到这里就能看到你的专属数据。"
             className="report-state"
           />
@@ -126,7 +220,7 @@ export default function UsageReport() {
                   }
                   value={formatDuration(stats.totalSeconds)}
                   label="总聆听时长"
-                  delta={rangeLabel}
+                  delta={periodLabel}
                 />
                 <MetricCard
                   icon={
@@ -134,7 +228,7 @@ export default function UsageReport() {
                   }
                   value={stats.playCount}
                   label="播放次数"
-                  delta={`${rangeLabel}累计`}
+                  delta={`${periodLabel}累计`}
                 />
                 <MetricCard
                   icon={
@@ -185,7 +279,7 @@ export default function UsageReport() {
               <div className="rp-section-head">
                 <div className="rp-label">偏好排行</div>
                 <h2 className="rp-title">最爱的标签、社团与声优</h2>
-                <p className="rp-desc">用时长投票 —— 这些是你{rangeLabel}反复回到的声音。</p>
+                <p className="rp-desc">用时长投票 —— 这些是你{periodLabel}反复回到的声音。</p>
               </div>
 
               <div className="rankings-grid">
@@ -216,7 +310,7 @@ export default function UsageReport() {
                 <div className="rp-section-head">
                   <div className="rp-label">作品排行</div>
                   <h2 className="rp-title">陪伴你最久的作品</h2>
-                  <p className="rp-desc">Top 10 高频回访 —— 这些是{rangeLabel}真正住进你耳畔的故事。</p>
+                  <p className="rp-desc">Top 10 高频回访 —— 这些是{periodLabel}真正住进你耳畔的故事。</p>
                 </div>
                 <div className="works-list">
                   {stats.workRanking.map((w, i) => (
