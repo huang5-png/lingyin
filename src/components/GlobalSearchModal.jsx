@@ -7,11 +7,13 @@ const RESULT_TYPE = {
   WORK: 'work',
   AUDIO: 'audio',
   PLAYING: 'playing',
+  PLAYLIST: 'playlist',
 }
 
-export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio, currentWork, onSelectWork, onPlayAudio }) {
+export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio, currentWork, onSelectWork, onPlayAudio, onSelectPlaylist }) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [playlists, setPlaylists] = useState([])
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
@@ -75,9 +77,30 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
     return results.slice(0, 5)
   }, [works, query])
 
+  // 搜索播放列表
+  const playlistResults = useMemo(() => {
+    if (!query.trim()) return []
+    const q = query.toLowerCase().trim()
+    const results = []
+
+    for (const pl of playlists) {
+      const name = (pl.name || '').toLowerCase()
+      if (name.includes(q)) {
+        results.push({
+          type: RESULT_TYPE.PLAYLIST,
+          playlist: pl,
+          displayTitle: pl.name,
+          displaySub: `${pl.items?.length || 0} 首曲目`,
+        })
+      }
+    }
+
+    return results.slice(0, 5)
+  }, [playlists, query])
+
   const allResults = useMemo(() => {
-    return [...localResults]
-  }, [localResults, audioResults])
+    return [...localResults, ...playlistResults]
+  }, [localResults, playlistResults])
 
   // 重置选中索引
   useEffect(() => {
@@ -90,8 +113,19 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
       setQuery('')
       setSelectedIndex(0)
       setTimeout(() => inputRef.current?.focus(), 50)
+      // 加载播放列表
+      loadPlaylists()
     }
   }, [isOpen])
+
+  const loadPlaylists = useCallback(async () => {
+    try {
+      const data = await window.electronAPI.playlistGetAll()
+      setPlaylists(data || [])
+    } catch (e) {
+      console.error('Failed to load playlists for search:', e)
+    }
+  }, [])
 
   // 滚动到选中项
   useEffect(() => {
@@ -143,8 +177,13 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
         onPlayAudio(result.audio, result.work)
       }
       onClose()
+    } else if (result.type === RESULT_TYPE.PLAYLIST) {
+      if (onSelectPlaylist) {
+        onSelectPlaylist(result.playlist)
+      }
+      onClose()
     }
-  }, [onSelectWork, onPlayAudio, onClose])
+  }, [onSelectWork, onPlayAudio, onSelectPlaylist, onClose])
 
   const handleOverlayClick = useCallback((e) => {
     if (e.target === e.currentTarget) {
@@ -186,7 +225,11 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
             ) : (
               allResults.map((result, index) => (
                 <div
-                  key={result.type === RESULT_TYPE.WORK ? `work-${result.work.id}` : `audio-${result.work.id}-${result.audio?.path}`}
+                  key={
+                    result.type === RESULT_TYPE.WORK ? `work-${result.work.id}` :
+                    result.type === RESULT_TYPE.PLAYLIST ? `playlist-${result.playlist.id}` :
+                    `audio-${result.work?.id}-${result.audio?.path}`
+                  }
                   data-index={index}
                   className={`global-search-result-item ${index === selectedIndex ? 'selected' : ''}`}
                   onClick={() => handleSelect(result)}
@@ -196,6 +239,15 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
                     {result.type === RESULT_TYPE.WORK ? (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
+                    ) : result.type === RESULT_TYPE.PLAYLIST ? (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"/>
+                        <line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
                       </svg>
                     ) : (
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -207,13 +259,21 @@ export default function GlobalSearchModal({ isOpen, onClose, works, currentAudio
                   </div>
                   <div className="result-info">
                     <div className="result-title">
-                      {result.type === RESULT_TYPE.WORK ? result.displayTitle : result.audio?.name}
+                      {result.type === RESULT_TYPE.WORK ? result.displayTitle :
+                       result.type === RESULT_TYPE.PLAYLIST ? result.displayTitle :
+                       result.audio?.name}
                     </div>
                     <div className="result-sub">
                       {result.type === RESULT_TYPE.WORK && (
                         <>
                           <span className="result-badge">{result.matchField === 'title' ? '作品' : result.matchField === 'rjCode' ? 'RJ号' : result.matchField === 'cv' ? 'CV' : result.matchField === 'circle' ? '社团' : '标签'}</span>
                           {result.displaySub && <span className="result-sub-text">{result.displaySub}</span>}
+                        </>
+                      )}
+                      {result.type === RESULT_TYPE.PLAYLIST && (
+                        <>
+                          <span className="result-badge">播放列表</span>
+                          <span className="result-sub-text">{result.displaySub}</span>
                         </>
                       )}
                       {result.type === RESULT_TYPE.AUDIO && (
