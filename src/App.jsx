@@ -31,54 +31,57 @@ import { useImmersive } from './hooks/useImmersive'
 import { useSplitter } from './hooks/useSplitter'
 import { usePlayer } from './hooks/usePlayer'
 import { useWorkMetadata } from './hooks/useWorkMetadata'
-import { scanFolder } from './utils/scanner'
-import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
+import { useAppSettings } from './hooks/useAppSettings'
+import { useViewNavigation } from './hooks/useViewNavigation'
+import { usePlaylistPlayback } from './hooks/usePlaylistPlayback'
+import { scanFolder, getExtension } from './utils/scanner'
+import { parseSubtitle } from './utils/subtitleParser'
 import './App.css'
 
-const DEFAULT_SETTINGS = {
-  autoPlayNext: true,
-  rememberProgress: true,
-  autoPlayOnStart: false,
-  defaultVolume: 80,
-  sidebarWidth: 280,
-  lyricWidth: 360,
-  playerHeight: 96,
-  showRatingStars: true,
-  waveformHeight: 56,
-  showLyric: true,
-  autoScrollLyric: true,
-  skipSeconds: 5,
-  theme: 'light',
-  viewMode: 'grid',
-  loopMode: 'none',
-  shuffle: false,
-  autoHideSidebar: true,
-  shortcuts: { ...DEFAULT_SHORTCUTS },
-}
-
-function loadSettings() {
-  try {
-    const saved = localStorage.getItem('appSettings')
-    if (saved) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
-    }
-  } catch (e) {}
-  return { ...DEFAULT_SETTINGS }
-}
-
 export default function App() {
-  const [selectedWork, setSelectedWork] = useState(null)
-  const [settings, setSettings] = useState(loadSettings)
-  const [viewMode, setViewMode] = useState(settings.viewMode || 'grid')
-  const [showLyric, setShowLyric] = useState(settings.showLyric)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
-  const [showDownloadModal, setShowDownloadModal] = useState(false)
-  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
-  const [addToPlaylistTarget, setAddToPlaylistTarget] = useState(null) // { audio, work } 待加入曲目
-  const [rightTab, setRightTab] = useState('details')
-  const [currentView, setCurrentView] = useState('library')
+  const playerRef = useRef(null)
+  const handleSelectAudioRef = useRef(null)
+  const discoverViewRef = useRef(null)
+
   // ===== Toast 通知 Hook =====
   const { toasts, showToast, removeToast } = useToast()
+
+  // ===== 设置管理 Hook =====
+  const {
+    settings,
+    setSettings,
+    viewMode,
+    showLyric,
+    setShowLyric,
+    handleSaveSettings,
+    handleViewModeChange,
+  } = useAppSettings({
+    playerRef,
+    showToast,
+  })
+
+  // ===== 视图导航 Hook =====
+  const {
+    selectedWork,
+    setSelectedWork,
+    currentView,
+    setCurrentView,
+    rightTab,
+    setRightTab,
+    showSettingsModal,
+    setShowSettingsModal,
+    showDownloadModal,
+    setShowDownloadModal,
+    showGlobalSearch,
+    setShowGlobalSearch,
+    settingsDefaultTab,
+    handleOpenSettings,
+    handleOpenSubtitleSettings,
+    pendingAutoPlayRef,
+    handleSelectWork,
+    handleRecentPlayAutoPlay,
+    handlePlayerCoverClick,
+  } = useViewNavigation({ showToast })
 
   // ===== 右侧面板宽度拖拽 Hook =====
   const contentAreaRef = useRef(null)
@@ -93,16 +96,6 @@ export default function App() {
     maxWidth: 600,
     containerRef: contentAreaRef,
   })
-
-  const playerRef = useRef(null)
-  const handleSelectAudioRef = useRef(null)
-  const discoverViewRef = useRef(null)
-
-  const pendingAutoPlayRef = useRef(null)
-
-  const handleRecentPlayAutoPlay = useCallback((item) => {
-    pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
-  }, [])
 
   // ===== 媒体库管理 Hook =====
   const {
@@ -332,17 +325,9 @@ export default function App() {
     showToast,
   })
 
-  const handleSelectWork = useCallback(
-    (work) => {
-      if (work?.id === selectedWork?.id) return
-      setSelectedWork(work)
-    },
-    [selectedWork],
-  )
-
   // 监听 audioFiles 加载完成后自动播放（最近播放）
   useEffect(() => {
-    if (!pendingAutoPlayRef.current || !audioFiles.length) return
+    if (!pendingAutoPlayRef?.current || !audioFiles.length) return
 
     const pending = pendingAutoPlayRef.current
     const timeout = Date.now() - pending.startedAt > 10000
@@ -363,25 +348,14 @@ export default function App() {
       pendingAutoPlayRef.current = null
       handleSelectAudio(targetAudio)
     }
-  }, [audioFiles, handleSelectAudio])
+  }, [audioFiles, handleSelectAudio, pendingAutoPlayRef])
 
-  // 点击播放栏封面：跳转到正在播放的作品，或切换沉浸式
-  const handlePlayerCoverClick = useCallback(() => {
-    if (!playingWork) return
-
-    if (selectedWork?.id !== playingWork.id) {
-      if (playingWork.isOnline) {
-        setCurrentView('discover')
-        setSelectedWork(playingWork)
-      } else {
-        setCurrentView('library')
-        setSelectedWork(playingWork)
-      }
-      return
-    }
-
-    handleToggleImmersive()
-  }, [playingWork, selectedWork, handleToggleImmersive])
+  const handlePlayerCoverClickWrapped = useCallback(() => {
+    handlePlayerCoverClick({
+      playingWork,
+      onToggleImmersive: handleToggleImmersive,
+    })
+  }, [playingWork, handleToggleImmersive, handlePlayerCoverClick])
 
   useKeyboardShortcuts({
     settings,
@@ -400,18 +374,6 @@ export default function App() {
     handlePrevAudio,
     handleNextAudio,
   })
-
-  const [settingsDefaultTab, setSettingsDefaultTab] = useState('basic')
-
-  const handleOpenSettings = useCallback(() => {
-    setSettingsDefaultTab('basic')
-    setShowSettingsModal(true)
-  }, [])
-
-  const handleOpenSubtitleSettings = useCallback(() => {
-    setSettingsDefaultTab('player')
-    setShowSettingsModal(true)
-  }, [])
 
   const handleRefreshSubtitles = useCallback(async () => {
     if (!selectedWork) return
@@ -462,100 +424,27 @@ export default function App() {
       console.error('Failed to refresh subtitles:', e)
       showToast('刷新字幕失败：' + e.message, 'error')
     }
-  }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex, findMatchedSubtitles, detectSubtitleLanguagesAsync])
+  }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex, findMatchedSubtitles, detectSubtitleLanguagesAsync, setAudioFiles, setAllSubtitleFiles, setSubtitleOptions, setSelectedSubtitleIndex, setCurrentCues, showToast])
 
-  const handleViewModeChange = useCallback((mode) => {
-    setViewMode(mode)
-    setSettings((prev) => {
-      const newSettings = { ...prev, viewMode: mode }
-      window.electronAPI?.dbSaveSettings(newSettings).catch(() => {})
-      return newSettings
-    })
-  }, [])
+  // ===== 播放列表播放 Hook =====
+  const {
+    addToPlaylistTarget,
+    handleOpenAddToPlaylist,
+    handleCloseAddToPlaylist,
+    handlePlayPlaylistItem,
+    handleNavigateToWorkFromPlaylist,
+  } = usePlaylistPlayback({
+    works,
+    showToast,
+    handleSelectAudio,
+    setCurrentView,
+    setSelectedWork,
+    latestAudioFilesRef,
+  })
 
-  // ===== 播放列表：从曲目项「+」加入 =====
-  const handleOpenAddToPlaylist = useCallback((audio) => {
-    if (!audio) return
-    setAddToPlaylistTarget({ audio, work: selectedWork })
-  }, [selectedWork])
-
-  const handleCloseAddToPlaylist = useCallback(() => {
-    setAddToPlaylistTarget(null)
-  }, [])
-
-  // 从播放列表点击播放某项：根据 workId 找到本地作品，切换视图并播放
-  const handlePlayPlaylistItem = useCallback(async (item) => {
-    if (!item) return
-    try {
-      // 在线曲目：直接构造作品并播放
-      if (item.isOnline) {
-        // 在线曲目通常依赖已加载的作品上下文，简单切换到「发现」视图并提示
-        showToast('在线曲目请在「发现」中重新打开作品后播放', 'info')
-        return
-      }
-      // 本地作品：从 works 中查找
-      const target = works.find((w) => w.id === item.workId) || works.find((w) => w.folderPath === item.workId)
-      if (!target) {
-        showToast('找不到原作品，可能已被删除', 'warning')
-        return
-      }
-      // 切换到 library 视图并选中作品
-      setCurrentView('library')
-      setSelectedWork(target)
-      // 等待 audioFiles 加载完成后播放对应曲目（通过轮询 playerRef）
-      const tryPlay = setInterval(() => {
-        // audioFiles 是异步加载的，借助 closure 直接读 state 不可行，改用全局引用
-        // 使用 querySelector 找到对应 audio-name 的元素并不优雅，改为读取最新 audioFiles 通过 setState 后再触发
-        // 这里采用轮询 setAudioFiles 已加载的标志
-        // 但因为 closure 限制，使用 ref 保存最新 audioFiles
-        const files = latestAudioFilesRef.current
-        if (files && files.length > 0) {
-          const target2 = files.find((f) => f.path === item.audioPath)
-          if (target2) {
-            handleSelectAudio(target2)
-            clearInterval(tryPlay)
-          }
-        }
-      }, 200)
-      setTimeout(() => clearInterval(tryPlay), 8000)
-    } catch (e) {
-      console.error('Failed to play playlist item:', e)
-      showToast('播放失败：' + (e.message || ''), 'error')
-    }
-  }, [works, showToast, handleSelectAudio])
-
-  // 跳转到作品
-  const handleNavigateToWorkFromPlaylist = useCallback((item) => {
-    if (!item) return
-    if (item.isOnline) {
-      setCurrentView('discover')
-      showToast('已切换到「发现」视图', 'info')
-      return
-    }
-    const target = works.find((w) => w.id === item.workId) || works.find((w) => w.folderPath === item.workId)
-    if (!target) {
-      showToast('找不到原作品', 'warning')
-      return
-    }
-    setCurrentView('library')
-    setSelectedWork(target)
-  }, [works, showToast])
-
-  const handleSaveSettings = (newSettings) => {
-    setSettings(newSettings)
-    localStorage.setItem('appSettings', JSON.stringify(newSettings))
-    try {
-      window.electronAPI.dbSaveSettings(newSettings)
-    } catch (e) {
-      console.error('Failed to save settings to db:', e)
-    }
-    if (newSettings.showLyric !== undefined) {
-      setShowLyric(newSettings.showLyric)
-    }
-    if (newSettings.defaultVolume !== undefined && playerRef.current) {
-      playerRef.current.setVolume?.(newSettings.defaultVolume / 100)
-    }
-  }
+  const handleOpenAddToPlaylistForAudio = useCallback((audio) => {
+    handleOpenAddToPlaylist(audio, selectedWork)
+  }, [handleOpenAddToPlaylist, selectedWork])
 
   return (
     <ErrorBoundary>
@@ -646,7 +535,7 @@ export default function App() {
                     getTranslatedText={getTranslatedText}
                     isTranslated={isTranslated}
                     isTranslating={isTranslating}
-                    onAddToPlaylist={handleOpenAddToPlaylist}
+                    onAddToPlaylist={handleOpenAddToPlaylistForAudio}
                     onAddToQueue={handleAddToQueue}
                     onPlayNext={handlePlayNext}
                   />
@@ -735,7 +624,7 @@ export default function App() {
                     getTranslatedText={getTranslatedText}
                     isTranslated={isTranslated}
                     isTranslating={isTranslating}
-                    onAddToPlaylist={handleOpenAddToPlaylist}
+                    onAddToPlaylist={handleOpenAddToPlaylistForAudio}
                     onAddToQueue={handleAddToQueue}
                     onPlayNext={handlePlayNext}
                   />
@@ -820,7 +709,7 @@ export default function App() {
             waveformHeight={settings.waveformHeight}
             defaultVolume={settings.defaultVolume}
             skipSeconds={settings.skipSeconds || 5}
-            onToggleImmersive={handlePlayerCoverClick}
+            onToggleImmersive={handlePlayerCoverClickWrapped}
             queue={playQueue}
             queueIndex={queueIndex}
             loopMode={loopMode}
@@ -914,7 +803,6 @@ export default function App() {
           if (work) {
             setCurrentView(work.isOnline ? 'discover' : 'library')
             if (work.isOnline) {
-              // 在线作品需要完整加载
               handleSelectOnlineWork({ id: work.onlineId, title: work.title, mainCoverUrl: work.cover, name: work.circle, vas: (work.cvs || []).map(c => ({ name: c })), tags: (work.tags || []).map(t => ({ name: t })) })
             } else {
               handleSelectWork(work)
