@@ -942,6 +942,22 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 每个曲目项：`{ id, workId, workTitle, workCover, audioPath, audioName, isOnline, addedAt }`
 - ID 生成规则：`pl_<base36时间戳>_<6位随机>` / `it_<base36时间戳>_<6位随机>`
 
+#### 智能播放列表
+系统内置 6 种智能播放列表，基于用户行为数据动态生成，无需手动管理：
+
+| 智能列表 ID | 名称 | 说明 | 数据来源 |
+|------------|------|------|---------|
+| `recently_added` | 最近添加 | 最近添加到媒体库的曲目 | works 按 createdAt 倒序 |
+| `most_played` | 最多播放 | 播放次数最多的曲目 | progressHistory 统计 |
+| `unfinished` | 未听完 | 播放进度 < 90% 的曲目 | progress 记录筛选 |
+| `recently_played` | 最近播放 | 最近播放过的曲目 | progressHistory 按时间倒序 |
+| `favorites` | 我的收藏 | 已收藏的作品曲目 | favorites 列表关联 |
+| `random` | 随机推荐 | 随机抽取 50 首曲目 | works 随机采样 |
+
+- 智能播放列表为只读，不支持添加/删除/排序曲目
+- 点击「刷新」按钮可重新生成列表内容
+- 智能列表数据实时计算，不写入数据库
+
 #### IPC API
 | 接口 | 说明 |
 |------|------|
@@ -953,15 +969,21 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 | `playlist:removeItem` | 移除指定曲目 |
 | `playlist:reorderItems` | 按 itemId 数组重新排序，未列入的项目追加到末尾 |
 | `playlist:clear` | 清空播放列表 |
+| `smartPlaylist:getAll` | 获取所有智能播放列表定义 |
+| `smartPlaylist:getItems` | 获取指定智能播放列表的曲目 |
 
 #### 前端组件
 - `PlaylistView.jsx`：左侧列表栏 + 右侧曲目列表
-  - 新建播放列表（顶部 + 按钮）
-  - 单击选中、双击重命名
-  - 删除按钮 hover 显示
-  - 曲目行支持 HTML5 拖拽排序（draggable），乐观更新
+  - 左侧分两组：「智能播放列表」+「我的播放列表」
+  - 智能播放列表：带图标，点击加载内容，不支持重命名/删除
+  - 新建播放列表（分组标题旁 + 按钮）
+  - 单击选中、双击重命名（仅普通列表）
+  - 删除按钮 hover 显示（仅普通列表）
+  - 曲目行支持 HTML5 拖拽排序（draggable），乐观更新（仅普通列表）
+  - 智能列表曲目行：无拖拽手柄、无删除按钮
   - 双击曲目行触发 `onPlayItem`
   - 「跳转到作品」按钮触发 `onNavigateToWork`
+  - 智能列表详情显示「刷新」按钮替代「清空」按钮
 - `WorkDetail.jsx`：曲目列表项 hover 时显示 `audio-action-btns` 按钮组，包含「下一首播放」「加入队列」「加入播放列表」三个按钮（详见第 18 节「播放队列」）
 - `AddToPlaylistModal`（App.jsx 内联）：列出全部播放列表 + 一键新建并加入，提交后调用 `playlistAddItem`
 
