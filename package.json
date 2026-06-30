@@ -1,6 +1,6 @@
 {
   "name": "lingyin",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "description": "聆音 - 沉浸式 ASMR 音声播放器",
   "main": "electron/main.js",
   "scripts": {
