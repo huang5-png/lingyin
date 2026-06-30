@@ -413,6 +413,7 @@ function RankingCard({ title, icon, items, color }) {
 function TimelineChart({ timeline, range }) {
   const [hoveredIndex, setHoveredIndex] = useState(-1)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [showTrendline, setShowTrendline] = useState(true)
   const containerRef = useRef(null)
 
   if (!timeline || timeline.length === 0) return null
@@ -433,6 +434,39 @@ function TimelineChart({ timeline, range }) {
     ? 1
     : Math.max(1, Math.ceil(timeline.length / 16))
 
+  // 计算平滑趋势线（移动平均，窗口=7或数据长度）
+  const trendlinePoints = useMemo(() => {
+    if (!showTrendline || timeline.length < 3) return null
+    const windowSize = Math.min(7, Math.max(3, Math.floor(timeline.length / 4)))
+    const smoothed = []
+    for (let i = 0; i < timeline.length; i++) {
+      const start = Math.max(0, i - Math.floor(windowSize / 2))
+      const end = Math.min(timeline.length, i + Math.ceil(windowSize / 2))
+      const sum = timeline.slice(start, end).reduce((acc, t) => acc + t.seconds, 0)
+      smoothed.push(sum / (end - start))
+    }
+    // 转换为 SVG path 点
+    return smoothed.map((val, i) => {
+      const x = padL + i * (barW + barGap) + barW / 2
+      const y = padT + plotH - (val / max) * plotH
+      return { x, y }
+    })
+  }, [timeline, showTrendline, barW, barGap, max, plotH, padT, padL])
+
+  // 生成平滑曲线的 SVG path
+  const trendlinePath = useMemo(() => {
+    if (!trendlinePoints || trendlinePoints.length < 2) return null
+    let d = `M ${trendlinePoints[0].x} ${trendlinePoints[0].y}`
+    // 使用三次贝塞尔曲线平滑连接
+    for (let i = 1; i < trendlinePoints.length; i++) {
+      const prev = trendlinePoints[i - 1]
+      const curr = trendlinePoints[i]
+      const cpX = (prev.x + curr.x) / 2
+      d += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`
+    }
+    return d
+  }, [trendlinePoints])
+
   const handleMouseMove = (e, index) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const svgRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
@@ -449,6 +483,18 @@ function TimelineChart({ timeline, range }) {
 
   return (
     <div className="timeline-container" ref={containerRef}>
+      <div className="chart-toggle-row">
+        <button
+          className={`chart-toggle-btn ${showTrendline ? 'active' : ''}`}
+          onClick={() => setShowTrendline(!showTrendline)}
+          title="切换趋势线"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          趋势线
+        </button>
+      </div>
       <svg className="timeline-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="tlGrad" x1="0" y1="0" x2="0" y2="1">
@@ -459,6 +505,18 @@ function TimelineChart({ timeline, range }) {
             <stop offset="0%" stopColor="#e07a5a" />
             <stop offset="100%" stopColor="#f0d9c0" stopOpacity="0.9" />
           </linearGradient>
+          <linearGradient id="trendlineGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#c96442" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#d97757" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#e0a082" stopOpacity="0.8" />
+          </linearGradient>
+          <filter id="trendlineGlow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
         </defs>
         {/* grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
@@ -509,6 +567,42 @@ function TimelineChart({ timeline, range }) {
             </g>
           )
         })}
+        {/* trendline */}
+        {trendlinePath && (
+          <g className="trendline-group">
+            {/* 趋势线发光层 */}
+            <path
+              d={trendlinePath}
+              fill="none"
+              stroke="rgba(201,100,66,0.25)"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#trendlineGlow)"
+            />
+            {/* 趋势线主层 */}
+            <path
+              d={trendlinePath}
+              fill="none"
+              stroke="url(#trendlineGrad)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* 趋势线端点 */}
+            {trendlinePoints.slice(-1).map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x}
+                cy={p.y}
+                r="4"
+                fill="#c96442"
+                stroke="#fff"
+                strokeWidth="1.5"
+              />
+            ))}
+          </g>
+        )}
       </svg>
       {/* Tooltip */}
       {hoveredIndex >= 0 && timeline[hoveredIndex] && (
