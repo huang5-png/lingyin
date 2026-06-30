@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LeftNavBar from './components/LeftNavBar'
 import ImmersiveView from './components/ImmersiveView'
