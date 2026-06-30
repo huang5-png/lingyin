@@ -162,6 +162,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   lastPlayStateGet: () => ipcRenderer.invoke('lastPlayState:get'),
   lastPlayStateSave: (state) => ipcRenderer.invoke('lastPlayState:save', state),
 
+  // 数据备份与恢复
+  backupGetStats: () => ipcRenderer.invoke('backup:getStats'),
+  backupExport: (keys) => ipcRenderer.invoke('backup:export', keys),
+  backupImport: (jsonString, mode) => ipcRenderer.invoke('backup:import', jsonString, mode),
+  backupSaveFile: (jsonString, defaultName) => ipcRenderer.invoke('backup:saveFile', jsonString, defaultName),
+  backupOpenFile: () => ipcRenderer.invoke('backup:openFile'),
+
   // 迷你播放器
   miniPlayerOpen: () => ipcRenderer.invoke('miniPlayer:open'),
   miniPlayerClose: () => ipcRenderer.invoke('miniPlayer:close'),

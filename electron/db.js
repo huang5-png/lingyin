@@ -1238,6 +1238,179 @@ async function getSmartPlaylistItems(smartId, limit = 100) {
   return items
 }
 
+// ===== 数据备份与恢复 =====
+// 可导出的数据类型
+const EXPORTABLE_KEYS = [
+  'works',
+  'progress',
+  'subtitles',
+  'settings',
+  'history',
+  'playlists',
+  'favorites',
+  'folderGroups',
+  'bookmarks',
+  'playQueue',
+  'lastPlayState',
+  'translateCache',
+]
+
+const EXPORT_KEY_LABELS = {
+  works: '作品库',
+  progress: '播放进度',
+  subtitles: '字幕选择',
+  settings: '设置',
+  history: '播放历史',
+  playlists: '播放列表',
+  favorites: '收藏',
+  folderGroups: '文件夹分组',
+  bookmarks: '书签',
+  playQueue: '播放队列',
+  lastPlayState: '上次播放状态',
+  translateCache: '翻译缓存',
+}
+
+async function getDataStats() {
+  const stats = {}
+  for (const key of EXPORTABLE_KEYS) {
+    const val = dbData[key]
+    if (Array.isArray(val)) {
+      stats[key] = { type: 'array', count: val.length, label: EXPORT_KEY_LABELS[key] }
+    } else if (val && typeof val === 'object') {
+      stats[key] = { type: 'object', count: Object.keys(val).length, label: EXPORT_KEY_LABELS[key] }
+    } else {
+      stats[key] = { type: typeof val, count: val ? 1 : 0, label: EXPORT_KEY_LABELS[key] }
+    }
+  }
+  const totalSize = Buffer.byteLength(JSON.stringify(dbData), 'utf8')
+  return { stats, totalSize, exportableKeys: EXPORTABLE_KEYS, keyLabels: EXPORT_KEY_LABELS }
+}
+
+async function exportData(keys = null) {
+  const exportKeys = keys && Array.isArray(keys) && keys.length > 0
+    ? keys.filter(k => EXPORTABLE_KEYS.includes(k))
+    : EXPORTABLE_KEYS
+
+  const data = {}
+  for (const key of exportKeys) {
+    data[key] = dbData[key]
+  }
+
+  const exportObj = {
+    app: 'lingyin',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data,
+  }
+
+  return JSON.stringify(exportObj, null, 2)
+}
+
+async function importData(jsonString, mode = 'merge') {
+  try {
+    const importObj = JSON.parse(jsonString)
+
+    if (!importObj || !importObj.data || typeof importObj.data !== 'object') {
+      return { success: false, error: '无效的备份文件格式' }
+    }
+
+    if (importObj.app !== 'lingyin') {
+      return { success: false, error: '不是聆音的备份文件' }
+    }
+
+    const importedKeys = []
+    const skippedKeys = []
+
+    for (const key of EXPORTABLE_KEYS) {
+      if (!(key in importObj.data)) continue
+
+      const imported = importObj.data[key]
+
+      if (mode === 'overwrite') {
+        dbData[key] = imported
+        importedKeys.push(key)
+      } else {
+        if (Array.isArray(imported) && Array.isArray(dbData[key])) {
+          const existingIds = new Set()
+          const existingData = dbData[key] || []
+
+          if (key === 'works') {
+            for (const item of existingData) existingIds.add(item.id)
+            for (const item of imported) {
+              if (!existingIds.has(item.id)) {
+                existingData.push(item)
+                existingIds.add(item.id)
+              }
+            }
+          } else if (key === 'playlists') {
+            for (const item of existingData) existingIds.add(item.id)
+            for (const item of imported) {
+              if (!existingIds.has(item.id)) {
+                existingData.push(item)
+                existingIds.add(item.id)
+              }
+            }
+          } else if (key === 'favorites') {
+            for (const item of existingData) existingIds.add(item.workId)
+            for (const item of imported) {
+              if (!existingIds.has(item.workId)) {
+                existingData.push(item)
+                existingIds.add(item.workId)
+              }
+            }
+          } else if (key === 'folderGroups') {
+            for (const item of existingData) existingIds.add(item.id)
+            for (const item of imported) {
+              if (!existingIds.has(item.id)) {
+                existingData.push(item)
+                existingIds.add(item.id)
+              }
+            }
+          } else if (key === 'bookmarks') {
+            for (const item of existingData) existingIds.add(item.id)
+            for (const item of imported) {
+              if (!existingIds.has(item.id)) {
+                existingData.push(item)
+                existingIds.add(item.id)
+              }
+            }
+          } else {
+            for (const item of imported) {
+              existingData.push(item)
+            }
+          }
+          importedKeys.push(key)
+        } else if (imported && typeof imported === 'object' && !Array.isArray(imported)) {
+          if (!dbData[key] || typeof dbData[key] !== 'object') {
+            dbData[key] = {}
+          }
+          Object.assign(dbData[key], imported)
+          importedKeys.push(key)
+        } else {
+          if (dbData[key] === undefined || dbData[key] === null) {
+            dbData[key] = imported
+            importedKeys.push(key)
+          } else {
+            skippedKeys.push(key)
+          }
+        }
+      }
+    }
+
+    saveDB()
+
+    return {
+      success: true,
+      importedKeys,
+      skippedKeys,
+      mode,
+    }
+  } catch (e) {
+    console.error('Import data error:', e)
+    return { success: false, error: e.message || '导入失败' }
+  }
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -1300,4 +1473,9 @@ module.exports = {
   saveLastPlayState,
   getSmartPlaylists,
   getSmartPlaylistItems,
+
+  // ===== 数据备份与恢复 =====
+  exportData,
+  importData,
+  getDataStats,
 }
