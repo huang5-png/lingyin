@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS = {
   autoImportDownloaded: true,
   downloadNotify: true,
   upscalePreset: 'anime',
+  closeToTray: true,
 };
 
 const TABS = [
@@ -184,6 +185,21 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
               placeholder="http://127.0.0.1:7897"
               value={settings.proxyUrl || ''}
               onChange={(e) => setSettings((p) => ({ ...p, proxyUrl: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-section-title">系统托盘</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">关闭窗口最小化到托盘</div>
+            <div className="setting-desc">点击关闭按钮时隐藏到系统托盘，继续后台播放</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.closeToTray}
+              onChange={() => handleToggle('closeToTray')}
             />
           </div>
         </div>

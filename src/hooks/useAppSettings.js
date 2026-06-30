@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
   autoHideSidebar: true,
   playbackRate: 1,
   shortcuts: { ...DEFAULT_SHORTCUTS },
+  closeToTray: true,
 }
 
 function loadSettings() {

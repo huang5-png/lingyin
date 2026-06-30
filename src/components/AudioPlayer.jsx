@@ -105,6 +105,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
       }
     },
     getPlaybackRate: () => playbackRate,
+    isPlaying: () => isPlaying,
   }))
 
   const handlePlayPause = () => {

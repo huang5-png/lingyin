@@ -476,6 +476,52 @@ export function useAppState() {
     }
   }, [])
 
+  // ===== 系统托盘集成 =====
+  const isPlayingRef = useRef(false)
+
+  useEffect(() => {
+    if (!window.electronAPI?.onTrayTogglePlay) return
+
+    const cleanupToggle = window.electronAPI.onTrayTogglePlay(() => {
+      if (playerRef.current) {
+        playerRef.current.playPause?.()
+      }
+    })
+
+    const cleanupPrev = window.electronAPI.onTrayPrevTrack(() => {
+      handlePrevAudio()
+    })
+
+    const cleanupNext = window.electronAPI.onTrayNextTrack(() => {
+      handleNextAudio()
+    })
+
+    return () => {
+      cleanupToggle?.()
+      cleanupPrev?.()
+      cleanupNext?.()
+    }
+  }, [handlePrevAudio, handleNextAudio])
+
+  useEffect(() => {
+    if (!window.electronAPI?.trayUpdatePlayState) return
+
+    const updateTrayState = () => {
+      const isPlaying = playerRef.current?.isPlaying?.() || false
+      const title = currentAudio?.name || ''
+      if (isPlaying !== isPlayingRef.current || title !== isPlayingRef.currentTitle) {
+        isPlayingRef.current = isPlaying
+        isPlayingRef.currentTitle = title
+        window.electronAPI.trayUpdatePlayState(isPlaying, title)
+      }
+    }
+
+    const timer = setInterval(updateTrayState, 1000)
+    updateTrayState()
+
+    return () => clearInterval(timer)
+  }, [currentAudio])
+
   // 全局搜索回调
   const handleGlobalSearchSelectWork = useCallback((work) => {
     setCurrentView('library')

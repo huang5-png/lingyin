@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const http = require('http')
@@ -51,6 +51,120 @@ app.commandLine.appendSwitch('no-sandbox')
 app.commandLine.appendSwitch('disable-setuid-sandbox')
 
 let mainWindow
+let tray = null
+let isPlaying = false
+let currentTrackTitle = ''
+
+function createTray() {
+  const iconPath = path.join(__dirname, '..', 'build', 'icon-16.png')
+  const trayIcon = nativeImage.createFromPath(iconPath)
+  
+  if (trayIcon.isEmpty()) {
+    logger.warn('托盘图标加载失败，使用 fallback')
+    return
+  }
+
+  tray = new Tray(trayIcon)
+  tray.setToolTip('聆音 - 沉浸式 ASMR 音声播放器')
+
+  const updateTrayMenu = () => {
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: isPlaying ? '暂停' : '播放',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:togglePlay')
+          }
+        }
+      },
+      {
+        label: '上一曲',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:prevTrack')
+          }
+        }
+      },
+      {
+        label: '下一曲',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tray:nextTrack')
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '显示主窗口',
+        click: () => {
+          showMainWindow()
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '退出',
+        click: () => {
+          app.isQuiting = true
+          app.quit()
+        }
+      }
+    ])
+    tray.setContextMenu(contextMenu)
+  }
+
+  updateTrayMenu()
+
+  tray.on('click', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+      } else {
+        showMainWindow()
+      }
+    } else {
+      createWindow()
+    }
+  })
+
+  tray.on('double-click', () => {
+    showMainWindow()
+  })
+
+  return { tray, updateTrayMenu }
+}
+
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow()
+    return
+  }
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore()
+  }
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+function updateTrayPlayState(playing, title) {
+  isPlaying = playing
+  if (title !== undefined) {
+    currentTrackTitle = title
+  }
+  if (tray) {
+    const tip = currentTrackTitle
+      ? `聆音${isPlaying ? ' · 播放中' : ' · 已暂停'}\n${currentTrackTitle}`
+      : '聆音 - 沉浸式 ASMR 音声播放器'
+    tray.setToolTip(tip)
+    
+    const contextMenu = tray.getContextMenu()
+    if (contextMenu) {
+      const playItem = contextMenu.items[0]
+      if (playItem) {
+        playItem.label = isPlaying ? '暂停' : '播放'
+      }
+    }
+  }
+}
 
 function createWindow() {
   const iconPath = path.join(__dirname, '..', 'build', 'icon.png')
@@ -140,6 +254,27 @@ function createWindow() {
     }
   })
 
+  mainWindow.on('close', async (e) => {
+    if (app.isQuiting) {
+      return
+    }
+    
+    try {
+      const settings = await getSettings()
+      if (settings.closeToTray !== false) {
+        e.preventDefault()
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.hide()
+        }
+        return
+      }
+    } catch (e) {
+      logger.warn('获取托盘设置失败，直接关闭:', e.message)
+    }
+    
+    app.isQuiting = true
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -157,28 +292,45 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
+  createTray()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
+    } else {
+      showMainWindow()
     }
   })
 })
 
 app.on('window-all-closed', () => {
-  logger.info('App closing')
+  logger.info('All windows closed')
   if (process.platform !== 'darwin') {
-    app.quit()
-    setTimeout(() => {
-      process.exit(0)
-    }, 500)
+    if (tray) {
+      logger.info('托盘存在，保持应用在后台运行')
+    } else {
+      app.quit()
+      setTimeout(() => {
+        process.exit(0)
+      }, 500)
+    }
   }
 })
 
 app.on('before-quit', (e) => {
   logger.info('App before quit')
+  app.isQuiting = true
+  if (tray) {
+    try {
+      tray.destroy()
+      tray = null
+    } catch (e) {
+      logger.warn('销毁托盘失败:', e.message)
+    }
+  }
   if (mainWindow) {
     mainWindow.removeAllListeners('closed')
+    mainWindow.removeAllListeners('close')
     mainWindow.close()
     mainWindow = null
   }
@@ -496,6 +648,33 @@ ipcMain.handle('window:close', () => {
 
 ipcMain.handle('window:isMaximized', () => {
   return mainWindow ? mainWindow.isMaximized() : false
+})
+
+ipcMain.handle('window:hide', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide()
+    return true
+  }
+  return false
+})
+
+ipcMain.handle('window:show', () => {
+  showMainWindow()
+  return true
+})
+
+ipcMain.handle('window:isVisible', () => {
+  return mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()
+})
+
+ipcMain.handle('tray:updatePlayState', (_, playing, title) => {
+  updateTrayPlayState(playing, title)
+  return true
+})
+
+ipcMain.handle('tray:setCloseToTray', (_, enabled) => {
+  logger.info('设置关闭最小化到托盘:', enabled)
+  return true
 })
 
 // 翻译 IPC

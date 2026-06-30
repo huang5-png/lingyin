@@ -87,6 +87,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
   windowClose: () => ipcRenderer.invoke('window:close'),
   windowIsMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  windowHide: () => ipcRenderer.invoke('window:hide'),
+  windowShow: () => ipcRenderer.invoke('window:show'),
+  windowIsVisible: () => ipcRenderer.invoke('window:isVisible'),
+
+  // 系统托盘
+  trayUpdatePlayState: (playing, title) => ipcRenderer.invoke('tray:updatePlayState', playing, title),
+  traySetCloseToTray: (enabled) => ipcRenderer.invoke('tray:setCloseToTray', enabled),
+  onTrayTogglePlay: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('tray:togglePlay', handler)
+    return () => ipcRenderer.removeListener('tray:togglePlay', handler)
+  },
+  onTrayPrevTrack: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('tray:prevTrack', handler)
+    return () => ipcRenderer.removeListener('tray:prevTrack', handler)
+  },
+  onTrayNextTrack: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('tray:nextTrack', handler)
+    return () => ipcRenderer.removeListener('tray:nextTrack', handler)
+  },
 
   // 翻译
   translateText: (text, targetLang) => ipcRenderer.invoke('translate:text', text, targetLang),
