@@ -1058,6 +1058,42 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 启动时从 `settings.loopMode / settings.shuffle` 初始化 state
 - 切换时同步写入两处（参考其他设置的持久化模式）
 
+#### 队列持久化
+- **开关**：`settings.persistPlayQueue`（默认 true）
+- **存储位置**：`db.json.playQueue`（通过主进程 IPC 读写）
+- **加载时机**：`usePlayQueue` 初始化时，若 `persistPlayQueue !== false` 则异步加载
+- **保存时机**：队列变化时通过 500ms 防抖保存到 db.json
+- **IPC 接口**：
+  - `playQueue:get` → 获取保存的队列
+  - `playQueue:save(queue)` → 保存队列
+  - `playQueue:clear` → 清空队列
+
+### 19.2 连续播放与启动恢复
+
+#### 作品间连续播放
+- **开关**：`settings.continuousPlay`（默认 false）
+- **触发条件**：当前作品最后一首播放完毕、且不在队列播放模式（`queueIndex < 0`）
+- **行为**：自动切换到当前筛选列表中的下一个作品，并从其第一首开始播放
+- **实现位置**：`useAppState.js` 中包装 `handleFinish` 为 `handleFinishWithContinuousPlay`
+
+#### 启动恢复播放
+- **开关**：`settings.restorePlayOnStart`（默认 false）
+- **保存时机**：播放中每 10 秒保存一次上次播放状态（作品、音频、进度）
+- **存储位置**：`db.json.lastPlayState`
+- **恢复时机**：works 加载完成后 800ms 延迟触发，自动选中上次作品并设置待播放
+- **IPC 接口**：
+  - `lastPlayState:get` → 获取上次播放状态
+  - `lastPlayState:save(state)` → 保存上次播放状态
+- **状态结构**：
+  ```js
+  {
+    workId, workTitle, workCover,   // 作品信息
+    audioPath, audioName,            // 音频信息
+    currentTime, duration,           // 播放进度
+    isOnline,                        // 是否在线作品
+  }
+  ```
+
 ### 19.5 书签系统
 
 #### 功能概述
