@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, memo } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import { formatTime } from '../utils/subtitleParser'
 import QueuePanel from './QueuePanel'
@@ -24,7 +24,7 @@ function pathToFileURL(filePath) {
   return 'file:///' + normalizedPath.split('/').map(encodeURIComponent).join('/')
 }
 
-const AudioPlayer = forwardRef(function AudioPlayer(
+const AudioPlayer = memo(forwardRef(function AudioPlayer(
   {
     audioPath, title, cover, onTimeUpdate, onReady, onFinish, workId,
     waveformHeight = 70, defaultVolume = 80, skipSeconds = 5,
@@ -672,6 +672,6 @@ const AudioPlayer = forwardRef(function AudioPlayer(
       )}
     </div>
   )
-})
+}))
 
 export default AudioPlayer

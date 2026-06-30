@@ -1,8 +1,8 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback, memo } from 'react'
 import { upscaleImage, UPSCALE_PRESETS } from '../utils/upscaleShaders'
 import './UpscaledImage.css'
 
-export default function UpscaledImage({
+const UpscaledImage = memo(function UpscaledImage({
   src,
   alt = '',
   preset = 'high',
@@ -175,4 +175,6 @@ export default function UpscaledImage({
       />
     </div>
   )
-}
+})
+
+export default UpscaledImage

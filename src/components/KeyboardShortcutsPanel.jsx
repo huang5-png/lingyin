@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import './KeyboardShortcutsPanel.css';
 
 const DEFAULT_SHORTCUTS = {
@@ -46,7 +46,7 @@ const ACTION_DESCS = {
   globalSearch: '打开/关闭全局搜索弹窗',
 };
 
-function KeyboardShortcutsPanel({ settings, onSettingsChange }) {
+const KeyboardShortcutsPanel = memo(function KeyboardShortcutsPanel({ settings, onSettingsChange }) {
   const [recordingKey, setRecordingKey] = useState(null);
   const [conflicts, setConflicts] = useState({});
 
@@ -226,7 +226,7 @@ function KeyboardShortcutsPanel({ settings, onSettingsChange }) {
       </div>
     </div>
   );
-}
+})
 
 export { DEFAULT_SHORTCUTS };
 export default KeyboardShortcutsPanel;

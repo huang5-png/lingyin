@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import './PlaylistView.css'
 
-export default function AddToPlaylistModal({ target, onClose, onToast }) {
+const AddToPlaylistModal = memo(function AddToPlaylistModal({ target, onClose, onToast }) {
   const [playlists, setPlaylists] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(null)
@@ -154,4 +154,6 @@ export default function AddToPlaylistModal({ target, onClose, onToast }) {
       </div>
     </div>
   )
-}
+})
+
+export default AddToPlaylistModal

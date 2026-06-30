@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import StateView from './StateView'
 import './UsageReport.css'
 
@@ -29,7 +29,7 @@ function formatShortDuration(totalSeconds) {
   return `${s}s`
 }
 
-export default function UsageReport() {
+const UsageReport = memo(function UsageReport() {
   const [range, setRange] = useState('month')
   const [refDate, setRefDate] = useState(null)
   const [stats, setStats] = useState(null)
@@ -487,7 +487,7 @@ export default function UsageReport() {
       </div>
     </div>
   )
-}
+})
 
 // ===== Sub components =====
 
@@ -869,3 +869,5 @@ function TimelineChart({ timeline, range }) {
     </div>
   )
 }
+
+export default UsageReport

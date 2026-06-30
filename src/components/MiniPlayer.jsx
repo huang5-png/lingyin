@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { formatTime } from '../utils/subtitleParser'
 import './MiniPlayer.css'
 
-function MiniPlayer() {
+const MiniPlayer = memo(function MiniPlayer() {
   const [state, setState] = useState({
     isPlaying: false,
     title: '',
@@ -168,6 +168,6 @@ function MiniPlayer() {
       </div>
     </div>
   )
-}
+})
 
 export default MiniPlayer

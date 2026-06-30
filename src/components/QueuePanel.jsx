@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, memo } from 'react'
 import './QueuePanel.css'
 import StateView from './StateView'
 
@@ -82,7 +82,7 @@ const LoopIcon = ({ mode }) => {
   return <LoopNoneIcon />
 }
 
-export default function QueuePanel({
+const QueuePanel = memo(function QueuePanel({
   queue,
   queueIndex,
   loopMode,
@@ -259,4 +259,6 @@ export default function QueuePanel({
       </div>
     </div>
   )
-}
+})
+
+export default QueuePanel

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import './DownloadModal.css'
 
 // 从 tracks 树形结构里提取所有音频文件，按顶层文件夹分组
@@ -61,7 +61,7 @@ function formatSpeed(bps) {
   return (bps / (1024 * 1024)).toFixed(1) + ' MB/s'
 }
 
-export default function DownloadModal({ work, onClose, onNavigateToDownload }) {
+const DownloadModal = memo(function DownloadModal({ work, onClose, onNavigateToDownload }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [groups, setGroups] = useState([])
@@ -302,4 +302,6 @@ export default function DownloadModal({ work, onClose, onNavigateToDownload }) {
       </div>
     </div>
   )
-}
+})
+
+export default DownloadModal

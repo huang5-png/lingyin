@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import './DownloadView.css'
 import StateView from './StateView'
 
@@ -40,7 +40,7 @@ function getTotalDownloaded(task) {
   return { downloaded, total, speed }
 }
 
-export default function DownloadView({ onToast, onOpenSettings }) {
+const DownloadView = memo(function DownloadView({ onToast, onOpenSettings }) {
   const [downloadState, setDownloadState] = useState({ queue: [], active: null })
   const [expandedTasks, setExpandedTasks] = useState(new Set())
 
@@ -281,4 +281,6 @@ export default function DownloadView({ onToast, onOpenSettings }) {
       </div>
     </div>
   )
-}
+})
+
+export default DownloadView

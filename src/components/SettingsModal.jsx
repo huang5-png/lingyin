@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import './SettingsModal.css';
 import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
 import { getPresetList } from '../utils/upscaleShaders';
@@ -129,7 +129,7 @@ const TABS = [
   { id: 'about', label: '关于' },
 ];
 
-function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab }) {
+const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab }) {
   const [activeTab, setActiveTab] = useState('basic');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isVisible, setIsVisible] = useState(false);
@@ -1352,7 +1352,7 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
       </div>
     </div>
   );
-}
+})
 
 function ToggleSwitch({ checked, onChange }) {
   return (

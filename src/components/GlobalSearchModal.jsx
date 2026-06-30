@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import './GlobalSearchModal.css'
 import StateView from './StateView'
 
@@ -33,7 +33,7 @@ function highlightText(text, query) {
   )
 }
 
-export default function GlobalSearchModal({
+const GlobalSearchModal = memo(function GlobalSearchModal({
   isOpen,
   onClose,
   works,
@@ -795,4 +795,6 @@ export default function GlobalSearchModal({
       </div>
     </div>
   )
-}
+})
+
+export default GlobalSearchModal
