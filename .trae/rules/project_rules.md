@@ -108,7 +108,11 @@
 
 | 文件 | 职责 |
 |------|------|
-| `App.jsx` | 根组件，核心状态管理（selectedWork/playingWork/currentAudio/currentView/isImmersive/flipState/playQueue/queueIndex/loopMode/shuffle/sleepTimer/rightPanelWidth） |
+| `App.jsx` | 根组件，核心状态管理（selectedWork/playingWork/currentAudio/currentView/isImmersive/flipState），集成自定义 Hooks |
+| `hooks/useTranslate.js` | 翻译功能 Hook：翻译缓存、批量翻译、字幕翻译切换、自动翻译 |
+| `hooks/usePlayQueue.js` | 播放队列 Hook：队列管理、循环模式、随机播放、跨作品播放、队列操作 |
+| `hooks/useKeyboardShortcuts.js` | 全局快捷键 Hook：快捷键解析匹配、按键事件处理、ESC 弹窗优先级 |
+| `hooks/useSleepTimer.js` | 睡眠定时器 Hook：倒计时管理、自动暂停播放、剩余时间格式化 |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
