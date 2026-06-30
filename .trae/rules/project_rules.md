@@ -129,6 +129,7 @@
 | `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：播放列表曲目播放、跳转到作品、加入播放列表弹窗 |
 | `hooks/useSubtitleRefresh.js` | 字幕刷新 Hook：重新扫描文件夹、更新音频和字幕列表、保持当前字幕选择 |
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
+| `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、自动居中、点击跳转） |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
@@ -297,7 +298,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   "settings": {},        // 用户设置
   "playlists": [],       // 播放列表
   "translateCache": {},  // 翻译缓存 { workId::audioPath: { text, timestamp } }
-  "favorites": []        // 收藏列表 [{ workId, title, cover, circle, isOnline, addedAt }]
+  "favorites": [],        // 收藏列表 [{ workId, title, cover, circle, isOnline, addedAt }]
+  "folderGroups": []      // 文件夹分组 [{ id, name, color, order, createdAt, updatedAt }]
 }
 ```
 
@@ -817,7 +819,57 @@ function formatSleepTimerRemaining(seconds) {
 - 收藏筛选开启时，空态显示对应提示
 - 切换收藏状态后即时更新列表显示
 
-### 22. 全局搜索
+### 22. 文件夹分组功能
+
+#### 功能概述
+- 用户可以创建自定义文件夹分组，将本地作品按类别组织管理
+- 支持创建/重命名/删除分组，分组带颜色标识
+- 侧边栏分组面板可折叠/展开，显示各分组作品数量
+- 作品详情页可快速移动作品到不同分组
+- 分组筛选与 CV/社团/标签/收藏筛选叠加生效
+- 分组数据持久化存储到 db.json，重启后自动恢复
+- 仅适用于本地作品，在线作品不支持分组
+
+#### 数据结构
+- 存储位置：`db.json.folderGroups`（数组）
+- 每个分组：`{ id, name, color, order, createdAt, updatedAt }`
+  - `id`：分组唯一标识，`fg_<base36时间戳>_<6位随机>`
+  - `name`：分组名称
+  - `color`：分组颜色（CSS 颜色值）
+  - `order`：排序序号
+- 作品关联：`work.folderGroupId` — 作品所属分组 ID，null 表示未分组
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `folderGroup:getAll` | 获取全部分组列表 |
+| `folderGroup:create` | 创建新分组，返回新对象 |
+| `folderGroup:rename` | 重命名分组 |
+| `folderGroup:setColor` | 设置分组颜色 |
+| `folderGroup:delete` | 删除分组（组内作品变为未分组） |
+| `folderGroup:reorder` | 按 id 数组重新排序 |
+| `folderGroup:setWorkGroup` | 设置作品所属分组（null 表示取消分组） |
+| `folderGroup:getWorks` | 获取指定分组下的所有作品 |
+
+#### 前端 Hook
+- `useFolderGroups` Hook 管理分组状态与操作
+- 状态：`folderGroups`（分组列表）、`activeFolderGroupId`（当前选中分组 ID）
+- 操作：`loadFolderGroups`、`createGroup`、`renameGroup`、`setGroupColor`、`deleteGroup`、`reorderGroups`、`setWorkGroup`
+- 筛选逻辑：`filterWorksByFolderGroup(works, groupId)`
+
+#### UI 入口
+- **Sidebar 分组面板**：可折叠/展开，包含「全部作品」「未分组」+ 各自定义分组
+- **作品详情页**：操作按钮区「移动到分组」下拉按钮，快速切换分组
+- **筛选逻辑**：文件夹分组 → CV/社团/标签 → 收藏（筛选优先级从高到低
+
+#### 分组筛选规则
+- 全部作品：显示所有作品（不筛选）
+- 未分组：显示 `folderGroupId` 为 null 的作品
+- 指定分组：显示 `folderGroupId` 等于该分组 ID 的作品
+- 分组筛选与 CV/社团/标签/收藏筛选叠加生效
+- 删除分组时，组内所有作品的 folderGroupId 自动设为 null（变为未分组）
+
+### 23. 全局搜索
 
 #### 功能概述
 - 全局搜索支持搜索作品、收藏、播放列表，按分类展示结果
