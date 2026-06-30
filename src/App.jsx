@@ -176,6 +176,7 @@ export default function App() {
     currentAudio,
     currentCues,
     currentTime,
+    duration,
     handleSelectAudio,
     handleTimeUpdate,
     handleReady,
@@ -625,14 +626,25 @@ export default function App() {
           work={playingWork}
           currentCues={currentCues}
           currentTime={currentTime}
+          duration={duration}
           subtitleFontSize={settings.subtitleFontSize}
           subtitleStyleSettings={immersiveSubtitleStyle}
           playerRef={playerRef}
           onClose={handleCloseImmersive}
+          onPrev={handlePrevAudio}
+          onNext={handleNextAudio}
           upscalePreset={settings.upscalePreset}
           hasTranslation={hasTranslation}
           onToggleTranslate={handleToggleTranslate}
           isTranslating={isAnyTranslating}
+          playbackRate={settings.playbackRate}
+          onPlaybackRateChange={handlePlaybackRateChange}
+          onAddBookmark={addBookmark}
+          hasCurrentBookmark={playingWork && currentAudio ? hasBookmarkAtTime(playingWork.id, currentAudio.path, currentTime) : false}
+          bookmarkCount={playingWork && currentAudio ? (bookmarks.filter(b => b.workId === playingWork.id && b.audioPath === currentAudio.path)).length : 0}
+          sleepTimerActive={sleepTimerActive}
+          sleepTimerStatusText={getSleepTimerStatusText()}
+          onToggleSleepTimer={handleSetCountdownTimer}
         />
       )}
 
