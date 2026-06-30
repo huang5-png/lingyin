@@ -768,6 +768,7 @@ export default function App() {
         works={works}
         currentAudio={currentAudio}
         currentWork={selectedWork}
+        favoriteIds={favoriteIds}
         onSelectWork={(work) => {
           setCurrentView('library')
           handleSelectWork(work)
