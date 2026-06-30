@@ -1595,3 +1595,49 @@
   background: var(--bg-tertiary);
   color: var(--text-primary);
 }
+
+/* ===== 作品播放进度条 ===== */
+
+/* 卡片视图进度条 */
+.card-progress {
+  width: 100%;
+  height: 3px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.card-progress-bar {
+  height: 100%;
+  background: var(--accent-gradient);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* 列表视图进度百分比 */
+.work-progress-pct {
+  font-size: var(--font-size-xs);
+  color: var(--accent-primary);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  opacity: 0.9;
+}
+
+/* 列表视图进度条容器 */
+.work-progress-bar-container {
+  width: 100%;
+  height: 2px;
+  background: var(--bg-secondary);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.work-progress-bar {
+  height: 100%;
+  background: var(--accent-gradient);
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import './Sidebar.css'
 import StateView from './StateView'
 
@@ -10,6 +10,38 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
   const [showNewGroupInput, setShowNewGroupInput] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [workGroupMenu, setWorkGroupMenu] = useState(null)
+  const [workProgressMap, setWorkProgressMap] = useState({})
+
+  // 加载所有作品的播放进度
+  const loadWorkProgress = useCallback(async () => {
+    if (!works || works.length === 0) return
+    try {
+      const progressEntries = await Promise.all(
+        works.map(async (work) => {
+          if (work.isOnline) return { id: work.id, progress: null }
+          try {
+            const progress = await window.electronAPI.dbGetWorkProgress(work.id)
+            return { id: work.id, progress }
+          } catch {
+            return { id: work.id, progress: null }
+          }
+        })
+      )
+      const map = {}
+      for (const entry of progressEntries) {
+        if (entry.progress) {
+          map[entry.id] = entry.progress
+        }
+      }
+      setWorkProgressMap(map)
+    } catch (e) {
+      console.error('Failed to load work progress:', e)
+    }
+  }, [works])
+
+  useEffect(() => {
+    loadWorkProgress()
+  }, [loadWorkProgress])
 
   const filteredWorks = useMemo(() => {
     const query = searchQuery.toLowerCase().trim()
@@ -382,6 +414,11 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                         ))}
                       </div>
                     )}
+                    {workProgressMap[work.id] && workProgressMap[work.id].percentage > 0 && (
+                      <div className="card-progress">
+                        <div className="card-progress-bar" style={{ width: `${workProgressMap[work.id].percentage}%` }} />
+                      </div>
+                    )}
                   </div>
                   <button
                     className={`work-favorite-btn card-favorite ${favoriteIds?.has(work.id) ? 'favorited' : ''}`}
@@ -425,12 +462,20 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                       {work.cvs && work.cvs.length > 0 && <span className="work-cv">{work.cvs.slice(0, 2).map(cv => getTranslatedText?.(cv) || cv).join('、')}</span>}
                       {work.rating > 0 && <span className="work-rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating}</span>}
                       {work.circle && <span className="work-circle-name">{getTranslatedText?.(work.circle) || work.circle}</span>}
+                      {workProgressMap[work.id] && workProgressMap[work.id].percentage > 0 && (
+                        <span className="work-progress-pct">{workProgressMap[work.id].percentage}%</span>
+                      )}
                     </div>
                     {work.tags && work.tags.length > 0 && (
                       <div className="work-tags-row">
                         {work.tags.map((tag, i) => (
                           <span key={i} className="work-tag-chip">{getTranslatedText?.(tag) || tag}</span>
                         ))}
+                      </div>
+                    )}
+                    {workProgressMap[work.id] && workProgressMap[work.id].percentage > 0 && (
+                      <div className="work-progress-bar-container">
+                        <div className="work-progress-bar" style={{ width: `${workProgressMap[work.id].percentage}%` }} />
                       </div>
                     )}
                   </div>

@@ -89,6 +89,33 @@ async function getProgress(workId, audioFile) {
   return dbData.progress[key] || { currentTime: 0, duration: 0, lastPlayed: 0 }
 }
 
+// 获取指定作品的总播放进度
+async function getWorkProgress(workId) {
+  const progressMap = dbData.progress || {}
+  let totalPlayed = 0
+  let totalDuration = 0
+  let lastPlayed = 0
+
+  for (const [key, data] of Object.entries(progressMap)) {
+    if (key.startsWith(`${workId}::`)) {
+      totalPlayed += data.currentTime || 0
+      totalDuration += data.duration || 0
+      if (data.lastPlayed && data.lastPlayed > lastPlayed) {
+        lastPlayed = data.lastPlayed
+      }
+    }
+  }
+
+  const percentage = totalDuration > 0 ? Math.min(100, Math.round((totalPlayed / totalDuration) * 100)) : 0
+
+  return {
+    totalPlayed,
+    totalDuration,
+    percentage,
+    lastPlayed,
+  }
+}
+
 async function saveProgress(workId, audioFile, progress) {
   const key = `${workId}::${audioFile}`
   dbData.progress[key] = {
@@ -685,6 +712,7 @@ module.exports = {
   updateWork,
   deleteWork,
   getProgress,
+  getWorkProgress,
   saveProgress,
   getSubtitle,
   saveSubtitle,
