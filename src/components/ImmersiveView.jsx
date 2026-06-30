@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useRef } from 'react'
 import { findCurrentCue } from '../utils/subtitleParser'
+import UpscaledImage from './UpscaledImage'
 import './ImmersiveView.css'
 
 export default function ImmersiveView({
@@ -9,6 +10,10 @@ export default function ImmersiveView({
   subtitleFontSize,
   playerRef,
   onClose,
+  upscalePreset = 'anime',
+  hasTranslation = false,
+  onToggleTranslate,
+  isTranslating = false,
 }) {
   const immersiveLyricRef = useRef(null)
 
@@ -57,8 +62,26 @@ export default function ImmersiveView({
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
+      {currentCues.length > 0 && onToggleTranslate && (
+        <button
+          className={`immersive-translate-btn ${isTranslating ? 'translating' : ''} ${hasTranslation ? 'has-translation' : ''}`}
+          onClick={onToggleTranslate}
+          title={isTranslating ? '翻译中...' : hasTranslation ? '关闭双语显示' : '翻译字幕'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m22 10-7-7-2 2 5 5-5 5 2 2 7-7Z"/>
+            <path d="M21 12H3"/>
+          </svg>
+        </button>
+      )}
       <div className="immersive-cover-wrapper">
-        <img src={work.cover} alt="" className="immersive-cover" loading="lazy" decoding="async" />
+        <UpscaledImage
+          src={work.cover}
+          alt=""
+          preset={upscalePreset}
+          className="immersive-cover"
+          fit="contain"
+        />
       </div>
       <div className="immersive-bottom">
         <div className="immersive-title">{work.title || work.folderName}</div>
@@ -74,6 +97,13 @@ export default function ImmersiveView({
                 {cue.text.split('\n').map((line, lineIdx) => (
                   <div key={lineIdx}>{line}</div>
                 ))}
+                {hasTranslation && cue.translated && (
+                  <div className="immersive-lyric-translated">
+                    {cue.translated.split('\n').map((line, lineIdx) => (
+                      <div key={lineIdx}>{line}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
