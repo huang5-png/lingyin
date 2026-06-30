@@ -522,6 +522,78 @@ export function useAppState() {
     return () => clearInterval(timer)
   }, [currentAudio])
 
+  // ===== 迷你播放器集成 =====
+  const miniPlayerStateRef = useRef({
+    isPlaying: false,
+    title: '',
+    cover: '',
+    currentTime: 0,
+    duration: 0,
+    workTitle: '',
+  })
+
+  useEffect(() => {
+    if (!window.electronAPI?.onMiniPlayerTogglePlay) return
+
+    const cleanupToggle = window.electronAPI.onMiniPlayerTogglePlay(() => {
+      if (playerRef.current) {
+        playerRef.current.playPause?.()
+      }
+    })
+
+    const cleanupPrev = window.electronAPI.onMiniPlayerPrevTrack(() => {
+      handlePrevAudio()
+    })
+
+    const cleanupNext = window.electronAPI.onMiniPlayerNextTrack(() => {
+      handleNextAudio()
+    })
+
+    return () => {
+      cleanupToggle?.()
+      cleanupPrev?.()
+      cleanupNext?.()
+    }
+  }, [handlePrevAudio, handleNextAudio])
+
+  useEffect(() => {
+    if (!window.electronAPI?.miniPlayerUpdateState) return
+
+    const updateMiniPlayerState = () => {
+      const isPlaying = playerRef.current?.isPlaying?.() || false
+      const title = currentAudio?.name || ''
+      const cover = selectedWork?.cover || ''
+      const currentTime = playerRef.current?.getCurrentTime?.() || 0
+      const duration = playerRef.current?.getDuration?.() || 0
+      const workTitle = selectedWork?.title || ''
+
+      const prev = miniPlayerStateRef.current
+      if (
+        isPlaying !== prev.isPlaying ||
+        title !== prev.title ||
+        cover !== prev.cover ||
+        Math.abs(currentTime - prev.currentTime) > 0.5 ||
+        duration !== prev.duration ||
+        workTitle !== prev.workTitle
+      ) {
+        miniPlayerStateRef.current = {
+          isPlaying,
+          title,
+          cover,
+          currentTime,
+          duration,
+          workTitle,
+        }
+        window.electronAPI.miniPlayerUpdateState(miniPlayerStateRef.current)
+      }
+    }
+
+    const timer = setInterval(updateMiniPlayerState, 500)
+    updateMiniPlayerState()
+
+    return () => clearInterval(timer)
+  }, [currentAudio, selectedWork])
+
   // 全局搜索回调
   const handleGlobalSearchSelectWork = useCallback((work) => {
     setCurrentView('library')

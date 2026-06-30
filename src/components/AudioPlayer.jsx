@@ -538,6 +538,26 @@ const AudioPlayer = forwardRef(function AudioPlayer(
             </div>
           )}
         </div>
+        <div className="mini-player-control">
+          <button
+            className="ctrl-btn mini-player-btn"
+            onClick={() => {
+              if (window.electronAPI?.miniPlayerOpen) {
+                window.electronAPI.miniPlayerOpen()
+              }
+            }}
+            title="迷你播放器模式"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="21" x2="9" y2="14" />
+              <line x1="15" y1="21" x2="15" y2="14" />
+              <line x1="9" y1="10" x2="9" y2="3" />
+              <line x1="15" y1="10" x2="15" y2="3" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+          </button>
+        </div>
       </div>
       {showQueuePanel && (
         <QueuePanel

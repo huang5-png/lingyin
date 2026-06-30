@@ -134,4 +134,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
   folderGroupsReorder: (groupIds) => ipcRenderer.invoke('folderGroups:reorder', groupIds),
   folderGroupsSetWorkGroup: (workId, groupId) => ipcRenderer.invoke('folderGroups:setWorkGroup', workId, groupId),
   folderGroupsGetWorks: (groupId) => ipcRenderer.invoke('folderGroups:getWorks', groupId),
+
+  // 迷你播放器
+  miniPlayerOpen: () => ipcRenderer.invoke('miniPlayer:open'),
+  miniPlayerClose: () => ipcRenderer.invoke('miniPlayer:close'),
+  miniPlayerIsOpen: () => ipcRenderer.invoke('miniPlayer:isOpen'),
+  miniPlayerUpdateState: (state) => ipcRenderer.invoke('miniPlayer:updateState', state),
+  miniPlayerGetState: () => ipcRenderer.invoke('miniPlayer:getState'),
+  miniPlayerTogglePlay: () => ipcRenderer.invoke('miniPlayer:togglePlay'),
+  miniPlayerPrevTrack: () => ipcRenderer.invoke('miniPlayer:prevTrack'),
+  miniPlayerNextTrack: () => ipcRenderer.invoke('miniPlayer:nextTrack'),
+  miniPlayerShowMain: () => ipcRenderer.invoke('miniPlayer:showMain'),
+  miniPlayerStartDrag: () => ipcRenderer.invoke('miniPlayer:startDrag'),
+  onMiniPlayerStateUpdate: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('miniPlayer:stateUpdate', handler)
+    return () => ipcRenderer.removeListener('miniPlayer:stateUpdate', handler)
+  },
+  onMiniPlayerTogglePlay: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('miniPlayer:togglePlay', handler)
+    return () => ipcRenderer.removeListener('miniPlayer:togglePlay', handler)
+  },
+  onMiniPlayerPrevTrack: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('miniPlayer:prevTrack', handler)
+    return () => ipcRenderer.removeListener('miniPlayer:prevTrack', handler)
+  },
+  onMiniPlayerNextTrack: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('miniPlayer:nextTrack', handler)
+    return () => ipcRenderer.removeListener('miniPlayer:nextTrack', handler)
+  },
 })

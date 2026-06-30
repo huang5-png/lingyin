@@ -51,9 +51,18 @@ app.commandLine.appendSwitch('no-sandbox')
 app.commandLine.appendSwitch('disable-setuid-sandbox')
 
 let mainWindow
+let miniWindow = null
 let tray = null
 let isPlaying = false
 let currentTrackTitle = ''
+let miniPlayerState = {
+  isPlaying: false,
+  title: '',
+  cover: '',
+  currentTime: 0,
+  duration: 0,
+  workTitle: '',
+}
 
 function createTray() {
   const iconPath = path.join(__dirname, '..', 'build', 'icon-16.png')
@@ -163,6 +172,87 @@ function updateTrayPlayState(playing, title) {
         playItem.label = isPlaying ? '暂停' : '播放'
       }
     }
+  }
+}
+
+function createMiniWindow() {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.show()
+    miniWindow.focus()
+    return
+  }
+
+  const iconPath = path.join(__dirname, '..', 'build', 'icon.png')
+
+  miniWindow = new BrowserWindow({
+    width: 360,
+    height: 130,
+    minWidth: 300,
+    minHeight: 110,
+    maxWidth: 500,
+    maxHeight: 180,
+    backgroundColor: '#faf9f5',
+    frame: false,
+    transparent: true,
+    icon: iconPath,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: false,
+    resizable: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false,
+      sandbox: false,
+      spellcheck: false,
+      enableWebSQL: false,
+    },
+  })
+
+  miniWindow.setMenuBarVisibility(false)
+
+  if (isDev) {
+    miniWindow.loadURL('http://localhost:5173#mini')
+  } else {
+    const indexPath = path.join(__dirname, '../dist/index.html')
+    miniWindow.loadFile(indexPath, { hash: 'mini' }).catch((err) => {
+      logger.error('迷你播放器加载失败:', err.message)
+    })
+  }
+
+  miniWindow.once('ready-to-show', () => {
+    if (miniWindow && !miniWindow.isDestroyed()) {
+      miniWindow.show()
+    }
+  })
+
+  miniWindow.on('closed', () => {
+    miniWindow = null
+  })
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const mainBounds = mainWindow.getBounds()
+    miniWindow.setPosition(
+      mainBounds.x + Math.floor((mainBounds.width - 360) / 2),
+      mainBounds.y + Math.floor((mainBounds.height - 130) / 2)
+    )
+  }
+}
+
+function broadcastToMini(channel, data) {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    try {
+      miniWindow.webContents.send(channel, data)
+    } catch (e) {}
+  }
+}
+
+function broadcastToMain(channel, data) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      mainWindow.webContents.send(channel, data)
+    } catch (e) {}
   }
 }
 
@@ -1524,5 +1614,63 @@ ipcMain.handle('download:retryFile', async (_, taskId, fileIndex) => {
     processDownloadQueue()
   }
 
+  return true
+})
+
+// ========== 迷你播放器 ==========
+
+ipcMain.handle('miniPlayer:open', () => {
+  createMiniWindow()
+  return true
+})
+
+ipcMain.handle('miniPlayer:close', () => {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.close()
+  }
+  return true
+})
+
+ipcMain.handle('miniPlayer:isOpen', () => {
+  return miniWindow && !miniWindow.isDestroyed()
+})
+
+ipcMain.handle('miniPlayer:updateState', (_, state) => {
+  miniPlayerState = { ...miniPlayerState, ...state }
+  broadcastToMini('miniPlayer:stateUpdate', miniPlayerState)
+  return true
+})
+
+ipcMain.handle('miniPlayer:getState', () => {
+  return miniPlayerState
+})
+
+ipcMain.handle('miniPlayer:togglePlay', () => {
+  broadcastToMain('miniPlayer:togglePlay')
+  return true
+})
+
+ipcMain.handle('miniPlayer:prevTrack', () => {
+  broadcastToMain('miniPlayer:prevTrack')
+  return true
+})
+
+ipcMain.handle('miniPlayer:nextTrack', () => {
+  broadcastToMain('miniPlayer:nextTrack')
+  return true
+})
+
+ipcMain.handle('miniPlayer:showMain', () => {
+  showMainWindow()
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.close()
+  }
+  return true
+})
+
+ipcMain.handle('miniPlayer:startDrag', () => {
+  if (miniWindow && !miniWindow.isDestroyed()) {
+    miniWindow.startDrag()
+  }
   return true
 })
