@@ -622,3 +622,106 @@
 [data-theme="dark"] .sleep-timer-option.active {
   background: rgba(217, 119, 87, 0.12);
 }
+
+/* ===== 播放速度控制 ===== */
+.playback-rate-control {
+  position: relative;
+  margin-left: 8px;
+}
+
+.ctrl-btn.playback-rate-btn {
+  min-width: 44px;
+  width: auto;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 11px;
+  position: relative;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.playback-rate-text {
+  line-height: 1;
+}
+
+/* 倍速激活态 */
+.ctrl-btn.playback-rate-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.playback-rate-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+/* 倍速下拉菜单 */
+.playback-rate-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 100px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-index-popover, 1000);
+  overflow: hidden;
+}
+
+.playback-rate-header {
+  padding: 10px 12px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.02em;
+}
+
+.playback-rate-options {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playback-rate-option {
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.playback-rate-option:hover {
+  background: var(--bg-hover);
+}
+
+.playback-rate-option.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .playback-rate-option.active {
+  background: rgba(217, 119, 87, 0.12);
+}
+
+/* ===== 高 DPI 适配 ===== */
+@media (min-resolution: 1.5dppx) {
+  .ctrl-btn.playback-rate-btn {
+    height: 32px;
+    min-width: 48px;
+    font-size: 12px;
+  }
+}

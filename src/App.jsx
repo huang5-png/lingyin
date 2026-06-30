@@ -33,6 +33,7 @@ export default function App() {
     viewMode,
     handleSaveSettings,
     handleViewModeChange,
+    handlePlaybackRateChange,
 
     // 视图导航
     selectedWork,
@@ -393,6 +394,8 @@ export default function App() {
             sleepTimerMinutes={sleepTimerMinutes}
             sleepTimerRemaining={sleepTimerRemaining}
             onSetSleepTimer={handleSetSleepTimer}
+            playbackRate={settings.playbackRate}
+            onPlaybackRateChange={handlePlaybackRateChange}
           />
         </div>
       )}

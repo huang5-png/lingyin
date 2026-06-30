@@ -46,6 +46,8 @@ const AudioPlayer = forwardRef(function AudioPlayer(
     onPlayFromQueue, onRemoveFromQueue, onClearQueue, onReorderQueue, onCloseQueuePanel,
     // 睡眠定时器相关
     sleepTimerMinutes = 0, sleepTimerRemaining = 0, onSetSleepTimer,
+    // 播放速度相关
+    playbackRate = 1, onPlaybackRateChange,
   },
   ref,
 ) {
@@ -64,6 +66,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
   const [tooltipPosition, setTooltipPosition] = useState(0)
   const volumeSliderRef = useRef(null)
   const [showSleepTimer, setShowSleepTimer] = useState(false) // 定时器下拉菜单显示状态
+  const [showPlaybackRate, setShowPlaybackRate] = useState(false) // 倍速下拉菜单显示状态
 
   useImperativeHandle(ref, () => ({
     seekTo: (time) => {
@@ -96,6 +99,12 @@ const AudioPlayer = forwardRef(function AudioPlayer(
         wavesurferRef.current.skip(seconds || skipSeconds)
       }
     },
+    setPlaybackRate: (rate) => {
+      if (wavesurferRef.current) {
+        wavesurferRef.current.setPlaybackRate(rate)
+      }
+    },
+    getPlaybackRate: () => playbackRate,
   }))
 
   const handlePlayPause = () => {
@@ -207,6 +216,7 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           const dur = ws.getDuration()
           setDuration(dur)
 
+          ws.setPlaybackRate(playbackRate)
           ws.play()
           if (onReady) onReady(dur)
         })
@@ -269,6 +279,12 @@ const AudioPlayer = forwardRef(function AudioPlayer(
       volumeSliderRef.current.style.backgroundSize = `${volume * 100}% 100%`
     }
   }, [volume])
+
+  useEffect(() => {
+    if (wavesurferRef.current && isReady) {
+      wavesurferRef.current.setPlaybackRate(playbackRate)
+    }
+  }, [playbackRate, isReady])
 
   return (
     <div className="audio-player">
@@ -423,6 +439,34 @@ const AudioPlayer = forwardRef(function AudioPlayer(
             </svg>
             {queue.length > 0 && <span className="queue-badge">{queue.length}</span>}
           </button>
+        </div>
+        <div className="playback-rate-control">
+          <button
+            className={`ctrl-btn playback-rate-btn ${playbackRate !== 1 ? 'active' : ''}`}
+            onClick={() => setShowPlaybackRate(!showPlaybackRate)}
+            title={`播放速度：${playbackRate}x`}
+          >
+            <span className="playback-rate-text">{playbackRate}x</span>
+          </button>
+          {showPlaybackRate && (
+            <div className="playback-rate-dropdown">
+              <div className="playback-rate-header">播放速度</div>
+              <div className="playback-rate-options">
+                {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
+                  <button
+                    key={rate}
+                    className={`playback-rate-option ${playbackRate === rate ? 'active' : ''}`}
+                    onClick={() => {
+                      if (onPlaybackRateChange) onPlaybackRateChange(rate)
+                      setShowPlaybackRate(false)
+                    }}
+                  >
+                    {rate}x
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="sleep-timer-control">
           <button

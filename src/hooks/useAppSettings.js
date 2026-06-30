@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   loopMode: 'none',
   shuffle: false,
   autoHideSidebar: true,
+  playbackRate: 1,
   shortcuts: { ...DEFAULT_SHORTCUTS },
 }
 
@@ -71,6 +72,18 @@ export function useAppSettings({ playerRef, setShowLyric, showToast }) {
     [],
   )
 
+  const handlePlaybackRateChange = useCallback(
+    (rate) => {
+      setSettings((prev) => {
+        const newSettings = { ...prev, playbackRate: rate }
+        localStorage.setItem('appSettings', JSON.stringify(newSettings))
+        window.electronAPI?.dbSaveSettings(newSettings).catch(() => {})
+        return newSettings
+      })
+    },
+    [],
+  )
+
   return {
     settings,
     setSettings,
@@ -80,6 +93,7 @@ export function useAppSettings({ playerRef, setShowLyric, showToast }) {
     setShowLyric: setLocalShowLyric,
     handleSaveSettings,
     handleViewModeChange,
+    handlePlaybackRateChange,
     DEFAULT_SETTINGS,
   }
 }

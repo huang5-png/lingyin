@@ -39,6 +39,7 @@ export function useAppState() {
     setShowLyric,
     handleSaveSettings,
     handleViewModeChange,
+    handlePlaybackRateChange,
   } = useAppSettings({
     playerRef,
     showToast,
@@ -505,6 +506,7 @@ export function useAppState() {
     setShowLyric,
     handleSaveSettings,
     handleViewModeChange,
+    handlePlaybackRateChange,
 
     // 视图导航
     selectedWork,
