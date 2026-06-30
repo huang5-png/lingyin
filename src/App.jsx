@@ -129,9 +129,22 @@ export default function App() {
     handleToggleQueuePanel,
 
     // 睡眠定时器
-    sleepTimerMinutes,
+    sleepTimerMode,
+    sleepTimerActive,
+    sleepTimerFading,
     sleepTimerRemaining,
-    handleSetSleepTimer,
+    sleepTimerFadeEnabled,
+    setSleepTimerFadeEnabled,
+    handleSetCountdownTimer,
+    handleSetTrackEndTimer,
+    handleSetTimePointTimer,
+    handleCancelSleepTimer,
+    handleSleepTimerTrackFinish,
+    formatSleepTimerRemaining,
+    getSleepTimerStatusText,
+    SLEEP_TIMER_OPTIONS,
+    SLEEP_TIMER_MODES,
+    SLEEP_TIMER_PRESETS,
 
     // 字幕
     subtitleOptions,
@@ -496,9 +509,22 @@ export default function App() {
             onClearQueue={handleClearQueue}
             onReorderQueue={handleReorderQueue}
             onCloseQueuePanel={() => setShowQueuePanel(false)}
-            sleepTimerMinutes={sleepTimerMinutes}
+            sleepTimerMode={sleepTimerMode}
+            sleepTimerActive={sleepTimerActive}
+            sleepTimerFading={sleepTimerFading}
             sleepTimerRemaining={sleepTimerRemaining}
-            onSetSleepTimer={handleSetSleepTimer}
+            sleepTimerFadeEnabled={sleepTimerFadeEnabled}
+            onSetSleepTimerFadeEnabled={setSleepTimerFadeEnabled}
+            onSetCountdownTimer={handleSetCountdownTimer}
+            onSetTrackEndTimer={handleSetTrackEndTimer}
+            onSetTimePointTimer={handleSetTimePointTimer}
+            onCancelSleepTimer={handleCancelSleepTimer}
+            onSleepTimerTrackFinish={handleSleepTimerTrackFinish}
+            formatSleepTimerRemaining={formatSleepTimerRemaining}
+            getSleepTimerStatusText={getSleepTimerStatusText}
+            sleepTimerOptions={SLEEP_TIMER_OPTIONS}
+            sleepTimerModes={SLEEP_TIMER_MODES}
+            sleepTimerPresets={SLEEP_TIMER_PRESETS}
             playbackRate={settings.playbackRate}
             onPlaybackRateChange={handlePlaybackRateChange}
             onAddBookmark={addBookmark}

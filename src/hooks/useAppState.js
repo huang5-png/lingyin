@@ -3,7 +3,7 @@ import { formatTime } from '../utils/subtitleParser'
 import { useTranslate } from './useTranslate'
 import { usePlayQueue } from './usePlayQueue'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
-import { useSleepTimer, SLEEP_TIMER_OPTIONS } from './useSleepTimer'
+import { useSleepTimer, SLEEP_TIMER_OPTIONS, SLEEP_TIMER_MODES, SLEEP_TIMER_PRESETS } from './useSleepTimer'
 import { useSubtitle } from './useSubtitle'
 import { useMediaLibrary } from './useMediaLibrary'
 import { useOnlineWork } from './useOnlineWork'
@@ -221,9 +221,19 @@ export function useAppState() {
 
   // ===== 睡眠定时器 Hook =====
   const {
-    sleepTimerMinutes,
-    sleepTimerRemaining,
-    setSleepTimer: handleSetSleepTimer,
+    mode: sleepTimerMode,
+    isActive: sleepTimerActive,
+    isFading: sleepTimerFading,
+    remainingSeconds: sleepTimerRemaining,
+    fadeEnabled: sleepTimerFadeEnabled,
+    setFadeEnabled: setSleepTimerFadeEnabled,
+    setCountdownTimer: handleSetCountdownTimer,
+    setTrackEndTimer: handleSetTrackEndTimer,
+    setTimePointTimer: handleSetTimePointTimer,
+    cancelSleepTimer: handleCancelSleepTimer,
+    handleTrackFinish: handleSleepTimerTrackFinish,
+    formatRemaining: formatSleepTimerRemaining,
+    getStatusText: getSleepTimerStatusText,
   } = useSleepTimer({ playerRef, showToast })
 
   // ===== 字幕管理 Hook =====
@@ -837,10 +847,22 @@ export function useAppState() {
     handleToggleQueuePanel,
 
     // 睡眠定时器
-    sleepTimerMinutes,
+    sleepTimerMode,
+    sleepTimerActive,
+    sleepTimerFading,
     sleepTimerRemaining,
-    handleSetSleepTimer,
+    sleepTimerFadeEnabled,
+    setSleepTimerFadeEnabled,
+    handleSetCountdownTimer,
+    handleSetTrackEndTimer,
+    handleSetTimePointTimer,
+    handleCancelSleepTimer,
+    handleSleepTimerTrackFinish,
+    formatSleepTimerRemaining,
+    getSleepTimerStatusText,
     SLEEP_TIMER_OPTIONS,
+    SLEEP_TIMER_MODES,
+    SLEEP_TIMER_PRESETS,
 
     // 字幕
     subtitleOptions,

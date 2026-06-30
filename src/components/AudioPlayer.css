@@ -680,6 +680,301 @@
   background: rgba(217, 119, 87, 0.12);
 }
 
+/* 渐弱状态动画 */
+.ctrl-btn.sleep-timer-btn.fading {
+  animation: sleepFadePulse 2s ease-in-out infinite;
+}
+
+@keyframes sleepFadePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ===== 增强版睡眠定时器面板 ===== */
+.sleep-timer-dropdown-enhanced {
+  width: 280px;
+  padding-bottom: 0;
+}
+
+.sleep-timer-dropdown-enhanced .sleep-timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px 10px;
+}
+
+.sleep-timer-cancel-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.sleep-timer-cancel-btn:hover {
+  background: rgba(201, 100, 66, 0.1);
+}
+
+/* Tab 切换 */
+.sleep-timer-tabs {
+  display: flex;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 2px;
+}
+
+.sleep-timer-tab {
+  flex: 1;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.sleep-timer-tab:hover {
+  color: var(--text-primary);
+}
+
+.sleep-timer-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* 预设网格 */
+.sleep-timer-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 12px 12px 8px;
+}
+
+.sleep-timer-preset {
+  padding: 8px 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.sleep-timer-preset:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.sleep-timer-preset.active {
+  background: rgba(201, 100, 66, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .sleep-timer-preset.active {
+  background: rgba(217, 119, 87, 0.15);
+}
+
+/* 自定义输入 */
+.sleep-timer-custom {
+  display: flex;
+  gap: 6px;
+  padding: 4px 12px 12px;
+}
+
+.sleep-timer-custom-input {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.sleep-timer-custom-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.15);
+}
+
+.sleep-timer-custom-btn {
+  padding: 7px 14px;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+  white-space: nowrap;
+}
+
+.sleep-timer-custom-btn:hover {
+  background: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+}
+
+/* 曲目结束模式 */
+.sleep-timer-track-end {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sleep-timer-track-end-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.sleep-timer-track-end-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.sleep-timer-track-end-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.sleep-timer-track-end-btn.active {
+  background: rgba(201, 100, 66, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+[data-theme="dark"] .sleep-timer-track-end-btn.active {
+  background: rgba(217, 119, 87, 0.15);
+}
+
+/* 指定时间模式 */
+.sleep-timer-time-point {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sleep-timer-time-point-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sleep-timer-time-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  outline: none;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.sleep-timer-time-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.15);
+}
+
+.sleep-timer-time-set-btn {
+  padding: 8px 18px;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+  white-space: nowrap;
+}
+
+.sleep-timer-time-set-btn:hover {
+  background: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+}
+
+.sleep-timer-time-point-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* 渐弱开关 */
+.sleep-timer-fade-toggle {
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.sleep-timer-fade-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sleep-timer-fade-label input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.sleep-timer-fade-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sleep-timer-fade-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
 /* ===== 播放速度控制 ===== */
 .playback-rate-control {
   position: relative;
