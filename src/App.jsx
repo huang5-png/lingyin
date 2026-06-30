@@ -116,6 +116,11 @@ export default function App() {
     filteredWorks,
     handleFilterChange,
 
+    // 排序
+    librarySortBy,
+    librarySortOrder,
+    handleLibrarySortChange,
+
     // 翻译
     handleTranslate,
     handleTranslateBatch,
@@ -449,6 +454,9 @@ export default function App() {
           onBulkFavorite={handleBulkFavorite}
           onBulkDelete={handleBulkDelete}
           onBulkMoveToGroup={handleBulkMoveToGroup}
+          sortBy={librarySortBy}
+          sortOrder={librarySortOrder}
+          onSortChange={handleLibrarySortChange}
         />
       )}
       {currentView === 'favorites' && (
@@ -491,6 +499,9 @@ export default function App() {
           onBulkFavorite={handleBulkFavorite}
           onBulkDelete={handleBulkDelete}
           onBulkMoveToGroup={handleBulkMoveToGroup}
+          sortBy={librarySortBy}
+          sortOrder={librarySortOrder}
+          onSortChange={handleLibrarySortChange}
         />
       )}
       {currentView === 'discover' && (

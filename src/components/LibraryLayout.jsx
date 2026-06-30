@@ -84,6 +84,9 @@ const LibraryLayout = memo(function LibraryLayout({
   onBulkFavorite,
   onBulkDelete,
   onBulkMoveToGroup,
+  sortBy,
+  sortOrder,
+  onSortChange,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -135,6 +138,9 @@ const LibraryLayout = memo(function LibraryLayout({
           onBulkFavorite={onBulkFavorite}
           onBulkDelete={onBulkDelete}
           onBulkMoveToGroup={onBulkMoveToGroup}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={onSortChange}
         />
       </div>
       {selectedWork && (

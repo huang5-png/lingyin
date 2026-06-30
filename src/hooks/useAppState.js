@@ -44,6 +44,7 @@ export function useAppState() {
     handleSaveSettings,
     handleViewModeChange,
     handlePlaybackRateChange,
+    handleLibrarySortChange,
   } = useAppSettings({
     playerRef,
     showToast,
@@ -166,8 +167,54 @@ export function useAppState() {
   } = useFilters(groupFilteredWorks)
 
   const filteredWorks = useMemo(() => {
-    return filterFavorites(filterByTagWorks)
-  }, [filterByTagWorks, filterFavorites])
+    const works = filterFavorites(filterByTagWorks)
+    const sortBy = settings?.librarySortBy || 'createdAt'
+    const sortOrder = settings?.librarySortOrder || 'desc'
+
+    const sorted = [...works]
+    sorted.sort((a, b) => {
+      let valA, valB
+      switch (sortBy) {
+        case 'title':
+          valA = (a.title || a.folderName || '').toLowerCase()
+          valB = (b.title || b.folderName || '').toLowerCase()
+          break
+        case 'createdAt':
+          valA = a.createdAt || 0
+          valB = b.createdAt || 0
+          break
+        case 'updatedAt':
+          valA = a.updatedAt || 0
+          valB = b.updatedAt || 0
+          break
+        case 'duration':
+          valA = a.totalDuration || 0
+          valB = b.totalDuration || 0
+          break
+        case 'rating':
+          valA = a.rating || 0
+          valB = b.rating || 0
+          break
+        case 'release':
+          valA = a.releaseDate || a.createdAt || 0
+          valB = b.releaseDate || b.createdAt || 0
+          break
+        default:
+          valA = a.createdAt || 0
+          valB = b.createdAt || 0
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return sortOrder === 'asc'
+          ? valA.localeCompare(valB, 'zh-CN')
+          : valB.localeCompare(valA, 'zh-CN')
+      }
+
+      return sortOrder === 'asc' ? valA - valB : valB - valA
+    })
+
+    return sorted
+  }, [filterByTagWorks, filterFavorites, settings?.librarySortBy, settings?.librarySortOrder])
 
   // ===== 批量选择 Hook =====
   const {
@@ -1152,6 +1199,11 @@ export function useAppState() {
     allCircles,
     filteredWorks,
     handleFilterChange,
+
+    // 排序
+    librarySortBy: settings?.librarySortBy || 'createdAt',
+    librarySortOrder: settings?.librarySortOrder || 'desc',
+    handleLibrarySortChange,
 
     // 翻译
     translateCacheRef,

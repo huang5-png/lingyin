@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, memo, useRef } from 'react'
 import './Sidebar.css'
 import StateView from './StateView'
 
-function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView, bulkMode, selectedIds, onToggleBulkMode, onToggleSelect, onSelectAll, onClearSelection, onBulkFavorite, onBulkDelete, onBulkMoveToGroup }) {
+function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView, bulkMode, selectedIds, onToggleBulkMode, onToggleSelect, onSelectAll, onClearSelection, onBulkFavorite, onBulkDelete, onBulkMoveToGroup, sortBy, sortOrder, onSortChange }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showGroups, setShowGroups] = useState(true)
   const [editingGroupId, setEditingGroupId] = useState(null)
@@ -386,6 +386,43 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div className="filter-row">
+            <div className="filter-group filter-sort">
+              <label>排序方式</label>
+              <div className="sort-controls">
+                <select
+                  value={sortBy || 'createdAt'}
+                  onChange={(e) => onSortChange?.(e.target.value, sortOrder)}
+                >
+                  <option value="createdAt">添加时间</option>
+                  <option value="updatedAt">更新时间</option>
+                  <option value="title">作品名称</option>
+                  <option value="duration">总时长</option>
+                  <option value="rating">评分</option>
+                  <option value="release">发售日期</option>
+                </select>
+                <button
+                  className={`sort-order-btn ${sortOrder === 'asc' ? 'asc' : 'desc'}`}
+                  onClick={() => onSortChange?.(sortBy, sortOrder === 'asc' ? 'desc' : 'asc')}
+                  title={sortOrder === 'asc' ? '升序' : '降序'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {sortOrder === 'asc' ? (
+                      <>
+                        <line x1="12" y1="19" x2="12" y2="5"/>
+                        <polyline points="5 12 12 5 19 12"/>
+                      </>
+                    ) : (
+                      <>
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <polyline points="19 12 12 19 5 12"/>
+                      </>
+                    )}
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

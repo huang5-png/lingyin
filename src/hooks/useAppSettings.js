@@ -44,6 +44,8 @@ const DEFAULT_SETTINGS = {
   continuousPlay: false,
   restorePlayOnStart: false,
   persistPlayQueue: true,
+  librarySortBy: 'createdAt',
+  librarySortOrder: 'desc',
 }
 
 function loadSettings() {
@@ -107,6 +109,22 @@ export function useAppSettings({ playerRef, setShowLyric, showToast }) {
     [],
   )
 
+  const handleLibrarySortChange = useCallback(
+    (sortBy, sortOrder) => {
+      setSettings((prev) => {
+        const newSettings = {
+          ...prev,
+          librarySortBy: sortBy !== undefined ? sortBy : prev.librarySortBy,
+          librarySortOrder: sortOrder !== undefined ? sortOrder : prev.librarySortOrder,
+        }
+        localStorage.setItem('appSettings', JSON.stringify(newSettings))
+        window.electronAPI?.dbSaveSettings(newSettings).catch(() => {})
+        return newSettings
+      })
+    },
+    [],
+  )
+
   return {
     settings,
     setSettings,
@@ -117,6 +135,7 @@ export function useAppSettings({ playerRef, setShowLyric, showToast }) {
     handleSaveSettings,
     handleViewModeChange,
     handlePlaybackRateChange,
+    handleLibrarySortChange,
     DEFAULT_SETTINGS,
   }
 }
