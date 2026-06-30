@@ -42,6 +42,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playlistRemoveItem: (id, itemId) => ipcRenderer.invoke('playlist:removeItem', id, itemId),
   playlistReorderItems: (id, itemIds) => ipcRenderer.invoke('playlist:reorderItems', id, itemIds),
   playlistClear: (id) => ipcRenderer.invoke('playlist:clear', id),
+
+  // 智能播放列表
+  smartPlaylistGetAll: () => ipcRenderer.invoke('smartPlaylist:getAll'),
+  smartPlaylistGetItems: (smartId, limit) => ipcRenderer.invoke('smartPlaylist:getItems', smartId, limit),
+
   logInfo: (message, ...args) => ipcRenderer.invoke('log:info', message, ...args),
   logWarn: (message, ...args) => ipcRenderer.invoke('log:warn', message, ...args),
   logError: (message, ...args) => ipcRenderer.invoke('log:error', message, ...args),

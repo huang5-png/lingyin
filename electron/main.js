@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState, getSmartPlaylists, getSmartPlaylistItems } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -724,6 +724,15 @@ ipcMain.handle('playlist:reorderItems', async (_, id, itemIds) => {
 
 ipcMain.handle('playlist:clear', async (_, id) => {
   return clearPlaylist(id)
+})
+
+// ===== 智能播放列表 IPC =====
+ipcMain.handle('smartPlaylist:getAll', async () => {
+  return getSmartPlaylists()
+})
+
+ipcMain.handle('smartPlaylist:getItems', async (_, smartId, limit) => {
+  return getSmartPlaylistItems(smartId, limit)
 })
 
 // ===== 收藏 IPC =====

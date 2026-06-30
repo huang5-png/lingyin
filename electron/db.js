@@ -1076,6 +1076,168 @@ async function saveLastPlayState(state) {
   return true
 }
 
+// ===== 智能播放列表 =====
+// 智能列表类型：recently_added / most_played / unfinished / recently_played / favorites / random
+
+const SMART_PLAYLISTS = [
+  { id: 'smart_recently_added', name: '最近添加', type: 'recently_added', icon: 'clock', description: '最近添加到媒体库的作品' },
+  { id: 'smart_most_played', name: '最常听', type: 'most_played', icon: 'heart', description: '播放时长最长的曲目' },
+  { id: 'smart_unfinished', name: '未听完', type: 'unfinished', icon: 'play-circle', description: '有播放进度但未完成的曲目' },
+  { id: 'smart_recently_played', name: '最近播放', type: 'recently_played', icon: 'history', description: '最近播放过的曲目' },
+  { id: 'smart_favorites', name: '我的收藏', type: 'favorites', icon: 'star', description: '收藏的作品曲目' },
+  { id: 'smart_random', name: '随机精选', type: 'random', icon: 'shuffle', description: '随机选取的曲目' },
+]
+
+function genSmartItemId() {
+  return `sm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+async function getSmartPlaylists() {
+  return SMART_PLAYLISTS.map((sp) => ({
+    ...sp,
+    isSmart: true,
+  }))
+}
+
+async function getSmartPlaylistItems(smartId, limit = 100) {
+  const works = dbData.works || []
+  const progressMap = dbData.progress || {}
+  const history = dbData.history || []
+  const favorites = dbData.favorites || []
+
+  const smartPlaylist = SMART_PLAYLISTS.find((sp) => sp.id === smartId)
+  if (!smartPlaylist) return []
+
+  const items = []
+
+  const buildAudioItem = (work, audio, extra = {}) => ({
+    id: genSmartItemId(),
+    workId: work.id,
+    workTitle: work.title || work.folderName || '',
+    workCover: work.cover || '',
+    audioPath: audio.path || audio.relativePath || audio.name || '',
+    audioName: audio.displayName || audio.name || '',
+    isOnline: false,
+    addedAt: extra.addedAt || Date.now(),
+    ...extra,
+  })
+
+  switch (smartPlaylist.type) {
+    case 'recently_added': {
+      const sortedWorks = [...works].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      for (const work of sortedWorks) {
+        const audios = work.audioFiles || []
+        for (const audio of audios.slice(0, 3)) {
+          items.push(buildAudioItem(work, audio, { addedAt: work.createdAt || 0 }))
+          if (items.length >= limit) break
+        }
+        if (items.length >= limit) break
+      }
+      break
+    }
+
+    case 'most_played': {
+      const audioPlayTime = new Map()
+      for (const h of history) {
+        if (!h.workId || !h.audioFile) continue
+        const key = `${h.workId}::${h.audioFile}`
+        const prev = audioPlayTime.get(key) || { seconds: 0, workId: h.workId, audioFile: h.audioFile, title: h.title, cover: h.cover }
+        prev.seconds += h.seconds || 0
+        audioPlayTime.set(key, prev)
+      }
+      const sorted = [...audioPlayTime.values()].sort((a, b) => b.seconds - a.seconds).slice(0, limit)
+      for (const entry of sorted) {
+        const work = works.find((w) => w.id === entry.workId)
+        if (!work) continue
+        const audio = (work.audioFiles || []).find((a) => (a.path || a.relativePath || a.name || '') === entry.audioFile)
+        if (!audio) continue
+        items.push(buildAudioItem(work, audio, { playSeconds: entry.seconds }))
+      }
+      break
+    }
+
+    case 'unfinished': {
+      const unfinished = []
+      for (const [key, prog] of Object.entries(progressMap)) {
+        if (!prog || !prog.duration || prog.duration === 0) continue
+        if (prog.currentTime <= 0) continue
+        if (prog.currentTime >= prog.duration * 0.95) continue
+        const [workId, ...audioParts] = key.split('::')
+        const audioFile = audioParts.join('::')
+        const work = works.find((w) => w.id === workId)
+        if (!work) continue
+        const audio = (work.audioFiles || []).find((a) => (a.path || a.relativePath || a.name || '') === audioFile)
+        if (!audio) continue
+        unfinished.push({
+          work,
+          audio,
+          lastPlayed: prog.lastPlayed || 0,
+          currentTime: prog.currentTime,
+          duration: prog.duration,
+        })
+      }
+      unfinished.sort((a, b) => b.lastPlayed - a.lastPlayed)
+      for (const entry of unfinished.slice(0, limit)) {
+        items.push(buildAudioItem(entry.work, entry.audio, {
+          lastPlayed: entry.lastPlayed,
+          currentTime: entry.currentTime,
+          duration: entry.duration,
+        }))
+      }
+      break
+    }
+
+    case 'recently_played': {
+      const seen = new Set()
+      for (let i = history.length - 1; i >= 0; i--) {
+        const h = history[i]
+        if (!h.workId || !h.audioFile) continue
+        const key = `${h.workId}::${h.audioFile}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        const work = works.find((w) => w.id === h.workId)
+        if (!work) continue
+        const audio = (work.audioFiles || []).find((a) => (a.path || a.relativePath || a.name || '') === h.audioFile)
+        if (!audio) continue
+        items.push(buildAudioItem(work, audio, { lastPlayed: h.ts }))
+        if (items.length >= limit) break
+      }
+      break
+    }
+
+    case 'favorites': {
+      const favWorkIds = new Set(favorites.map((f) => f.workId))
+      for (const work of works) {
+        if (!favWorkIds.has(work.id)) continue
+        const audios = work.audioFiles || []
+        for (const audio of audios) {
+          items.push(buildAudioItem(work, audio))
+          if (items.length >= limit) break
+        }
+        if (items.length >= limit) break
+      }
+      break
+    }
+
+    case 'random': {
+      const allAudios = []
+      for (const work of works) {
+        const audios = work.audioFiles || []
+        for (const audio of audios) {
+          allAudios.push({ work, audio })
+        }
+      }
+      const shuffled = allAudios.sort(() => Math.random() - 0.5).slice(0, Math.min(limit, 50))
+      for (const entry of shuffled) {
+        items.push(buildAudioItem(entry.work, entry.audio))
+      }
+      break
+    }
+  }
+
+  return items
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -1136,4 +1298,6 @@ module.exports = {
   clearPlayQueue,
   getLastPlayState,
   saveLastPlayState,
+  getSmartPlaylists,
+  getSmartPlaylistItems,
 }
