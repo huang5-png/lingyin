@@ -568,6 +568,57 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - `app.isQuiting` 标志：区分用户主动退出和窗口关闭
 - `before-quit` 事件：销毁托盘，移除窗口事件监听
 
+### 12.5 迷你播放器模式
+
+- 触发：点击播放器右侧的迷你按钮
+- 入口：`electronAPI.miniPlayerOpen()`
+- 独立窗口：360x130 默认尺寸，可缩放（300x110 ~ 500x180）
+- 无边框透明窗口：`frame: false` + `transparent: true` + 圆角 + 背景模糊
+
+#### 功能特性
+- 显示封面、作品标题、曲目名称
+- 进度条实时同步，支持点击跳转
+- 播放/暂停、上一曲、下一曲快捷控制
+- 拖拽移动：按住顶部标题栏拖动窗口位置
+- 置顶显示：`alwaysOnTop: true`，不会被其他窗口遮挡
+- 展开主窗口：点击「...」按钮回到主窗口
+- 关闭迷你窗口：点击「×」按钮关闭迷你窗口
+
+#### IPC API
+| 接口 | 方向 | 说明 |
+|------|------|------|
+| `miniPlayerOpen()` | 渲染→主 | 打开迷你播放器窗口 |
+| `miniPlayerClose()` | 渲染→主 | 关闭迷你播放器窗口 |
+| `miniPlayerIsOpen()` | 渲染→主 | 查询迷你窗口是否打开 |
+| `miniPlayerUpdateState(state)` | 渲染→主 | 更新迷你播放器状态（主窗口→迷你窗口） |
+| `miniPlayerGetState()` | 渲染→主 | 获取当前迷你播放器状态 |
+| `miniPlayerTogglePlay()` | 渲染→主 | 迷你窗口触发播放/暂停 |
+| `miniPlayerPrevTrack()` | 渲染→主 | 迷你窗口触发上一曲 |
+| `miniPlayerNextTrack()` | 渲染→主 | 迷你窗口触发下一曲 |
+| `miniPlayerShowMain()` | 渲染→主 | 迷你窗口触发显示主窗口 |
+| `miniPlayerStartDrag()` | 渲染→主 | 迷你窗口触发拖拽移动 |
+| `onMiniPlayerStateUpdate(callback)` | 主→渲染 | 监听迷你播放器状态更新 |
+| `onMiniPlayerTogglePlay(callback)` | 主→渲染 | 监听迷你窗口播放/暂停事件 |
+| `onMiniPlayerPrevTrack(callback)` | 主→渲染 | 监听迷你窗口上一曲事件 |
+| `onMiniPlayerNextTrack(callback)` | 主→渲染 | 监听迷你窗口下一曲事件 |
+
+#### 状态同步机制
+- 主窗口 → 迷你窗口：useAppState 中 500ms 轮询，通过 `miniPlayerUpdateState` 广播
+- 迷你窗口 → 主窗口：用户操作通过 IPC 事件触发主窗口对应的控制函数
+- 状态对象：`{ isPlaying, title, cover, currentTime, duration, workTitle }`
+
+#### 主进程实现
+- `createMiniWindow()` — 创建迷你播放器窗口
+- `broadcastToMini(channel, data)` — 向迷你窗口广播消息
+- `broadcastToMain(channel, data)` — 向主窗口广播消息
+- `miniPlayerState` — 全局状态缓存，新窗口打开时立即同步
+
+#### 渲染进程实现
+- `src/components/MiniPlayer.jsx` — 迷你播放器 React 组件
+- `src/components/MiniPlayer.css` — 迷你播放器样式
+- `src/main.jsx` — 根据 URL hash 判断是否迷你模式，渲染对应组件
+- `useAppState.js` — 状态同步与事件监听
+
 ### 13. 沉浸式播放模式
 
 - 触发：点击播放器的封面图
