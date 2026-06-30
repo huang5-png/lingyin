@@ -623,6 +623,71 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - `src/main.jsx` — 根据 URL hash 判断是否迷你模式，渲染对应组件
 - `useAppState.js` — 状态同步与事件监听
 
+### 12.6 系统媒体集成
+
+#### 功能概述
+深度集成 Windows 系统媒体功能，支持系统级媒体控制、全局媒体快捷键和曲目切换通知。
+
+#### 系统媒体控制（MediaSession）
+- 使用 Chromium 内置 MediaSession API 与 Windows 系统媒体传输控制（SMTC）集成
+- 在系统音量面板中显示播放信息（曲目名、社团、作品名、封面）
+- 支持系统级播放/暂停、上一曲、下一曲、快进、快退、跳转控制
+- 每秒同步一次播放状态和进度
+- 可在设置中开关（默认开启）
+
+#### 全局媒体快捷键
+- 注册系统级媒体键，即使窗口不在焦点也能控制播放
+- 支持的媒体键：
+  - `MediaPlayPause` — 播放/暂停
+  - `MediaNextTrack` — 下一曲
+  - `MediaPreviousTrack` — 上一曲
+  - `MediaStop` — 停止
+- 应用启动时自动注册，退出时自动注销
+- 可在设置中开关（默认开启）
+
+#### 曲目切换系统通知
+- 切换曲目时显示 Windows 系统通知
+- 通知内容：曲目名称（标题）、作品名称（正文）、封面（图标）
+- 点击通知可聚焦到应用窗口
+- 静默通知（不播放系统提示音）
+- 同一曲目不重复通知
+- 可在设置中开关（默认开启）
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `globalShortcut:register` | 注册全局媒体快捷键 |
+| `globalShortcut:unregister` | 注销全局媒体快捷键 |
+| `globalShortcut:isRegistered` | 查询是否已注册 |
+| `globalShortcut:playPause` | 全局播放/暂停事件 |
+| `globalShortcut:nextTrack` | 全局下一曲事件 |
+| `globalShortcut:prevTrack` | 全局上一曲事件 |
+| `globalShortcut:stop` | 全局停止事件 |
+| `notification:show` | 显示系统通知 |
+
+#### 设置项
+| 设置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `enableMediaSession` | 系统媒体控制开关 | `true` |
+| `globalMediaKeys` | 全局媒体快捷键开关 | `true` |
+| `trackChangeNotification` | 曲目切换通知开关 | `true` |
+
+#### 主进程实现
+- `registerGlobalShortcuts()` — 注册全局媒体快捷键
+- `unregisterGlobalShortcuts()` — 注销全局媒体快捷键
+- `showTrackNotification(title, body, coverUrl)` — 显示曲目切换通知
+- `currentNotification` — 当前通知实例，避免重复显示
+- 应用启动时自动注册快捷键，`before-quit` 时注销
+
+#### 渲染进程实现
+- `useAppState.js` 中集成：
+  - `updateMediaSession()` — 每秒同步 MediaSession 状态
+  - MediaSession action handlers 绑定播放控制
+  - 全局快捷键事件监听
+  - 曲目切换通知触发逻辑
+- `mediaSessionStateRef` — MediaSession 状态缓存，避免频繁更新
+- `lastNotifiedAudioRef` — 通知去重标记
+
 ### 13. 沉浸式播放模式
 
 - 触发：点击播放器的封面图
