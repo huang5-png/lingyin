@@ -85,8 +85,8 @@ export function usePlayer({
           if (progress && progress.currentTime > 5 && progress.duration > 0) {
             const targetTime = progress.currentTime
             const checkAndSeek = setInterval(() => {
-              if (playerRef.current && playerRef.current.getDuration() > 0) {
-                playerRef.current.seekTo(targetTime)
+              if (playerRef.current && playerRef.current.getDuration?.() > 0) {
+                playerRef.current.seekTo?.(targetTime)
                 clearInterval(checkAndSeek)
               }
             }, 200)
@@ -138,7 +138,7 @@ export function usePlayer({
 
   const handleSeek = useCallback((time) => {
     if (playerRef.current) {
-      playerRef.current.seekTo(time)
+      playerRef.current.seekTo?.(time)
     }
   }, [playerRef])
 

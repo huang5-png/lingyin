@@ -4,6 +4,13 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let dbLock = Promise.resolve()
+
+function acquireLock() {
+  const next = dbLock.then(() => {})
+  dbLock = next
+  return next
+}
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -36,9 +43,9 @@ async function initDB() {
   return dbData
 }
 
-function saveDB() {
+async function saveDB() {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    await fs.promises.writeFile(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
   } catch (e) {
     console.error('Save DB error:', e)
   }
@@ -53,6 +60,7 @@ async function getAllWorks() {
 }
 
 async function addWork(work) {
+  await acquireLock()
   const exists = dbData.works.find((w) => w.id === work.id)
   if (exists) {
     return exists
@@ -60,25 +68,27 @@ async function addWork(work) {
   work.createdAt = Date.now()
   work.updatedAt = Date.now()
   dbData.works.push(work)
-  saveDB()
+  await saveDB()
   return work
 }
 
 async function updateWork(id, data) {
+  await acquireLock()
   const work = dbData.works.find((w) => w.id === id)
   if (work) {
     Object.assign(work, data, { updatedAt: Date.now() })
-    saveDB()
+    await saveDB()
     return work
   }
   return null
 }
 
 async function deleteWork(id) {
+  await acquireLock()
   const index = dbData.works.findIndex((w) => w.id === id)
   if (index > -1) {
     dbData.works.splice(index, 1)
-    saveDB()
+    await saveDB()
     return true
   }
   return false
@@ -90,12 +100,13 @@ async function getProgress(workId, audioFile) {
 }
 
 async function saveProgress(workId, audioFile, progress) {
+  await acquireLock()
   const key = `${workId}::${audioFile}`
   dbData.progress[key] = {
     ...progress,
     lastPlayed: Date.now(),
   }
-  saveDB()
+  await saveDB()
   return true
 }
 
@@ -105,12 +116,13 @@ async function getSubtitle(workId, audioFile) {
 }
 
 async function saveSubtitle(workId, audioFile, subtitleData) {
+  await acquireLock()
   const key = `${workId}::${audioFile}`
   dbData.subtitles[key] = {
     ...subtitleData,
     savedAt: Date.now(),
   }
-  saveDB()
+  await saveDB()
   return true
 }
 
@@ -119,14 +131,16 @@ async function getSettings() {
 }
 
 async function saveSettings(settings) {
+  await acquireLock()
   dbData.settings = { ...dbData.settings, ...settings }
-  saveDB()
+  await saveDB()
   return dbData.settings
 }
 
 // ===== Listening history =====
 // Each entry: { ts, workId, audioFile, seconds, title, cover, circle, cvs:[], tags:[] }
 async function appendHistory(entry) {
+  await acquireLock()
   if (!dbData.history) dbData.history = []
   dbData.history.push({
     ts: entry.ts || Date.now(),
@@ -143,7 +157,7 @@ async function appendHistory(entry) {
   if (dbData.history.length > 20000) {
     dbData.history = dbData.history.slice(-20000)
   }
-  saveDB()
+  await saveDB()
   return true
 }
 
@@ -291,20 +305,22 @@ async function getAllHistory() {
 
 // 删除指定作品的所有播放历史
 async function deleteHistoryByWorkId(workId) {
+  await acquireLock()
   if (!dbData.history || !workId) return 0
   const initialLen = dbData.history.length
   dbData.history = dbData.history.filter((h) => h.workId !== workId)
   const deleted = initialLen - dbData.history.length
-  if (deleted > 0) saveDB()
+  if (deleted > 0) await saveDB()
   return deleted
 }
 
 // 清空全部播放历史
 async function clearAllHistory() {
+  await acquireLock()
   if (!dbData.history) return 0
   const count = dbData.history.length
   dbData.history = []
-  saveDB()
+  await saveDB()
   return count
 }
 
@@ -351,6 +367,7 @@ async function getAllPlaylists() {
 }
 
 async function createPlaylist(name) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const now = Date.now()
   const safeName = (name && String(name).trim()) || '未命名播放列表'
@@ -362,31 +379,34 @@ async function createPlaylist(name) {
     items: [],
   }
   playlists.push(playlist)
-  saveDB()
+  await saveDB()
   return playlist
 }
 
 async function renamePlaylist(id, name) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const pl = playlists.find((p) => p.id === id)
   if (!pl) return null
   const safeName = (name && String(name).trim()) || '未命名播放列表'
   pl.name = safeName
   pl.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return pl
 }
 
 async function deletePlaylist(id) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const idx = playlists.findIndex((p) => p.id === id)
   if (idx < 0) return false
   playlists.splice(idx, 1)
-  saveDB()
+  await saveDB()
   return true
 }
 
 async function addPlaylistItem(id, item) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const pl = playlists.find((p) => p.id === id)
   if (!pl) return null
@@ -407,11 +427,12 @@ async function addPlaylistItem(id, item) {
   }
   pl.items.push(newItem)
   pl.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return pl
 }
 
 async function removePlaylistItem(id, itemId) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const pl = playlists.find((p) => p.id === id)
   if (!pl) return null
@@ -420,11 +441,12 @@ async function removePlaylistItem(id, itemId) {
   if (idx < 0) return pl
   pl.items.splice(idx, 1)
   pl.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return pl
 }
 
 async function reorderPlaylistItems(id, itemIds) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const pl = playlists.find((p) => p.id === id)
   if (!pl) return null
@@ -443,17 +465,18 @@ async function reorderPlaylistItems(id, itemIds) {
   for (const remaining of map.values()) next.push(remaining)
   pl.items = next
   pl.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return pl
 }
 
 async function clearPlaylist(id) {
+  await acquireLock()
   const playlists = ensurePlaylists()
   const pl = playlists.find((p) => p.id === id)
   if (!pl) return null
   pl.items = []
   pl.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return pl
 }
 
@@ -480,19 +503,21 @@ async function getTranslateCache(workId, audioPath) {
 }
 
 async function saveTranslateCache(workId, audioPath, cues) {
+  await acquireLock()
   const cache = ensureTranslateCache()
   const key = `${workId}::${audioPath}`
   cache[key] = {
     cues: cues,
     updatedAt: Date.now(),
   }
-  saveDB()
+  await saveDB()
   return true
 }
 
 async function clearTranslateCache() {
+  await acquireLock()
   dbData.translateCache = {}
-  saveDB()
+  await saveDB()
   return true
 }
 
@@ -515,6 +540,7 @@ async function isFavorite(workId) {
 }
 
 async function addFavorite(workId, workInfo = {}) {
+  await acquireLock()
   const favorites = ensureFavorites()
   const exists = favorites.find(f => f.workId === workId)
   if (exists) return exists
@@ -527,25 +553,27 @@ async function addFavorite(workId, workInfo = {}) {
     addedAt: Date.now(),
   }
   favorites.push(fav)
-  saveDB()
+  await saveDB()
   return fav
 }
 
 async function removeFavorite(workId) {
+  await acquireLock()
   const favorites = ensureFavorites()
   const idx = favorites.findIndex(f => f.workId === workId)
   if (idx < 0) return false
   favorites.splice(idx, 1)
-  saveDB()
+  await saveDB()
   return true
 }
 
 async function toggleFavorite(workId, workInfo = {}) {
+  await acquireLock()
   const favorites = ensureFavorites()
   const idx = favorites.findIndex(f => f.workId === workId)
   if (idx >= 0) {
     favorites.splice(idx, 1)
-    saveDB()
+    await saveDB()
     return { isFavorite: false }
   } else {
     const fav = {
@@ -557,7 +585,7 @@ async function toggleFavorite(workId, workInfo = {}) {
       addedAt: Date.now(),
     }
     favorites.push(fav)
-    saveDB()
+    await saveDB()
     return { isFavorite: true, favorite: fav }
   }
 }
@@ -581,6 +609,7 @@ async function getAllFolderGroups() {
 }
 
 async function createFolderGroup(name, color = '') {
+  await acquireLock()
   const groups = ensureFolderGroups()
   const now = Date.now()
   const safeName = (name && String(name).trim()) || '未命名分组'
@@ -594,32 +623,35 @@ async function createFolderGroup(name, color = '') {
     updatedAt: now,
   }
   groups.push(group)
-  saveDB()
+  await saveDB()
   return group
 }
 
 async function renameFolderGroup(id, name) {
+  await acquireLock()
   const groups = ensureFolderGroups()
   const group = groups.find(g => g.id === id)
   if (!group) return null
   const safeName = (name && String(name).trim()) || '未命名分组'
   group.name = safeName
   group.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return group
 }
 
 async function setFolderGroupColor(id, color) {
+  await acquireLock()
   const groups = ensureFolderGroups()
   const group = groups.find(g => g.id === id)
   if (!group) return null
   group.color = color || ''
   group.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return group
 }
 
 async function deleteFolderGroup(id, moveToGroupId = null) {
+  await acquireLock()
   const groups = ensureFolderGroups()
   const idx = groups.findIndex(g => g.id === id)
   if (idx < 0) return false
@@ -635,11 +667,12 @@ async function deleteFolderGroup(id, moveToGroupId = null) {
   }
 
   groups.splice(idx, 1)
-  saveDB()
+  await saveDB()
   return true
 }
 
 async function reorderFolderGroups(groupIds) {
+  await acquireLock()
   const groups = ensureFolderGroups()
   if (!Array.isArray(groupIds)) return groups
   const map = new Map(groups.map(g => [g.id, g]))
@@ -655,17 +688,18 @@ async function reorderFolderGroups(groupIds) {
   for (const remaining of map.values()) {
     remaining.order = order++
   }
-  saveDB()
+  await saveDB()
   return getAllFolderGroups()
 }
 
 async function setWorkFolderGroup(workId, groupId) {
+  await acquireLock()
   if (!dbData.works) return null
   const work = dbData.works.find(w => w.id === workId)
   if (!work) return null
   work.folderGroupId = groupId || null
   work.updatedAt = Date.now()
-  saveDB()
+  await saveDB()
   return work
 }
 

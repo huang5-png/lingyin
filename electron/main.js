@@ -9,6 +9,16 @@ const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require(
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
 
+function sanitizePath(inputPath) {
+  if (!inputPath || typeof inputPath !== 'string') return null
+  const resolved = path.resolve(inputPath)
+  if (resolved.includes('..')) {
+    logger.warn('Path traversal attempt:', inputPath)
+    return null
+  }
+  return resolved
+}
+
 // 创建 keep-alive agent，复用连接，减少 ECONNRESET
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 })
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 })
@@ -149,11 +159,13 @@ ipcMain.handle('dialog:openDirectory', async () => {
 
 ipcMain.handle('fs:readDir', async (_, dirPath) => {
   try {
-    const files = fs.readdirSync(dirPath, { withFileTypes: true })
+    const safePath = sanitizePath(dirPath)
+    if (!safePath) return []
+    const files = fs.readdirSync(safePath, { withFileTypes: true })
     return files.map((f) => ({
       name: f.name,
       isDirectory: f.isDirectory(),
-      path: path.join(dirPath, f.name),
+      path: path.join(safePath, f.name),
     }))
   } catch (e) {
     return []
@@ -162,7 +174,9 @@ ipcMain.handle('fs:readDir', async (_, dirPath) => {
 
 ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
   try {
-    return fs.readFileSync(filePath, encoding)
+    const safePath = sanitizePath(filePath)
+    if (!safePath) return null
+    return fs.readFileSync(safePath, encoding)
   } catch (e) {
     return null
   }
@@ -190,12 +204,16 @@ ipcMain.handle('dialog:openSubtitleFile', async () => {
 })
 
 ipcMain.handle('fs:fileExists', async (_, filePath) => {
-  return fs.existsSync(filePath)
+  const safePath = sanitizePath(filePath)
+  if (!safePath) return false
+  return fs.existsSync(safePath)
 })
 
 ipcMain.handle('fs:stat', async (_, filePath) => {
   try {
-    const stat = fs.statSync(filePath)
+    const safePath = sanitizePath(filePath)
+    if (!safePath) return null
+    const stat = fs.statSync(safePath)
     return {
       size: stat.size,
       mtime: stat.mtime,
@@ -686,7 +704,9 @@ ipcMain.handle('asmrOne:getTags', async () => {
 
 ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
   try {
-    const buffer = fs.readFileSync(filePath)
+    const safePath = sanitizePath(filePath)
+    if (!safePath) return null
+    const buffer = fs.readFileSync(safePath)
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
     return arrayBuffer
   } catch (e) {
@@ -697,8 +717,10 @@ ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
 
 ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
   try {
+    const safePath = sanitizePath(filePath)
+    if (!safePath) return 0
     const pf = await getParseFile()
-    const metadata = await pf(filePath, { duration: true })
+    const metadata = await pf(safePath, { duration: true })
     return metadata.format.duration || 0
   } catch (e) {
     logger.error('Failed to read audio duration:', filePath, e.message)
@@ -888,6 +910,13 @@ ipcMain.handle('dialog:selectDownloadDir', async () => {
 
 const downloadQueue = []
 let activeDownloadTask = null
+let downloadQueueLock = Promise.resolve()
+
+function acquireDownloadLock() {
+  const next = downloadQueueLock.then(() => {})
+  downloadQueueLock = next
+  return next
+}
 let taskIdCounter = 0
 
 function generateTaskId() {
@@ -907,6 +936,7 @@ function broadcastDownloadState() {
 
 async function downloadFileInTask(task, file, fileIndex) {
   return new Promise(async (resolve, reject) => {
+    let abortController = null
     try {
       const targetDir = file.savePath
       if (!fs.existsSync(targetDir)) {
@@ -914,7 +944,7 @@ async function downloadFileInTask(task, file, fileIndex) {
       }
       const finalPath = path.join(targetDir, file.fileName)
 
-      const abortController = new AbortController()
+      abortController = new AbortController()
       activeAbortControllers.add(abortController)
       const signal = abortController.signal
 
@@ -1012,6 +1042,9 @@ async function downloadFileInTask(task, file, fileIndex) {
         }
       })
     } catch (e) {
+      if (abortController) {
+        activeAbortControllers.delete(abortController)
+      }
       file.status = 'failed'
       file.error = e.message || '下载失败'
       reject(e)
@@ -1020,6 +1053,8 @@ async function downloadFileInTask(task, file, fileIndex) {
 }
 
 async function processDownloadQueue() {
+  await acquireDownloadLock()
+
   if (activeDownloadTask) return
   if (downloadQueue.length === 0) return
 
