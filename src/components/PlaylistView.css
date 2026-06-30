@@ -663,3 +663,70 @@
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* ===== 骨架屏样式 ===== */
+.skeleton-playlist-item {
+  pointer-events: none;
+  animation: none;
+}
+
+.skeleton-playlist-item:hover {
+  background: transparent;
+  border-left-color: transparent;
+}
+
+.skeleton-playlist-name {
+  width: 100px;
+  height: 13px;
+}
+
+.skeleton-playlist-count {
+  width: 22px;
+  height: 18px;
+  border-radius: var(--radius-full);
+}
+
+.skeleton-playlist-row {
+  pointer-events: none;
+  animation: none;
+}
+
+.skeleton-playlist-row:hover {
+  background: transparent;
+  border-left-color: transparent;
+}
+
+.skeleton-grip {
+  width: 10px;
+  height: 14px;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-index {
+  width: 20px;
+  height: 12px;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-cover-sm {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-item-name {
+  width: 60%;
+  height: 13px;
+}
+
+.skeleton-item-work {
+  width: 40%;
+  height: 11px;
+  margin-top: 4px;
+}
+
+.skeleton-action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+}

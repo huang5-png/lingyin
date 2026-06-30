@@ -1,6 +1,44 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import './PlaylistView.css'
 import StateView from './StateView'
+
+// 骨架屏播放列表条目
+const SkeletonPlaylistItem = memo(() => {
+  return (
+    <div className="playlist-list-item skeleton-playlist-item">
+      <div className="skeleton-line skeleton-playlist-name" />
+      <div className="skeleton-line skeleton-playlist-count" />
+    </div>
+  )
+})
+SkeletonPlaylistItem.displayName = 'SkeletonPlaylistItem'
+
+// 骨架屏曲目行
+const SkeletonPlaylistRow = memo(({ index }) => {
+  return (
+    <div className="playlist-item-row skeleton-playlist-row">
+      <div className="playlist-item-grip">
+        <div className="skeleton-line skeleton-grip" />
+      </div>
+      <div className="playlist-item-index">
+        <div className="skeleton-line skeleton-index" />
+      </div>
+      <div className="playlist-item-cover">
+        <div className="skeleton-cover skeleton-cover-sm" />
+      </div>
+      <div className="playlist-item-info">
+        <div className="skeleton-line skeleton-item-name" />
+        <div className="skeleton-line skeleton-item-work" />
+      </div>
+      <div className="playlist-item-actions">
+        <div className="skeleton-line skeleton-action-btn" />
+        <div className="skeleton-line skeleton-action-btn" />
+        <div className="skeleton-line skeleton-action-btn" />
+      </div>
+    </div>
+  )
+})
+SkeletonPlaylistRow.displayName = 'SkeletonPlaylistRow'
 
 export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) {
   const [playlists, setPlaylists] = useState([])
@@ -250,7 +288,11 @@ export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) 
 
         <div className="playlist-list">
           {loading ? (
-            <StateView type="loading" className="playlist-state-inline" />
+            <>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonPlaylistItem key={i} />
+              ))}
+            </>
           ) : playlists.length === 0 ? (
             <StateView
               type="empty"

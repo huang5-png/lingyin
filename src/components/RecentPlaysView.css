@@ -418,3 +418,81 @@
 [data-theme="dark"] .rp-play-btn:hover {
   box-shadow: var(--shadow-glow-strong);
 }
+
+/* ===== 骨架屏样式 ===== */
+.skeleton-item {
+  pointer-events: none;
+  animation: none;
+}
+
+.skeleton-item:hover {
+  transform: none !important;
+  background: var(--bg-tertiary);
+  border-color: transparent;
+}
+
+.skeleton-item .rp-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-index {
+  width: 16px;
+  height: 14px;
+  border-radius: var(--radius-xs);
+}
+
+.rp-skeleton-cover {
+  width: 48px;
+  height: 60px;
+  position: relative;
+  border-radius: var(--radius-sm);
+}
+
+.rp-skeleton-title {
+  width: 70%;
+  height: 14px;
+}
+
+.rp-skeleton-meta {
+  width: 45%;
+  height: 11px;
+}
+
+.skeleton-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.rp-skeleton-stat {
+  width: 40px;
+  height: 11px;
+}
+
+.rp-skeleton-time {
+  width: 50px;
+  height: 11px;
+}
+
+.skeleton-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+@media (min-resolution: 1.5dppx) {
+  .rp-skeleton-cover {
+    width: 42px;
+    height: 52px;
+  }
+}
+
+@media (min-resolution: 2dppx) {
+  .rp-skeleton-cover {
+    width: 36px;
+    height: 46px;
+  }
+}

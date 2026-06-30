@@ -1,6 +1,33 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import './RecentPlaysView.css'
 import StateView from './StateView'
+
+// 骨架屏条目组件
+const SkeletonItem = memo(() => {
+  return (
+    <div className="rp-item skeleton-item">
+      <div className="rp-index">
+        <div className="skeleton-line skeleton-index" />
+      </div>
+      <div className="rp-cover-wrapper">
+        <div className="skeleton-cover rp-skeleton-cover" />
+      </div>
+      <div className="rp-info">
+        <div className="skeleton-line skeleton-title rp-skeleton-title" />
+        <div className="skeleton-line skeleton-meta rp-skeleton-meta" />
+        <div className="skeleton-bottom">
+          <div className="skeleton-line skeleton-stat rp-skeleton-stat" />
+          <div className="skeleton-line skeleton-time rp-skeleton-time" />
+        </div>
+      </div>
+      <div className="rp-item-actions">
+        <div className="skeleton-line skeleton-btn" />
+        <div className="skeleton-line skeleton-btn" />
+      </div>
+    </div>
+  )
+})
+SkeletonItem.displayName = 'SkeletonItem'
 
 export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onToast, onAutoPlay }) {
   const [recentList, setRecentList] = useState([])
@@ -126,7 +153,11 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
 
       <div className="rp-content">
         {loading ? (
-          <StateView type="loading" text="加载中..." />
+          <div className="rp-list">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonItem key={i} />
+            ))}
+          </div>
         ) : recentList.length === 0 ? (
           <StateView type="empty" title="还没有播放记录" description="播放一些作品后，它们会出现在这里" />
         ) : (
