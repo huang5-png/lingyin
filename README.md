@@ -574,6 +574,14 @@ C:\Users\{用户名}\AppData\Roaming\lingyin\logs\
 <details>
 <summary>点击展开查看历史版本</summary>
 
+### v1.10.2 — 2026-06-30
+- **重构**：App.jsx 持续模块化 — 抽取主题与缩放逻辑到 useTheme Hook
+  - 新增 `useTheme` Hook：管理窗口响应式缩放（0.6x-1.2x）、主题切换与过渡动画、CSS 变量同步、数据库设置加载
+  - App.jsx 从 1081 行减少到 1035 行，净减少 46 行
+- **重构**：App.jsx 持续模块化 — 抽取筛选状态逻辑到 useFilters Hook
+  - 新增 `useFilters` Hook：管理 CV/社团/标签筛选状态、筛选结果计算
+- **修复**：修复 `setTranslateVersion` 未返回导致的 ReferenceError
+
 ### v1.10.1 — 2026-06-30
 - **重构**：App.jsx 持续模块化 — 抽取播放历史记录逻辑到 usePlaybackHistory Hook
   - 将 `handleTimeUpdate` 中每 60 秒追加播放历史记录的逻辑抽取为独立 Hook
