@@ -94,14 +94,21 @@ export function useTranslate(showToast) {
       return
     }
 
-    const hasTranslation = currentCues.some(cue => cue.translated)
+    const hasTranslation = currentCues.some(cue => cue.translated && cue.translated.trim())
 
     if (hasTranslation) {
-      setCurrentCues(prev => prev.map(cue => ({ ...cue, translated: undefined })))
+      const newCues = currentCues.map(cue => {
+        const newCue = { ...cue }
+        delete newCue.translated
+        return newCue
+      })
+      setCurrentCues(newCues)
+
       currentCues.forEach(cue => {
         translateCacheRef.current.delete(cue.text)
       })
       setTranslateVersion(v => v + 1)
+
       try {
         await window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, [])
       } catch (e) {

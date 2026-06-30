@@ -266,7 +266,7 @@ export function useAppState() {
     handleSelectAudioRef,
   })
 
-  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
+  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated && cue.translated.trim()), [currentCues])
 
   const handleToggleTranslate = useCallback(() => {
     toggleSubtitleTranslate({

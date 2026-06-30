@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './SettingsModal.css';
 import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
+import { getPresetList } from '../utils/upscaleShaders';
 
 const DEFAULT_SETTINGS = {
   autoPlayNext: true,
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS = {
   downloadConcurrency: 3,
   autoImportDownloaded: true,
   downloadNotify: true,
+  upscalePreset: 'anime',
 };
 
 const TABS = [
@@ -289,6 +291,28 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
               </svg>
             </button>
+          </div>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-section-title">图片超分</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">沉浸式封面质量</div>
+            <div className="setting-desc">选择沉浸式模式下封面图片的放大算法，越高清处理越慢</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.upscalePreset || 'anime'}
+              onChange={(e) => setSettings((p) => ({ ...p, upscalePreset: e.target.value }))}
+            >
+              {getPresetList().map((preset) => (
+                <option key={preset.key} value={preset.key}>
+                  {preset.name} — {preset.description}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
