@@ -200,6 +200,7 @@ export default function App() {
   const {
     translateCacheRef,
     translateVersion,
+    setTranslateVersion,
     translate: handleTranslate,
     translateBatch: handleTranslateBatch,
     getTranslatedText,

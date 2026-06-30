@@ -186,6 +186,7 @@ export function useTranslate(showToast) {
   return {
     translateCacheRef,
     translateVersion,
+    setTranslateVersion,
     translating,
     translate,
     translateBatch,
