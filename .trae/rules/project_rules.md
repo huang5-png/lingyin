@@ -120,6 +120,7 @@
 | `hooks/usePlayer.js` | 核心播放控制 Hook：音频选择、上一曲/下一曲、播放完成、进度保存、历史记录、时间更新 |
 | `hooks/useFilters.js` | 筛选状态 Hook：CV/社团/标签筛选状态、筛选结果计算 |
 | `hooks/useTheme.js` | 主题与缩放 Hook：窗口响应式缩放（0.6x-1.2x）、主题切换与过渡动画、CSS 变量同步、数据库设置加载 |
+| `hooks/useWorkMetadata.js` | 元数据编辑与刷新 Hook：handleEditMetadata（更新作品信息）、handleRefreshMetadata（从 DLsite 重新刮削） |
 | `hooks/useToast.js` | Toast 通知 Hook：Toast 状态（toasts/showToast/removeToast） |
 | `hooks/useImmersive.js` | 沉浸式模式 Hook：沉浸式 state、字幕滚动、开关控制 |
 | `hooks/useSplitter.js` | 可拖拽分割线 Hook：分割线拖拽 state 和逻辑，支持宽度约束 |

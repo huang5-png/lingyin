@@ -30,7 +30,8 @@ import { useToast } from './hooks/useToast'
 import { useImmersive } from './hooks/useImmersive'
 import { useSplitter } from './hooks/useSplitter'
 import { usePlayer } from './hooks/usePlayer'
-import { scanFolder, extractRJCode } from './utils/scanner'
+import { useWorkMetadata } from './hooks/useWorkMetadata'
+import { scanFolder } from './utils/scanner'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
 
@@ -292,6 +293,17 @@ export default function App() {
     setSelectedSubtitleIndex,
   })
 
+  // ===== 元数据编辑与刷新 Hook =====
+  const {
+    handleEditMetadata,
+    handleRefreshMetadata,
+  } = useWorkMetadata({
+    selectedWork,
+    setSelectedWork,
+    setWorks,
+    showToast,
+  })
+
   // ===== 沉浸式模式 Hook =====
   const {
     isImmersive,
@@ -400,51 +412,6 @@ export default function App() {
     setSettingsDefaultTab('player')
     setShowSettingsModal(true)
   }, [])
-
-  const handleEditMetadata = async (data) => {
-    if (!selectedWork) return
-    try {
-      const updated = await window.electronAPI.dbUpdateWork(selectedWork.id, data)
-      if (updated) {
-        setSelectedWork(updated)
-        setWorks((prev) => prev.map((w) => (w.id === updated.id ? updated : w)))
-      }
-    } catch (e) {
-      console.error('Failed to update metadata:', e)
-    }
-  }
-
-  const handleRefreshMetadata = async () => {
-    if (!selectedWork) return
-    try {
-      const rjCode = selectedWork.rjCode || extractRJCode(selectedWork.folderName)
-      if (rjCode) {
-        const detail = await window.electronAPI.dlsiteGetDetail(rjCode)
-        if (detail) {
-          const updated = await window.electronAPI.dbUpdateWork(selectedWork.id, detail)
-          if (updated) {
-            setSelectedWork(updated)
-            setWorks((prev) => prev.map((w) => (w.id === updated.id ? updated : w)))
-          }
-          return
-        }
-      }
-      const results = await window.electronAPI.dlsiteSearch(selectedWork.folderName)
-      if (results.length > 0 && results[0].rjCode) {
-        const detail = await window.electronAPI.dlsiteGetDetail(results[0].rjCode)
-        if (detail) {
-          const updated = await window.electronAPI.dbUpdateWork(selectedWork.id, detail)
-          if (updated) {
-            setSelectedWork(updated)
-            setWorks((prev) => prev.map((w) => (w.id === updated.id ? updated : w)))
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Failed to refresh metadata:', e)
-      showToast('重新刮削失败：' + e.message, 'error')
-    }
-  }
 
   const handleRefreshSubtitles = useCallback(async () => {
     if (!selectedWork) return
