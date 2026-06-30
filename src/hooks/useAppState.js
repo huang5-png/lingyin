@@ -75,13 +75,6 @@ export function useAppState() {
     handlePlayerCoverClick,
   } = useViewNavigation({ showToast })
 
-  const handleContinueListen = useCallback(
-    (item) => {
-      _handleContinueListen(item, works)
-    },
-    [_handleContinueListen, works],
-  )
-
   // ===== 右侧面板宽度拖拽 Hook =====
   const {
     width: rightPanelWidth,
@@ -115,6 +108,13 @@ export function useAppState() {
     setSelectedWork,
     selectedWork,
   })
+
+  const handleContinueListen = useCallback(
+    (item) => {
+      _handleContinueListen(item, works)
+    },
+    [_handleContinueListen, works],
+  )
 
   // ===== 收藏功能 Hook =====
   const {
