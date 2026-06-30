@@ -16,6 +16,7 @@ import GlobalSearchModal from './components/GlobalSearchModal'
 import Toast from './components/Toast'
 import AddToPlaylistModal from './components/AddToPlaylistModal'
 import LeftNavBar from './components/LeftNavBar'
+import ImmersiveView from './components/ImmersiveView'
 import { useTranslate } from './hooks/useTranslate'
 import { usePlayQueue } from './hooks/usePlayQueue'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -34,8 +35,7 @@ import { useWorkMetadata } from './hooks/useWorkMetadata'
 import { useAppSettings } from './hooks/useAppSettings'
 import { useViewNavigation } from './hooks/useViewNavigation'
 import { usePlaylistPlayback } from './hooks/usePlaylistPlayback'
-import { scanFolder, getExtension } from './utils/scanner'
-import { parseSubtitle } from './utils/subtitleParser'
+import { useSubtitleRefresh } from './hooks/useSubtitleRefresh'
 import './App.css'
 
 export default function App() {
@@ -302,16 +302,9 @@ export default function App() {
     isImmersive,
     setIsImmersive,
     immersiveLyricRef,
-    immersiveLyricCues,
-    currentCueIndex,
     handleCloseImmersive,
     handleToggleImmersive,
-  } = useImmersive({
-    currentCues,
-    currentTime,
-    subtitleFontSize: settings.subtitleFontSize,
-    playerRef,
-  })
+  } = useImmersive()
 
   useEffect(() => {
     loadWorks()
@@ -375,56 +368,23 @@ export default function App() {
     handleNextAudio,
   })
 
-  const handleRefreshSubtitles = useCallback(async () => {
-    if (!selectedWork) return
-    try {
-      const r = await scanFolder(selectedWork.folderPath)
-      const filesWithDuration = await Promise.all(
-        r.audioFiles.map(async (f) => {
-          try {
-            const dur = await window.electronAPI.getAudioDuration(f.path)
-            return { ...f, duration: dur ? Math.round(dur) : null }
-          } catch {
-            return f
-          }
-        })
-      )
-      setAudioFiles(filesWithDuration)
-      setAllSubtitleFiles(r.subtitleFiles)
-
-      if (currentAudio) {
-        const newSubtitleOptions = findMatchedSubtitles(currentAudio.name, currentAudio.path)
-        const currentSubPath = subtitleOptions[selectedSubtitleIndex]?.file?.path
-        let newSelectedIndex = newSubtitleOptions.length > 0 ? 0 : -1
-
-        if (currentSubPath && selectedSubtitleIndex >= 0) {
-          const existingIndex = newSubtitleOptions.findIndex((s) => s.file.path === currentSubPath)
-          if (existingIndex >= 0) {
-            newSelectedIndex = existingIndex
-          }
-        }
-
-        setSubtitleOptions(newSubtitleOptions)
-        setSelectedSubtitleIndex(newSelectedIndex)
-        detectSubtitleLanguagesAsync(newSubtitleOptions)
-
-        if (newSelectedIndex >= 0) {
-          const sub = newSubtitleOptions[newSelectedIndex]
-          const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
-          if (content) {
-            const ext = getExtension(sub.file.name)
-            const cues = parseSubtitle(content, ext)
-            setCurrentCues(cues)
-          }
-        } else {
-          setCurrentCues([])
-        }
-      }
-    } catch (e) {
-      console.error('Failed to refresh subtitles:', e)
-      showToast('刷新字幕失败：' + e.message, 'error')
-    }
-  }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex, findMatchedSubtitles, detectSubtitleLanguagesAsync, setAudioFiles, setAllSubtitleFiles, setSubtitleOptions, setSelectedSubtitleIndex, setCurrentCues, showToast])
+  // ===== 字幕刷新 Hook =====
+  const {
+    handleRefreshSubtitles,
+  } = useSubtitleRefresh({
+    selectedWork,
+    currentAudio,
+    subtitleOptions,
+    selectedSubtitleIndex,
+    findMatchedSubtitles,
+    detectSubtitleLanguagesAsync,
+    setAudioFiles,
+    setAllSubtitleFiles,
+    setSubtitleOptions,
+    setSelectedSubtitleIndex,
+    setCurrentCues,
+    showToast,
+  })
 
   // ===== 播放列表播放 Hook =====
   const {
@@ -734,43 +694,14 @@ export default function App() {
       </div>
 
       {isImmersive && playingWork && (
-        <div 
-          className="immersive-overlay"
-          style={{
-            '--immersive-lyric-font-size': `${settings.subtitleFontSize ? settings.subtitleFontSize * 1.2 : 22}px`,
-            '--immersive-lyric-active-font-size': `${settings.subtitleFontSize ? settings.subtitleFontSize * 1.8 : 34}px`,
-          }}
-        >
-          <div className="immersive-bg" style={{ backgroundImage: `url(${playingWork.cover})` }} />
-          <button className="immersive-close-btn" onClick={handleCloseImmersive} title="关闭 (ESC)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-          <div className="immersive-cover-wrapper">
-            <img src={playingWork.cover} alt="" className="immersive-cover" />
-          </div>
-          <div className="immersive-bottom">
-            <div className="immersive-title">{playingWork.title || playingWork.folderName}</div>
-            <div className="immersive-subtitle">{playingWork.circle || ''}</div>
-            {immersiveLyricCues.length > 0 && (
-              <div className="immersive-lyrics-container" ref={immersiveLyricRef}>
-                {immersiveLyricCues.map((cue) => (
-                  <div
-                    key={cue.realIndex}
-                    className={`immersive-lyric-line ${cue.isActive ? 'active' : ''}`}
-                    onClick={() => playerRef.current?.seekTo(cue.time)}
-                  >
-                    {cue.text.split('\n').map((line, lineIdx) => (
-                      <div key={lineIdx}>{line}</div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <ImmersiveView
+          work={playingWork}
+          currentCues={currentCues}
+          currentTime={currentTime}
+          subtitleFontSize={settings.subtitleFontSize}
+          playerRef={playerRef}
+          onClose={handleCloseImmersive}
+        />
       )}
 
       <SettingsModal
