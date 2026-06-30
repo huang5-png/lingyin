@@ -21,6 +21,9 @@ const DEFAULT_SETTINGS = {
   shuffle: false,
   autoHideSidebar: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
+  downloadConcurrency: 3,
+  autoImportDownloaded: true,
+  downloadNotify: true,
 };
 
 const TABS = [
@@ -179,6 +182,50 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
               placeholder="http://127.0.0.1:7897"
               value={settings.proxyUrl || ''}
               onChange={(e) => setSettings((p) => ({ ...p, proxyUrl: e.target.value }))}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-section-title">下载</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">最大同时下载数</div>
+            <div className="setting-desc">同一任务内同时下载的文件数量</div>
+          </div>
+          <div className="setting-control">
+            <div className="slider-control">
+              <div className="slider-value">{settings.downloadConcurrency}</div>
+              <Slider
+                value={settings.downloadConcurrency}
+                min={1}
+                max={8}
+                onChange={(e) => handleSlider('downloadConcurrency', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">下载完成通知</div>
+            <div className="setting-desc">任务完成或失败时显示 Toast 通知</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.downloadNotify}
+              onChange={() => handleToggle('downloadNotify')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">自动导入媒体库</div>
+            <div className="setting-desc">下载完成后自动添加到本地媒体库</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.autoImportDownloaded}
+              onChange={() => handleToggle('autoImportDownloaded')}
             />
           </div>
         </div>
