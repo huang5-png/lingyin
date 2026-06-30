@@ -486,6 +486,32 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 卡片悬停时整体上移 2px + 阴影加深
 - 封面 `object-fit: cover`，悬停时轻微放大
 
+### 9.5 作品排序
+
+侧边栏支持多种排序方式，状态保存在 `settings.librarySortBy` 和 `settings.librarySortOrder`：
+
+**排序方式：**
+- `createdAt` — 添加时间（默认）
+- `updatedAt` — 更新时间
+- `title` — 作品名称
+- `duration` — 总时长
+- `rating` — 评分
+- `release` — 发售日期
+
+**排序顺序：**
+- `desc` — 降序（默认）
+- `asc` — 升序
+
+**UI 位置：**
+- 排序下拉菜单位于 CV/社团筛选下方
+- 升序/降序切换按钮在下拉菜单右侧
+- 同时适用于我的库视图和收藏视图
+
+**实现位置：**
+- 排序逻辑：`useAppState.js` 的 `filteredWorks` useMemo 中
+- 排序 UI：`Sidebar.jsx` 的筛选区域
+- 排序设置：`useAppSettings.js` 的 `handleLibrarySortChange`
+
 ### 10. 在线 ASMR 发现（asmr.one）
 
 #### API 端点
