@@ -148,7 +148,7 @@
 | `components/PlaylistView.jsx` | 播放列表视图（多列表、拖拽排序、加入弹窗） |
 | `components/QueuePanel.jsx` | 播放队列浮层（拖拽排序、循环/随机切换、当前项高亮、ESC 关闭） |
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签、翻译切换 |
-| `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/关于，六个 Tab） |
+| `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/数据管理/关于，七个 Tab） |
 | `components/KeyboardShortcutsPanel.jsx` | 快捷键配置面板（自定义快捷键、冲突检测） |
 | `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索历史、作品、收藏、播放列表分类展示，关键词高亮，快捷键唤起，方向键选择+回车跳转） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
@@ -728,15 +728,74 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 
 ### 14. 设置面板
 
-设置弹窗包含 6 个分类标签页：
+设置弹窗包含 7 个分类标签页：
 - **基本** — 播放设置、系统托盘、网络代理、下载设置、翻译设置
 - **外观** — 主题、是否显示评分、波形高度、视图模式（网格/列表）
 - **主界面** — 侧边栏宽度、歌词宽度、播放器高度
 - **播放界面** — 显示歌词、自动滚动歌词、字幕语言优先级、字幕字体大小、自动翻译字幕
 - **快捷键** — 自定义快捷键配置，支持组合键
+- **数据管理** — 数据统计、导出备份、导入备份（合并/覆盖模式）
 - **关于** — 版本信息、应用图标
 
 设置同时保存到 localStorage 和数据库。
+
+### 14.5 数据备份与恢复
+
+#### 功能概述
+完整的数据备份与恢复系统，支持导出和导入所有用户数据，防止数据丢失，支持设备迁移。
+
+#### 入口
+- 设置面板 → 数据管理 Tab
+- 包含三个区域：数据统计、导出备份、导入备份
+
+#### 可导出数据类型
+| Key | 名称 | 类型 |
+|-----|------|------|
+| `works` | 本地作品 | array |
+| `progress` | 播放进度 | object |
+| `progressHistory` | 播放历史 | array |
+| `subtitles` | 字幕选择 | object |
+| `settings` | 用户设置 | object |
+| `playlists` | 播放列表 | array |
+| `translateCache` | 翻译缓存 | object |
+| `favorites` | 收藏列表 | array |
+| `folderGroups` | 文件夹分组 | array |
+| `bookmarks` | 书签列表 | array |
+
+#### 导出功能
+- 支持自由选择要导出的数据类型（全选/取消全选）
+- 导出为 JSON 格式，文件名默认：`lingyin-backup-YYYY-MM-DD.json`
+- 通过系统保存对话框选择保存位置
+- 导出成功后显示保存路径
+
+#### 导入模式
+- **合并模式**（默认）：保留现有数据，将备份中的新数据合并进来
+  - 数组类型：按 ID 去重合并
+  - 对象类型：深度合并，备份中的值覆盖现有值
+- **覆盖模式**：用备份数据完全替换现有数据（⚠️ 谨慎操作）
+  - 替换所有选择的数据类型
+  - 有警告提示
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `backup:getStats` | 获取数据统计信息（各类型数量、总大小、可导出key列表） |
+| `backup:export(keys)` | 导出指定数据为 JSON 字符串 |
+| `backup:import(jsonString, mode)` | 导入备份数据，mode: 'merge' / 'overwrite' |
+| `backup:saveFile(jsonString, defaultName)` | 打开保存对话框，写入文件 |
+| `backup:openFile()` | 打开文件选择对话框，读取备份文件内容 |
+
+#### 数据验证
+- 导入时自动验证备份文件格式
+- 检查是否为有效的 JSON
+- 检查是否包含可识别的数据 key
+- 验证失败时返回错误信息
+
+#### 前端实现
+- `SettingsModal.jsx` 中新增 `renderDataTab()` 函数
+- 状态：`dataStats`、`exportKeys`、`importMode`、`importResult`、`isExporting`、`isImporting`
+- 切换到数据管理 Tab 时自动加载数据统计
+- 操作结果显示成功/错误横幅，可关闭
 
 ### 15. 快捷键
 
