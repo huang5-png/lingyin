@@ -268,6 +268,57 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 卡片内小区域空态：`size="sm"` 或 `compact`
 - 页面级空态：默认尺寸或 `size="lg"`
 
+#### 骨架屏加载模式
+
+对于列表型视图（如 DiscoverView、RecentPlaysView、PlaylistView），优先使用**骨架屏**替代 `StateView type="loading"`，提供更流畅的加载体验。
+
+**共享骨架样式**（定义在 `StateView.css`）：
+```css
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-line {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-hover) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-cover {
+  /* 同 skeleton-line，但无 border-radius 或根据容器设置 */
+}
+```
+
+**实现模式**：
+1. 在组件中创建 `SkeletonItem` / `SkeletonCard` 等骨架组件
+2. 骨架元素使用 `.skeleton-line` / `.skeleton-cover` 等类名
+3. 组件特定样式在各自 CSS 文件中定义（如 `.rp-skeleton-cover`）
+4. 加载状态替换示例：
+```jsx
+{loading ? (
+  <div className="rp-list">
+    {Array.from({ length: 8 }).map((_, i) => (
+      <SkeletonItem key={i} />
+    ))}
+  </div>
+) : (
+  // 实际内容
+)}
+```
+
+**骨架屏 CSS 规范**：
+- 骨架容器添加 `.skeleton-item` 类，禁止 hover 效果：`pointer-events: none; animation: none;`
+- 骨架行/封面等使用共享 `.skeleton-line` / `.skeleton-cover`
+- 组件特定尺寸/位置覆盖在各自 CSS 文件中定义
+- 高 DPI 适配：在 `@media (min-resolution)` 中调整骨架尺寸
+
+**已使用骨架屏的视图**：
+- DiscoverView（作品卡片骨架）
+- RecentPlaysView（最近播放条目骨架）
+- PlaylistView（播放列表条目 + 曲目行骨架）
+
 #### 已使用 StateView 的组件
 - WorkDetail（曲目加载/错误态）
 - Sidebar（作品列表空态）
