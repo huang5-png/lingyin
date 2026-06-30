@@ -57,7 +57,7 @@
     - **侧边栏**（卡片，`library-main` / `discover-main`）：作品列表、搜索、筛选、添加文件夹
     - **作品详情区**（卡片，`work-detail-wrapper`）：作品详情 + 曲目列表
     - **可拖拽分割线**（`content-splitter`）：8px 宽，可拖动调整右侧面板宽度（240-600px）
-    - **右侧标签栏**（卡片，`right-tab-bar`）：Details / Subtitles / Related / Playlists
+    - **右侧标签栏**（卡片，`right-tab-bar`）：Details / Subtitles / Bookmarks / Related / Playlists
   - **底部播放栏**（卡片，`global-player-bar`）：波形、播放控制、快进快退、音量、播放速度、沉浸式、睡眠定时器、队列
     - 默认高度 96px（可在设置中调整）
     - 仅占右侧内容区宽度，不延伸到左侧导航栏下方
@@ -130,14 +130,16 @@
 | `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：播放列表曲目播放、跳转到作品、加入播放列表弹窗 |
 | `hooks/useSubtitleRefresh.js` | 字幕刷新 Hook：重新扫描文件夹、更新音频和字幕列表、保持当前字幕选择 |
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
+| `hooks/useBookmarks.js` | 书签功能 Hook：书签状态管理、按作品/音频筛选、增删改查、本地持久化 |
 | `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
 | `hooks/useDownloadImport.js` | 下载完成自动导入 Hook：下载任务完成/失败通知、自动添加到媒体库 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、自动居中、点击跳转） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
 | `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
-| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Related/Playlists 四个 Tab） |
+| `components/BookmarksPanel.jsx` | 书签面板（当前音频书签列表、作品书签列表、添加/编辑/删除书签、点击跳转、双击重命名、空态展示） |
+| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Bookmarks/Related/Playlists 五个 Tab） |
 | `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表、重试机制） |
 | `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品，支持进度条显示、未听完标记、继续听按钮、全部/未听完/已听完筛选） |
 | `components/UsageReport.jsx` | 使用报告视图（年度/月度/日度切换、标签/CV/社团/作品排行） |
@@ -265,7 +267,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - **三种状态类型**：`empty`（空态）/ `loading`（加载中）/ `error`（错误）
 - **三种尺寸**：`sm` / `md`（默认）/ `lg`
 - **两种模式**：紧凑模式（`compact`）、行内模式（`inline`）
-- **13+ 预置图标**：empty / loading / error / playlist / download / folder / music / search / clock / chart / subtitle / queue / settings / warn / info
+- **13+ 预置图标**：empty / loading / error / playlist / download / folder / music / search / clock / chart / subtitle / queue / settings / warn / info / bookmark
 
 #### 使用规范
 - 列表/网格为空时：`type="empty"`，配合对应的 iconType（音乐列表用 `music`，下载用 `download`，搜索用 `search` 等）
@@ -336,6 +338,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - RecentPlaysView（最近播放空态）
 - QueuePanel（队列为空）
 - PlaylistView（播放列表为空）
+- BookmarksPanel（书签为空）
 - GlobalSearchModal（搜索结果为空）
 
 ### 4. 数据持久化
@@ -358,7 +361,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   "playlists": [],       // 播放列表
   "translateCache": {},  // 翻译缓存 { workId::audioPath: { text, timestamp } }
   "favorites": [],        // 收藏列表 [{ workId, title, cover, circle, isOnline, addedAt }]
-  "folderGroups": []      // 文件夹分组 [{ id, name, color, order, createdAt, updatedAt }]
+  "folderGroups": [],      // 文件夹分组 [{ id, name, color, order, createdAt, updatedAt }]
+  "bookmarks": []          // 书签列表 [{ id, workId, workTitle, audioPath, audioName, time, name, color, createdAt, updatedAt }]
 }
 ```
 
@@ -943,6 +947,72 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - `loopMode` 和 `shuffle` 同时存储在 `localStorage.appSettings` 和 `db.json.settings`
 - 启动时从 `settings.loopMode / settings.shuffle` 初始化 state
 - 切换时同步写入两处（参考其他设置的持久化模式）
+
+### 19.5 书签系统
+
+#### 功能概述
+- 用户可在音频播放的任意时间点添加书签，记录喜欢的片段
+- 支持书签命名、颜色标记、快速跳转到书签位置
+- 按作品和音频层级管理书签
+- 数据持久化存储到 `db.json.bookmarks`
+
+#### 数据结构
+```js
+{
+  id: 'bm_<base36时间戳>_<6位随机>',
+  workId: string,           // 作品ID
+  workTitle: string,        // 作品标题（冗余，供UI直接显示）
+  audioPath: string,        // 音频文件路径
+  audioName: string,        // 音频名称（冗余，供UI直接显示）
+  time: number,             // 书签时间点（秒）
+  name: string,             // 书签名称
+  color: string,            // 书签颜色（默认 #c96442）
+  createdAt: number,        // 创建时间戳
+  updatedAt: number,        // 更新时间戳
+}
+```
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `bookmarks:getAll` | 获取全部书签 |
+| `bookmarks:getByWork` | 获取指定作品的所有书签 |
+| `bookmarks:getByAudio` | 获取指定音频的所有书签 |
+| `bookmarks:add` | 添加新书签，返回新对象 |
+| `bookmarks:update` | 更新书签（名称、颜色、时间） |
+| `bookmarks:delete` | 删除指定书签 |
+| `bookmarks:deleteByWork` | 删除指定作品的所有书签 |
+| `bookmarks:clearAll` | 清空所有书签 |
+
+#### 前端组件
+- **BookmarksPanel.jsx**：书签管理面板
+  - 当前音频书签列表（按时间排序）
+  - 作品全部书签列表（按音频分组）
+  - 添加新书签按钮（在当前播放位置添加）
+  - 双击书签名称重命名（Enter 确认 / Escape 取消）
+  - 点击书签跳转到对应时间点
+  - 删除书签按钮
+  - 空态使用 StateView（iconType: 'bookmark'）
+- **AudioPlayer.jsx**：播放器右侧书签按钮
+  - 点击在当前播放位置添加书签
+  - 显示当前音频书签数量徽标
+  - 当前位置有书签时按钮高亮
+- **RightTabBar.jsx**：新增 Bookmarks Tab
+
+#### 核心 Hook（useBookmarks.js）
+- `bookmarks` — 全部书签数组
+- `loadingBookmarks` — 加载状态
+- `addBookmark(bookmark)` — 添加书签
+- `updateBookmark(id, data)` — 更新书签
+- `deleteBookmark(id)` — 删除书签
+- `hasBookmarkAtTime(workId, audioPath, time, tolerance=1)` — 检查指定时间附近是否有书签
+
+#### UI 交互细节
+- 书签列表按时间升序排列
+- 书签行显示：颜色标记 + 时间 + 名称 + 删除按钮
+- 重命名：双击名称进入编辑状态，Enter 保存，Escape 取消
+- 点击书签行（非编辑状态）跳转到对应播放位置
+- 书签颜色：默认暖橙色 `#c96442`
 
 ### 20. 睡眠定时器
 
