@@ -23,6 +23,7 @@ import { useSleepTimer, SLEEP_TIMER_OPTIONS } from './hooks/useSleepTimer'
 import { useSubtitle } from './hooks/useSubtitle'
 import { useMediaLibrary } from './hooks/useMediaLibrary'
 import { useOnlineWork } from './hooks/useOnlineWork'
+import { usePlaybackHistory } from './hooks/usePlaybackHistory'
 import { scanFolder, extractRJCode, getExtension } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
@@ -134,7 +135,6 @@ export default function App() {
   const handleSelectAudioRef = useRef(null)
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
-  const lastHistoryTimeRef = useRef(0)
   const durationRef = useRef(0)
 
   // 最近播放自动播放：记录待播放的音频路径，audioFiles 加载后自动播放
@@ -192,6 +192,9 @@ export default function App() {
     setSubtitleOptions,
     setSelectedSubtitleIndex,
   })
+
+  // ===== 播放历史记录 Hook =====
+  const { recordHistoryIfNeeded } = usePlaybackHistory()
 
   // ===== 自定义 Hooks =====
   const {
@@ -576,24 +579,11 @@ export default function App() {
             duration: durationRef.current,
           })
         }
-        // Record listening history every 60 seconds (both online & local)
-        if (now - lastHistoryTimeRef.current > 60000) {
-          lastHistoryTimeRef.current = now
-          window.electronAPI.dbAppendHistory?.({
-            ts: now,
-            workId: selectedWork.id,
-            audioFile: currentAudio.path || currentAudio.name || '',
-            seconds: 60,
-            title: selectedWork.title || selectedWork.folderName || '',
-            cover: selectedWork.cover || '',
-            circle: selectedWork.circle || '',
-            cvs: selectedWork.cvs || [],
-            tags: selectedWork.tags || [],
-          }).catch(() => {})
-        }
+        // 记录播放历史（每 60 秒，由 usePlaybackHistory 管理）
+        recordHistoryIfNeeded(selectedWork, currentAudio, now)
       }
     },
-    [selectedWork, currentAudio],
+    [selectedWork, currentAudio, recordHistoryIfNeeded],
   )
 
   const handleReady = useCallback((dur) => {
