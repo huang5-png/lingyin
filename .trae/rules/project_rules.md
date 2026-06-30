@@ -139,7 +139,7 @@
 | `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
 | `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Related/Playlists 四个 Tab） |
 | `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表、重试机制） |
-| `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品） |
+| `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品，支持进度条显示、未听完标记、继续听按钮、全部/未听完/已听完筛选） |
 | `components/UsageReport.jsx` | 使用报告视图（年度/月度/日度切换、标签/CV/社团/作品排行） |
 | `components/DownloadView.jsx` | 下载管理视图（任务列表、进度、速度、状态控制、后台下载） |
 | `components/DownloadModal.jsx` | 下载配置弹窗（选择文件、音质、添加到队列） |
@@ -151,7 +151,7 @@
 | `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索历史、作品、收藏、播放列表分类展示，关键词高亮，快捷键唤起，方向键选择+回车跳转） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
 | `components/StateView.jsx` | 统一空态/加载态/错误状态组件（13+ 预置图标、sm/md/lg 尺寸、紧凑/行内模式） |
-| `components/LeftNavBar.jsx` | 左侧导航栏（64px 宽，卡片样式，包含我的库/发现/最近播放/使用报告/下载/播放列表/设置入口） |
+| `components/LeftNavBar.jsx` | 左侧导航栏（64px 宽，卡片样式，包含继续听快捷入口、我的库/发现/最近播放/使用报告/下载/播放列表/设置入口） |
 | `components/Toast.jsx` | Toast 通知组件（success/error/info/warning 四种类型，自动消失，带动画） |
 | `components/AddToPlaylistModal.jsx` | 加入播放列表弹窗（选择已有列表或新建列表并加入） |
 | `components/LibraryLayout.jsx` | 我的库布局组件（左侧 Sidebar + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
