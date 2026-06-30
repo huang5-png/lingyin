@@ -574,6 +574,17 @@ C:\Users\{用户名}\AppData\Roaming\lingyin\logs\
 <details>
 <summary>点击展开查看历史版本</summary>
 
+### v1.10.1 — 2026-06-30
+- **重构**：App.jsx 持续模块化 — 抽取播放历史记录逻辑到 usePlaybackHistory Hook
+  - 将 `handleTimeUpdate` 中每 60 秒追加播放历史记录的逻辑抽取为独立 Hook
+  - 简化 App.jsx 职责，消除直接在组件中分散 IPC 调用的模式
+  - App.jsx 现在包含 7 个自定义 Hook：useTranslate、usePlayQueue、useKeyboardShortcuts、useSleepTimer、useSubtitle、useMediaLibrary、useOnlineWork、usePlaybackHistory
+- **重构**：Hooks 批量抽取 — 完成媒体库、在线作品、字幕管理三大模块重构
+  - `useMediaLibrary`：作品列表、音频/字幕文件扫描、DLsite 异步刮削
+  - `useOnlineWork`：在线作品加载、tracks 解析为音频列表
+  - `useSubtitle`：字幕选项/索引、语言检测、字幕选择/添加/刷新
+  - `usePlaybackHistory`：播放历史定时记录（每 60 秒）
+
 ### v1.10.0 — 2026-07-01
 - **重构**：App.jsx 模块化重构 - 抽取 4 个自定义 Hooks
   - 新增 `useTranslate` Hook：管理翻译缓存、批量翻译和字幕翻译切换
