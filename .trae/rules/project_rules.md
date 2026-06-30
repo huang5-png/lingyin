@@ -117,6 +117,7 @@
 | `hooks/useMediaLibrary.js` | 媒体库管理 Hook：作品状态（works/audioFiles/allSubtitleFiles）、加载/添加/删除/刷新、DLsite 自动刮削 |
 | `hooks/useOnlineWork.js` | 在线作品 Hook：在线作品加载/刷新、tracks 解析为音频列表 |
 | `hooks/useSubtitle.js` | 字幕管理 Hook：字幕选项/索引状态、语言异步检测、字幕选择/添加/刷新、自动翻译 |
+| `hooks/usePlayer.js` | 核心播放控制 Hook：音频选择、上一曲/下一曲、播放完成、进度保存、历史记录、时间更新 |
 | `hooks/useFilters.js` | 筛选状态 Hook：CV/社团/标签筛选状态、筛选结果计算 |
 | `hooks/useTheme.js` | 主题与缩放 Hook：窗口响应式缩放（0.6x-1.2x）、主题切换与过渡动画、CSS 变量同步、数据库设置加载 |
 | `hooks/useToast.js` | Toast 通知 Hook：Toast 状态（toasts/showToast/removeToast） |
