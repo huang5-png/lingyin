@@ -117,6 +117,8 @@
 | `hooks/useMediaLibrary.js` | 媒体库管理 Hook：作品状态（works/audioFiles/allSubtitleFiles）、加载/添加/删除/刷新、DLsite 自动刮削 |
 | `hooks/useOnlineWork.js` | 在线作品 Hook：在线作品加载/刷新、tracks 解析为音频列表 |
 | `hooks/useSubtitle.js` | 字幕管理 Hook：字幕选项/索引状态、语言异步检测、字幕选择/添加/刷新、自动翻译 |
+| `hooks/useFilters.js` | 筛选状态 Hook：CV/社团/标签筛选状态、筛选结果计算 |
+| `hooks/useTheme.js` | 主题与缩放 Hook：窗口响应式缩放（0.6x-1.2x）、主题切换与过渡动画、CSS 变量同步、数据库设置加载 |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
