@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import './SettingsModal.css';
 import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
 import { getPresetList } from '../utils/upscaleShaders';
+import { THEME_PRESETS } from '../utils/themePresets';
 
 const SUBTITLE_STYLE_PRESETS = {
   default: {
@@ -84,6 +85,8 @@ const DEFAULT_SETTINGS = {
   autoScrollLyric: true,
   skipSeconds: 5,
   theme: 'light',
+  accentPreset: 'warm-orange',
+  customAccentColor: '#c96442',
   viewMode: 'grid',
   loopMode: 'none',
   shuffle: false,
@@ -448,24 +451,15 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
   const renderAppearanceTab = () => (
     <div className="settings-tab-content">
       <div className="settings-section">
-        <div className="settings-section-title">主题</div>
+        <div className="settings-section-title">主题模式</div>
         <div className="setting-item">
           <div className="setting-info">
             <div className="setting-label">界面主题</div>
-            <div className="setting-desc">选择深色或浅色模式</div>
+            <div className="setting-desc">选择浅色、深色或跟随系统</div>
           </div>
-          <div className="theme-selector">
+          <div className="theme-mode-selector">
             <button
-              className={`theme-toggle-btn ${settings.theme === 'dark' ? 'active' : ''}`}
-              onClick={() => handleThemeChange('dark')}
-              title="深色模式"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
-              </svg>
-            </button>
-            <button
-              className={`theme-toggle-btn ${settings.theme === 'light' ? 'active' : ''}`}
+              className={`theme-mode-btn ${settings.theme === 'light' ? 'active' : ''}`}
               onClick={() => handleThemeChange('light')}
               title="浅色模式"
             >
@@ -480,10 +474,99 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
               </svg>
+              <span>浅色</span>
+            </button>
+            <button
+              className={`theme-mode-btn ${settings.theme === 'dark' ? 'active' : ''}`}
+              onClick={() => handleThemeChange('dark')}
+              title="深色模式"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
+              </svg>
+              <span>深色</span>
+            </button>
+            <button
+              className={`theme-mode-btn ${settings.theme === 'auto' ? 'active' : ''}`}
+              onClick={() => handleThemeChange('auto')}
+              title="跟随系统"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+              <span>自动</span>
             </button>
           </div>
         </div>
       </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">主题配色</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">预设主题</div>
+            <div className="setting-desc">选择喜欢的主题色</div>
+          </div>
+        </div>
+        <div className="accent-presets-grid">
+          {THEME_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              className={`accent-preset-btn ${settings.accentPreset === preset.id ? 'active' : ''}`}
+              onClick={() => setSettings((p) => ({ ...p, accentPreset: preset.id }))}
+              title={`${preset.name} — ${preset.description}`}
+            >
+              <div
+                className="accent-preset-preview"
+                style={{
+                  background: `linear-gradient(135deg, ${preset.lightColor} 0%, ${preset.darkColor} 100%)`,
+                }}
+              />
+              <span className="accent-preset-name">{preset.name}</span>
+            </button>
+          ))}
+          <button
+            className={`accent-preset-btn ${settings.accentPreset === 'custom' ? 'active' : ''}`}
+            onClick={() => setSettings((p) => ({ ...p, accentPreset: 'custom' }))}
+            title="自定义主题色"
+          >
+            <div
+              className="accent-preset-preview custom-preview"
+              style={{ background: settings.customAccentColor || '#c96442' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                <path d="M2 2l7.586 7.586"/>
+                <circle cx="11" cy="11" r="2"/>
+              </svg>
+            </div>
+            <span className="accent-preset-name">自定义</span>
+          </button>
+        </div>
+        {settings.accentPreset === 'custom' && (
+          <div className="setting-item custom-accent-item">
+            <div className="setting-info">
+              <div className="setting-label">自定义颜色</div>
+              <div className="setting-desc">选择你喜欢的主题色</div>
+            </div>
+            <div className="setting-control">
+              <div className="color-picker-wrapper">
+                <input
+                  type="color"
+                  className="color-picker-input"
+                  value={settings.customAccentColor || '#c96442'}
+                  onChange={(e) => setSettings((p) => ({ ...p, customAccentColor: e.target.value }))}
+                />
+                <span className="color-picker-value">{settings.customAccentColor || '#c96442'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="settings-section">
         <div className="settings-section-title">图片超分</div>
         <div className="setting-item">
