@@ -162,6 +162,7 @@
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `utils/upscaleShaders.js` | 图片超分 WebGL 着色器（Lanczos2/3、Bicubic、Anime4K 线条增强、双边滤波、USM 锐化、色彩调整）+ 9 档预设 |
+| `utils/themePresets.js` | 主题配色工具（8 套预设主题、颜色处理函数、动态 CSS 变量生成） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
 
 ## 开发命令
@@ -196,13 +197,21 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 
 ### 3. CSS 约定
 
-#### 主题风格（Claude 暖橙风格）
-- 浅色为主的温暖纸张色调，搭配暖橙色主色调
+#### 主题风格（多主题配色系统）
+- 默认主题为 Claude 暖橙风格，支持 8 套预设主题 + 自定义主题色
 - 浅色背景：`#faf9f5`（米白暖纸色），整体渐变叠加层营造质感
 - 深色背景：`#262624`（深棕灰），低对比度护眼
-- 主色调：暖橙/赤陶色（`--accent-primary: #c96442`，`--accent-secondary: #b0562f`）
-- 深色模式主色：`--accent-primary: #d97757`，`--accent-secondary: #e08d6f`
-- 使用 CSS 变量定义所有颜色（在 `global.css` 的 `:root` 和 `[data-theme="dark"]` 中）
+- 三种主题模式：浅色 / 深色 / 跟随系统（auto）
+- 预设主题：暖橙、森绿、海蓝、薰衣、玫红、琥珀、青碧、岩灰
+- 每套预设包含亮色和暗色两种主色调，分别适配明暗模式
+- 支持自定义主题色，自动生成 9 级色阶（accent-100 到 accent-900）
+- 主色调通过 `--accent-primary` 和 `--accent-secondary` CSS 变量控制
+- 主题色动态应用：通过 `applyThemeColors()` 函数注入 CSS 变量到根元素
+- 主题切换有 550ms 平滑过渡动画
+- 主题配置存储在 `settings.accentPreset` 和 `settings.customAccentColor` 中
+- 默认预设为 `warm-orange`（暖橙），默认主题模式为 `light`（浅色）
+- 主题工具库：`src/utils/themePresets.js`
+- 主题管理 Hook：`useTheme.js`
 
 #### 字体系统
 - 标题字体：Poppins（无衬线，现代感，font-weight: 600）
