@@ -338,7 +338,7 @@ async function clearAllHistory() {
 // 获取最近播放的作品（去重后按时间倒序），用于侧边栏快捷访问
 async function getRecentWorks(limit = 8) {
   const history = dbData.history || []
-  // 从后往前遍历，取最早出现的 workId（最近播放的排在最后）
+  const progressMap = dbData.progress || {}
   const seen = new Set()
   const recent = []
   for (let i = history.length - 1; i >= 0; i--) {
@@ -346,6 +346,22 @@ async function getRecentWorks(limit = 8) {
     if (!h || !h.workId) continue
     if (seen.has(h.workId)) continue
     seen.add(h.workId)
+    const audioFile = h.audioFile || ''
+    const progressKey = `${h.workId}::${audioFile}`
+    const progress = progressMap[progressKey] || null
+    let workProgress = 0
+    let workDuration = 0
+    let workLastPlayed = h.ts
+    for (const [key, data] of Object.entries(progressMap)) {
+      if (key.startsWith(`${h.workId}::`)) {
+        workProgress += data.currentTime || 0
+        workDuration += data.duration || 0
+        if (data.lastPlayed && data.lastPlayed > workLastPlayed) {
+          workLastPlayed = data.lastPlayed
+        }
+      }
+    }
+    const workPercentage = workDuration > 0 ? Math.min(100, Math.round((workProgress / workDuration) * 100)) : 0
     recent.push({
       workId: h.workId,
       title: h.title || '',
@@ -353,11 +369,66 @@ async function getRecentWorks(limit = 8) {
       circle: h.circle || '',
       cvs: h.cvs || [],
       tags: h.tags || [],
-      lastPlayed: h.ts,
+      lastPlayed: workLastPlayed,
+      audioFile: audioFile,
+      audioName: h.audioName || '',
+      currentTime: progress?.currentTime || 0,
+      duration: progress?.duration || 0,
+      percentage: progress && progress.duration > 0 ? Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)) : 0,
+      workPercentage,
+      isUnfinished: progress && progress.duration > 0 && progress.currentTime > 0 && progress.currentTime < progress.duration * 0.95,
     })
     if (recent.length >= limit) break
   }
   return recent
+}
+
+// 获取最近播放的音频（用于继续听功能）
+async function getLastPlayedAudio() {
+  const history = dbData.history || []
+  const progressMap = dbData.progress || {}
+  for (let i = history.length - 1; i >= 0; i--) {
+    const h = history[i]
+    if (!h || !h.workId || !h.audioFile) continue
+    const progressKey = `${h.workId}::${h.audioFile}`
+    const progress = progressMap[progressKey]
+    if (progress && progress.duration > 0 && progress.currentTime > 0 && progress.currentTime < progress.duration * 0.95) {
+      return {
+        workId: h.workId,
+        title: h.title || '',
+        cover: h.cover || '',
+        circle: h.circle || '',
+        cvs: h.cvs || [],
+        tags: h.tags || [],
+        audioFile: h.audioFile,
+        audioName: h.audioName || '',
+        currentTime: progress.currentTime,
+        duration: progress.duration,
+        percentage: Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)),
+        lastPlayed: progress.lastPlayed || h.ts,
+      }
+    }
+  }
+  if (history.length > 0) {
+    const h = history[history.length - 1]
+    const progressKey = `${h.workId}::${h.audioFile || ''}`
+    const progress = progressMap[progressKey] || {}
+    return {
+      workId: h.workId,
+      title: h.title || '',
+      cover: h.cover || '',
+      circle: h.circle || '',
+      cvs: h.cvs || [],
+      tags: h.tags || [],
+      audioFile: h.audioFile || '',
+      audioName: h.audioName || '',
+      currentTime: progress.currentTime || 0,
+      duration: progress.duration || 0,
+      percentage: progress.duration > 0 ? Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)) : 0,
+      lastPlayed: progress.lastPlayed || h.ts,
+    }
+  }
+  return null
 }
 
 // ===== Playlists =====
@@ -724,6 +795,7 @@ module.exports = {
   deleteHistoryByWorkId,
   clearAllHistory,
   getRecentWorks,
+  getLastPlayedAudio,
   getAllPlaylists,
   createPlaylist,
   renamePlaylist,

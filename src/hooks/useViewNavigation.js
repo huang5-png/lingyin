@@ -10,6 +10,7 @@ export function useViewNavigation({ showToast }) {
   const [settingsDefaultTab, setSettingsDefaultTab] = useState('basic')
 
   const pendingAutoPlayRef = useRef(null)
+  const pendingContinueRef = useRef(null)
 
   const handleSelectWork = useCallback(
     (work) => {
@@ -31,6 +32,21 @@ export function useViewNavigation({ showToast }) {
 
   const handleRecentPlayAutoPlay = useCallback((item) => {
     pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
+  }, [])
+
+  const handleContinueListen = useCallback((item, works) => {
+    if (!item || !item.workId) return
+    const targetWork = works ? works.find(w => w.id === item.workId) : null
+    pendingContinueRef.current = {
+      workId: item.workId,
+      audioFile: item.audioFile || item.audioPath,
+      currentTime: item.currentTime || 0,
+      startedAt: Date.now(),
+    }
+    if (targetWork) {
+      setSelectedWork(targetWork)
+      setCurrentView('library')
+    }
   }, [])
 
   const handlePlayerCoverClick = useCallback(
@@ -69,10 +85,12 @@ export function useViewNavigation({ showToast }) {
     settingsDefaultTab,
     setSettingsDefaultTab,
     pendingAutoPlayRef,
+    pendingContinueRef,
     handleSelectWork,
     handleOpenSettings,
     handleOpenSubtitleSettings,
     handleRecentPlayAutoPlay,
+    handleContinueListen,
     handlePlayerCoverClick,
   }
 }

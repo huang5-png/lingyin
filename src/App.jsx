@@ -53,6 +53,9 @@ export default function App() {
     handleOpenSettings,
     handleSelectWork,
     handleRecentPlayAutoPlay,
+    handleContinueListen,
+    lastPlayedAudio,
+    loadLastPlayedAudio,
 
     // 右侧面板拖拽
     rightPanelWidth,
@@ -208,6 +211,8 @@ export default function App() {
           currentView={currentView}
           onViewChange={setCurrentView}
           onOpenSettings={handleOpenSettings}
+          lastPlayedAudio={lastPlayedAudio}
+          onContinueListen={() => lastPlayedAudio && handleContinueListen(lastPlayedAudio)}
         />
 
         <div className="right-content-area">
@@ -428,6 +433,7 @@ export default function App() {
             works={works}
             onSelectWork={handleSelectWork}
             onAutoPlay={handleRecentPlayAutoPlay}
+            onContinueListen={handleContinueListen}
             onToast={showToast}
           />
         </div>

@@ -64,10 +64,19 @@ export function useAppState() {
     handleOpenSettings,
     handleOpenSubtitleSettings,
     pendingAutoPlayRef,
+    pendingContinueRef,
     handleSelectWork,
     handleRecentPlayAutoPlay,
+    handleContinueListen: _handleContinueListen,
     handlePlayerCoverClick,
   } = useViewNavigation({ showToast })
+
+  const handleContinueListen = useCallback(
+    (item) => {
+      _handleContinueListen(item, works)
+    },
+    [_handleContinueListen, works],
+  )
 
   // ===== 右侧面板宽度拖拽 Hook =====
   const {
@@ -352,6 +361,22 @@ export function useAppState() {
     loadWorks()
   }, [])
 
+  // ===== 继续听（最近未听完的音频） =====
+  const [lastPlayedAudio, setLastPlayedAudio] = useState(null)
+
+  const loadLastPlayedAudio = useCallback(async () => {
+    try {
+      const result = await window.electronAPI.dbGetLastPlayedAudio()
+      setLastPlayedAudio(result)
+    } catch (e) {
+      // 静默失败
+    }
+  }, [])
+
+  useEffect(() => {
+    loadLastPlayedAudio()
+  }, [loadLastPlayedAudio])
+
   // ===== 下载完成通知与自动导入 Hook =====
   useDownloadImport({
     showToast,
@@ -368,7 +393,7 @@ export function useAppState() {
     showToast,
   })
 
-  // 监听 audioFiles 加载完成后自动播放（最近播放）
+  // 监听 audioFiles 加载完成后自动播放（最近播放 / 继续听）
   useEffect(() => {
     if (!pendingAutoPlayRef?.current || !audioFiles.length) return
 
@@ -392,6 +417,31 @@ export function useAppState() {
       handleSelectAudio(targetAudio)
     }
   }, [audioFiles, handleSelectAudio, pendingAutoPlayRef])
+
+  // 监听 audioFiles 加载完成后继续听
+  useEffect(() => {
+    if (!pendingContinueRef?.current || !audioFiles.length) return
+
+    const pending = pendingContinueRef.current
+    const timeout = Date.now() - pending.startedAt > 10000
+    if (timeout) {
+      pendingContinueRef.current = null
+      return
+    }
+
+    let targetAudio = null
+    if (pending.audioFile) {
+      targetAudio = audioFiles.find(a => a.path === pending.audioFile || a.name === pending.audioFile)
+    }
+    if (!targetAudio && audioFiles.length > 0) {
+      targetAudio = audioFiles[0]
+    }
+
+    if (targetAudio) {
+      pendingContinueRef.current = null
+      handleSelectAudio(targetAudio)
+    }
+  }, [audioFiles, handleSelectAudio, pendingContinueRef])
 
   const handlePlayerCoverClickWrapped = useCallback(() => {
     handlePlayerCoverClick({
@@ -655,6 +705,9 @@ export function useAppState() {
     handleOpenSubtitleSettings,
     handleSelectWork,
     handleRecentPlayAutoPlay,
+    handleContinueListen,
+    lastPlayedAudio,
+    loadLastPlayedAudio,
 
     // 右侧面板拖拽
     rightPanelWidth,

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import './RecentPlaysView.css'
 import StateView from './StateView'
 
-// 骨架屏条目组件
 const SkeletonItem = memo(() => {
   return (
     <div className="rp-item skeleton-item">
@@ -29,11 +28,12 @@ const SkeletonItem = memo(() => {
 })
 SkeletonItem.displayName = 'SkeletonItem'
 
-export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onToast, onAutoPlay }) {
+export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onToast, onAutoPlay, onContinueListen }) {
   const [recentList, setRecentList] = useState([])
   const [loading, setLoading] = useState(true)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [filterType, setFilterType] = useState('all')
 
   const loadRecent = useCallback(async () => {
     try {
@@ -63,6 +63,17 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
       }
     })
   }, [recentList, works])
+
+  const filteredList = useMemo(() => {
+    if (filterType === 'unfinished') {
+      return enrichedList.filter(item => item.isUnfinished)
+    }
+    return enrichedList
+  }, [enrichedList, filterType])
+
+  const unfinishedCount = useMemo(() => {
+    return enrichedList.filter(item => item.isUnfinished).length
+  }, [enrichedList])
 
   const formatDuration = (seconds) => {
     if (!seconds) return '--:--'
@@ -97,6 +108,23 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
       onToast?.('该作品不在本地库中', 'info')
     }
   }, [onSelectWork, onToast])
+
+  const handleContinueListen = useCallback((item, e) => {
+    e?.stopPropagation()
+    if (!item.work) {
+      onToast?.('该作品不在本地库中', 'info')
+      return
+    }
+    onContinueListen?.(item)
+  }, [onContinueListen, onToast])
+
+  const handlePlay = useCallback((item, e) => {
+    e.stopPropagation()
+    if (item.work) {
+      onSelectWork?.(item.work)
+      onAutoPlay?.(item)
+    }
+  }, [onSelectWork, onAutoPlay])
 
   const handleDeleteItem = useCallback(async (item, e) => {
     e.stopPropagation()
@@ -136,6 +164,21 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
           <p className="rp-subtitle">共 {recentList.length} 条记录</p>
         </div>
         <div className="rp-actions">
+          <div className="rp-filter-tabs">
+            <button
+              className={`rp-filter-tab ${filterType === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterType('all')}
+            >
+              全部
+            </button>
+            <button
+              className={`rp-filter-tab ${filterType === 'unfinished' ? 'active' : ''}`}
+              onClick={() => setFilterType('unfinished')}
+            >
+              未听完
+              {unfinishedCount > 0 && <span className="rp-filter-badge">{unfinishedCount}</span>}
+            </button>
+          </div>
           {recentList.length > 0 && (
             <button
               className="rp-clear-btn"
@@ -158,14 +201,19 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
               <SkeletonItem key={i} />
             ))}
           </div>
-        ) : recentList.length === 0 ? (
-          <StateView type="empty" title="还没有播放记录" description="播放一些作品后，它们会出现在这里" />
+        ) : filteredList.length === 0 ? (
+          <StateView 
+            type="empty" 
+            title={filterType === 'unfinished' ? '没有未听完的作品' : '还没有播放记录'} 
+            description={filterType === 'unfinished' ? '听完的作品会从这里消失' : '播放一些作品后，它们会出现在这里'} 
+            iconType={filterType === 'unfinished' ? 'clock' : 'music'}
+          />
         ) : (
           <div className="rp-list">
-            {enrichedList.map((item, index) => (
+            {filteredList.map((item, index) => (
               <div
-                key={`${item.workId}_${item.timestamp}_${index}`}
-                className="rp-item"
+                key={`${item.workId}_${item.lastPlayed}_${index}`}
+                className={`rp-item ${item.isUnfinished ? 'has-unfinished' : ''}`}
                 onClick={() => handleItemClick(item)}
               >
                 <div className="rp-index">{index + 1}</div>
@@ -181,22 +229,40 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
                       </svg>
                     </div>
                   )}
+                  {item.isUnfinished && (
+                    <div className="rp-unfinished-dot" title="未听完">
+                      <div className="rp-unfinished-pulse" />
+                    </div>
+                  )}
                 </div>
                 <div className="rp-info">
-                  <div className="rp-work-title">{item.title}</div>
+                  <div className="rp-work-title">
+                    {item.title}
+                    {item.isUnfinished && (
+                      <span className="rp-unfinished-tag">未听完</span>
+                    )}
+                  </div>
                   <div className="rp-meta">
                     {item.work?.circle && <span className="rp-circle">{item.work.circle}</span>}
                     {item.audioName && <span className="rp-audio-name">{item.audioName}</span>}
                   </div>
+                  {item.duration > 0 && (
+                    <div className="rp-progress-bar" title={`已听 ${formatDuration(item.currentTime)} / ${formatDuration(item.duration)}`}>
+                      <div 
+                        className="rp-progress-fill" 
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
+                  )}
                   <div className="rp-bottom">
                     <span className="rp-duration">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10"/>
                         <polyline points="12 6 12 12 16 14"/>
                       </svg>
-                      {formatDuration(item.duration)}
+                      {item.duration > 0 ? `${formatDuration(item.currentTime)} / ${formatDuration(item.duration)}` : formatDuration(item.duration)}
                     </span>
-                    <span className="rp-time">{formatDate(item.timestamp)}</span>
+                    <span className="rp-time">{formatDate(item.lastPlayed)}</span>
                   </div>
                 </div>
                 <div className="rp-item-actions">
@@ -211,15 +277,23 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
                   </button>
+                  {item.work && item.isUnfinished && (
+                    <button
+                      className="rp-continue-btn"
+                      onClick={(e) => handleContinueListen(item, e)}
+                      title="继续听"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                      </svg>
+                      继续
+                    </button>
+                  )}
                   {item.work && (
                     <button
                       className="rp-play-btn"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onSelectWork?.(item.work)
-                        onAutoPlay?.(item)
-                      }}
-                      title="播放"
+                      onClick={(e) => handlePlay(item, e)}
+                      title="从头播放"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polygon points="5 3 19 12 5 21 5 3"/>
