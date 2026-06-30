@@ -20,7 +20,8 @@ import { useTranslate } from './hooks/useTranslate'
 import { usePlayQueue } from './hooks/usePlayQueue'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from './hooks/useSleepTimer'
-import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
+import { useSubtitle } from './hooks/useSubtitle'
+import { scanFolder, scanMediaLibrary, extractRJCode, getExtension } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
@@ -72,8 +73,6 @@ export default function App() {
   const [showLyric, setShowLyric] = useState(settings.showLyric)
   const [audioFiles, setAudioFiles] = useState([])
   const [allSubtitleFiles, setAllSubtitleFiles] = useState([])
-  const [subtitleOptions, setSubtitleOptions] = useState([])
-  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(-1)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
@@ -210,6 +209,28 @@ export default function App() {
     sleepTimerRemaining,
     setSleepTimer: handleSetSleepTimer,
   } = useSleepTimer({ playerRef, showToast })
+
+  const {
+    subtitleOptions,
+    setSubtitleOptions,
+    selectedSubtitleIndex,
+    setSelectedSubtitleIndex,
+    detectSubtitleLanguagesAsync,
+    findMatchedSubtitles,
+    loadSavedSubtitle,
+    selectSubtitleByPriority,
+    handleSelectSubtitle,
+    handleAddSubtitleFile,
+    handleAutoTranslate,
+  } = useSubtitle({
+    selectedWork,
+    currentAudio,
+    allSubtitleFiles,
+    settings,
+    translateCacheRef,
+    setTranslateVersion,
+    showToast,
+  })
 
   const currentCueIndex = useMemo(() => {
     return findCurrentCue(currentCues, currentTime)
@@ -683,33 +704,6 @@ export default function App() {
     }
   }, [selectedWork])
 
-  const detectSubtitleLanguagesAsync = useCallback(async (subOptions) => {
-    if (!subOptions || subOptions.length === 0) return
-    
-    for (let i = 0; i < subOptions.length; i++) {
-      const sub = subOptions[i]
-      if (!sub || !sub.file || !sub.file.path) continue
-      
-      try {
-        const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
-        if (!content) continue
-        
-        const detectedLang = detectLanguageFromContent(content)
-        if (detectedLang !== 'unknown' && sub.language !== detectedLang) {
-          setSubtitleOptions((prev) => {
-            const newOptions = [...prev]
-            if (newOptions[i] && newOptions[i].file.path === sub.file.path) {
-              newOptions[i] = { ...newOptions[i], language: detectedLang }
-            }
-            return newOptions
-          })
-        }
-      } catch (e) {
-        console.warn('Failed to detect language for subtitle:', sub.file?.name, e)
-      }
-    }
-  }, [])
-
   const handleSelectAudio = useCallback(
     async (audio) => {
       if (!selectedWork) return
@@ -718,66 +712,29 @@ export default function App() {
       setCurrentAudio(audio)
       setCurrentCues([])
 
-      let subtitleOptions = []
+      // 使用 useSubtitle 提供的辅助函数查找匹配的字幕
+      let foundSubtitleOptions = []
       
       if (!audio.isOnline) {
-        subtitleOptions = findAllSubtitlesForAudio(audio.name, allSubtitleFiles, audio.path)
-        detectSubtitleLanguagesAsync(subtitleOptions)
+        foundSubtitleOptions = findMatchedSubtitles(audio.name, audio.path)
+        detectSubtitleLanguagesAsync(foundSubtitleOptions)
       }
       
-      setSubtitleOptions(subtitleOptions)
+      setSubtitleOptions(foundSubtitleOptions)
 
-      let savedSubtitleIndex = -1
-
-      try {
-        const savedSubtitle = await window.electronAPI.dbGetSubtitle(selectedWork.id, audio.path)
-        if (savedSubtitle && savedSubtitle.filePath) {
-          const existingIndex = subtitleOptions.findIndex((s) => s.file.path === savedSubtitle.filePath)
-          if (existingIndex >= 0) {
-            savedSubtitleIndex = existingIndex
-          } else if (savedSubtitle.isManual) {
-            const manualSub = {
-              file: {
-                name: savedSubtitle.fileName,
-                path: savedSubtitle.filePath,
-                isDirectory: false,
-              },
-              format: savedSubtitle.format,
-              language: savedSubtitle.language || 'unknown',
-              isTranslated: savedSubtitle.isTranslated || false,
-              matchScore: 100,
-              displayName: savedSubtitle.displayName || savedSubtitle.fileName,
-              isManual: true,
-            }
-            subtitleOptions.unshift(manualSub)
-            savedSubtitleIndex = 0
-            setSubtitleOptions([...subtitleOptions])
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load saved subtitle:', e)
+      // 加载保存的字幕选择
+      const { savedIndex, updatedOptions } = await loadSavedSubtitle(foundSubtitleOptions)
+      if (updatedOptions !== foundSubtitleOptions) {
+        setSubtitleOptions(updatedOptions)
       }
 
-      // 如果没有保存的字幕选择，且设置了语言优先级，则按优先级选择
-      if (savedSubtitleIndex < 0 && subtitleOptions.length > 0) {
-        const langPriority = settings.subtitleLangPriority || 'auto'
-        if (langPriority !== 'auto') {
-          const priorityIndex = subtitleOptions.findIndex((s) => s.language === langPriority)
-          if (priorityIndex >= 0) {
-            savedSubtitleIndex = priorityIndex
-          } else {
-            savedSubtitleIndex = 0
-          }
-        } else {
-          savedSubtitleIndex = 0
-        }
-      }
+      // 根据语言优先级选择字幕
+      const selectedIndex = selectSubtitleByPriority(updatedOptions, savedIndex)
+      setSelectedSubtitleIndex(selectedIndex)
 
-      setSelectedSubtitleIndex(savedSubtitleIndex)
-
-      if (savedSubtitleIndex >= 0 && subtitleOptions[savedSubtitleIndex]) {
+      if (selectedIndex >= 0 && updatedOptions[selectedIndex]) {
         try {
-          const sub = subtitleOptions[savedSubtitleIndex]
+          const sub = updatedOptions[selectedIndex]
           const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
           if (content) {
             const ext = getExtension(sub.file.name)
@@ -879,7 +836,7 @@ export default function App() {
         }
       }
     },
-    [selectedWork, allSubtitleFiles, settings.subtitleLangPriority, settings.autoTranslateSubtitle],
+    [selectedWork, settings.subtitleLangPriority, settings.autoTranslateSubtitle, findMatchedSubtitles, detectSubtitleLanguagesAsync, loadSavedSubtitle, selectSubtitleByPriority],
   )
 
   handleSelectAudioRef.current = handleSelectAudio
@@ -1030,137 +987,6 @@ export default function App() {
     handleNextAudio,
   })
 
-  const handleSelectSubtitle = useCallback(async (index) => {
-    setSelectedSubtitleIndex(index)
-    if (index < 0 || !subtitleOptions[index]) {
-      setCurrentCues([])
-      if (selectedWork && currentAudio) {
-        try {
-          await window.electronAPI.dbSaveSubtitle(selectedWork.id, currentAudio.path, null)
-        } catch (e) {
-          console.error('Failed to clear subtitle:', e)
-        }
-      }
-      return
-    }
-    try {
-      const sub = subtitleOptions[index]
-      const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
-      if (content) {
-        const ext = getExtension(sub.file.name)
-        const cues = parseSubtitle(content, ext)
-        setCurrentCues(cues)
-        
-        const contentLanguage = detectLanguageFromContent(content)
-        if (contentLanguage !== 'unknown' && sub.language !== contentLanguage) {
-          const updatedSub = { ...sub, language: contentLanguage }
-          const newOptions = [...subtitleOptions]
-          newOptions[index] = updatedSub
-          setSubtitleOptions(newOptions)
-          
-          if (selectedWork && currentAudio) {
-            try {
-              await window.electronAPI.dbSaveSubtitle(selectedWork.id, currentAudio.path, {
-                filePath: updatedSub.file.path,
-                fileName: updatedSub.file.name,
-                format: updatedSub.format,
-                language: updatedSub.language,
-                isTranslated: updatedSub.isTranslated,
-                displayName: updatedSub.displayName,
-                isManual: updatedSub.isManual || false,
-              })
-            } catch (e) {
-              console.error('Failed to save updated subtitle language:', e)
-            }
-          }
-          return
-        }
-      }
-      if (selectedWork && currentAudio) {
-        try {
-          await window.electronAPI.dbSaveSubtitle(selectedWork.id, currentAudio.path, {
-            filePath: sub.file.path,
-            fileName: sub.file.name,
-            format: sub.format,
-            language: sub.language,
-            isTranslated: sub.isTranslated,
-            displayName: sub.displayName,
-            isManual: sub.isManual || false,
-          })
-        } catch (e) {
-          console.error('Failed to save subtitle:', e)
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load subtitle:', e)
-    }
-  }, [subtitleOptions, selectedWork, currentAudio])
-
-  const handleAddSubtitleFile = useCallback(async () => {
-    try {
-      const files = await window.electronAPI.openSubtitleFile()
-      if (!files || files.length === 0) return
-
-      const newOptions = [...subtitleOptions]
-      let newIndex = -1
-
-      for (const file of files) {
-        const ext = getExtension(file.name).slice(1).toLowerCase()
-        const base = file.name.replace(/\.[^/.]+$/, '')
-        
-        let detectedLang = 'unknown'
-        try {
-          const content = await window.electronAPI.readFile(file.path, 'utf-8')
-          if (content) {
-            detectedLang = detectLanguageFromContent(content)
-          }
-        } catch (e) {
-          console.warn('Failed to detect language for subtitle:', file.name, e)
-        }
-
-        const newSub = {
-          file,
-          format: ext,
-          language: detectedLang,
-          isTranslated: false,
-          matchScore: 100,
-          displayName: base,
-          isManual: true,
-        }
-        newOptions.push(newSub)
-        newIndex = newOptions.length - 1
-      }
-
-      setSubtitleOptions(newOptions)
-
-      if (newIndex >= 0 && currentAudio && selectedWork) {
-        const sub = newOptions[newIndex]
-        try {
-          const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
-          if (content) {
-            const ext = getExtension(sub.file.name)
-            const cues = parseSubtitle(content, ext)
-            setCurrentCues(cues)
-            setSelectedSubtitleIndex(newIndex)
-          }
-          await window.electronAPI.dbSaveSubtitle(selectedWork.id, currentAudio.path, {
-            filePath: sub.file.path,
-            fileName: sub.file.name,
-            format: sub.format,
-            language: sub.language,
-            isTranslated: sub.isTranslated,
-            displayName: sub.displayName,
-            isManual: true,
-          })
-        } catch (e) {
-          console.error('Failed to load subtitle:', e)
-        }
-      }
-    } catch (e) {
-      console.error('Failed to add subtitle file:', e)
-    }
-  }, [subtitleOptions, currentAudio, selectedWork])
-
   const [settingsDefaultTab, setSettingsDefaultTab] = useState('basic')
 
   const handleOpenSettings = useCallback(() => {
@@ -1236,7 +1062,7 @@ export default function App() {
       setAllSubtitleFiles(r.subtitleFiles)
 
       if (currentAudio) {
-        const newSubtitleOptions = findAllSubtitlesForAudio(currentAudio.name, r.subtitleFiles, currentAudio.path)
+        const newSubtitleOptions = findMatchedSubtitles(currentAudio.name, currentAudio.path)
         const currentSubPath = subtitleOptions[selectedSubtitleIndex]?.file?.path
         let newSelectedIndex = newSubtitleOptions.length > 0 ? 0 : -1
 
@@ -1267,7 +1093,7 @@ export default function App() {
       console.error('Failed to refresh subtitles:', e)
       showToast('刷新字幕失败：' + e.message, 'error')
     }
-  }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex])
+  }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex, findMatchedSubtitles, detectSubtitleLanguagesAsync])
 
   const handleFilterChange = (type, value) => {
     if (type === 'cv') {
