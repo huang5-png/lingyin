@@ -152,6 +152,8 @@
 | `components/LeftNavBar.jsx` | 左侧导航栏（64px 宽，卡片样式，包含我的库/发现/最近播放/使用报告/下载/播放列表/设置入口） |
 | `components/Toast.jsx` | Toast 通知组件（success/error/info/warning 四种类型，自动消失，带动画） |
 | `components/AddToPlaylistModal.jsx` | 加入播放列表弹窗（选择已有列表或新建列表并加入） |
+| `components/LibraryLayout.jsx` | 我的库布局组件（左侧 Sidebar + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
+| `components/DiscoverLayout.jsx` | 发现布局组件（左侧 DiscoverView + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
