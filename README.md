@@ -4,6 +4,24 @@
 
 ## 📋 更新日志
 
+### v1.16.1 — 架构持续优化与布局组件抽取
+**发布日期：2026-06-30**
+
+本次更新继续推进 App.jsx 模块化重构，将 library 和 discover 视图的复杂布局抽取为独立组件，进一步降低 App.jsx 的复杂度。
+
+**🔧 架构重构**
+- 新增 `LibraryLayout` 组件：封装我的库视图的完整布局（左侧 Sidebar + 右侧详情区 + 可拖拽分割线），使用 `React.memo` 优化
+- 新增 `DiscoverLayout` 组件：封装发现视图的完整布局（左侧 DiscoverView + 右侧详情区 + 可拖拽分割线），使用 `React.memo` 优化
+- `App.jsx` 代码量从 830 行减少到 762 行，净减少 68 行，布局逻辑更清晰
+- 清理不再需要的组件 import（Sidebar、WorkDetail、RightTabBar、DiscoverView）
+
+**⚡ 性能优化**
+- `LeftNavBar` 组件添加 `React.memo` 包装，减少不必要的重渲染
+- 布局组件均使用 `React.memo` 优化，提升整体渲染性能
+
+**📝 规范文档**
+- 项目规则新增 LibraryLayout 和 DiscoverLayout 组件说明
+
 ### v1.16.0 — 骨架屏加载模式统一
 **发布日期：2026-06-30**
 
