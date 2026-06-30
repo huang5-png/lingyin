@@ -4,6 +4,26 @@
 
 ## 📋 更新日志
 
+### v1.16.0 — 骨架屏加载模式统一
+**发布日期：2026-06-30**
+
+本次更新统一了骨架屏加载模式，提升多视图加载体验的一致性与流畅性。
+
+**✨ 新功能**
+- 统一骨架屏加载动画规范，DiscoverView / RecentPlaysView / PlaylistView 均使用骨架屏替代简单 spinner
+- 新增共享骨架样式（`skeleton-shimmer` 动画、`.skeleton-line`、`.skeleton-cover`），定义于 StateView.css
+- RecentPlaysView 新增骨架屏条目组件，模拟封面、标题、元信息、时长等元素
+- PlaylistView 新增骨架屏播放列表条目和曲目行组件
+
+**🔧 技术实现**
+- 骨架屏 CSS 使用 shimmer 动画（从左到右渐变扫光），1.5s 循环
+- 骨架组件使用 `memo` 包装，避免不必要的重渲染
+- 组件特定骨架样式在各自 CSS 文件中定义，高 DPI 适配
+- 骨架容器添加 `pointer-events: none` 和 `animation: none`，禁用 hover 效果
+
+**📝 规范文档**
+- 项目规则新增「骨架屏加载模式」章节，包含共享样式、实现模式、CSS 规范说明
+
 ### v1.15.0 — 文件夹分组功能全新上线
 **发布日期：2026-06-30**
 
