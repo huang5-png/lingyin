@@ -266,6 +266,87 @@
   color: #5a7ab0;
 }
 
+.result-badge.track-badge {
+  background: rgba(80, 160, 120, 0.15);
+  color: #3a8a5a;
+}
+
+.result-badge.online-badge {
+  background: rgba(201, 100, 66, 0.15);
+  color: var(--accent-primary, #c96442);
+}
+
+.result-icon.online-icon {
+  background: linear-gradient(135deg, rgba(201, 100, 66, 0.15), rgba(176, 86, 47, 0.1));
+}
+
+.global-search-result-item.online-result {
+  background: linear-gradient(135deg, rgba(201, 100, 66, 0.03), rgba(176, 86, 47, 0.02));
+}
+
+.search-loading-spinner {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent-primary, #c96442);
+  animation: search-spin 1s linear infinite;
+}
+
+.search-loading-spinner svg {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes search-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.search-loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  font-size: 13px;
+  color: var(--text-secondary, #7a7570);
+  font-family: var(--font-heading, 'Poppins', sans-serif);
+}
+
+.loading-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--bg-secondary, rgba(200, 190, 180, 0.3));
+  border-top-color: var(--accent-primary, #c96442);
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.search-online-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin: 4px 8px;
+  background: rgba(220, 80, 60, 0.08);
+  border-radius: var(--radius-md, 10px);
+  font-size: 13px;
+  color: #c05040;
+}
+
+.search-online-error svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .result-sub-text {
   font-size: 12px;
   color: var(--text-tertiary, #a09890);
@@ -393,6 +474,33 @@
 
 [data-theme="dark"] .results-count {
   background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .result-badge.track-badge {
+  background: rgba(80, 180, 120, 0.2);
+  color: #5ab08a;
+}
+
+[data-theme="dark"] .result-badge.online-badge {
+  background: rgba(217, 119, 87, 0.2);
+  color: var(--accent-primary, #d97757);
+}
+
+[data-theme="dark"] .result-icon.online-icon {
+  background: rgba(217, 119, 87, 0.15);
+}
+
+[data-theme="dark"] .global-search-result-item.online-result {
+  background: linear-gradient(135deg, rgba(217, 119, 87, 0.05), rgba(176, 86, 47, 0.03));
+}
+
+[data-theme="dark"] .search-online-error {
+  background: rgba(220, 80, 60, 0.15);
+  color: #e07060;
+}
+
+[data-theme="dark"] .search-loading-more {
+  color: var(--text-secondary, #a09890);
 }
 
 /* 高 DPI 适配 */

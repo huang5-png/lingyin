@@ -198,6 +198,7 @@ export default function App() {
     handleGlobalSearchSelectWork,
     handleGlobalSearchPlayAudio,
     handleGlobalSearchSelectPlaylist,
+    handleGlobalSearchSelectOnlineWork,
   } = useAppState()
 
   const [isDragOver, setIsDragOver] = useState(false)
@@ -619,6 +620,7 @@ export default function App() {
         onSelectWork={handleGlobalSearchSelectWork}
         onPlayAudio={handleGlobalSearchPlayAudio}
         onSelectPlaylist={handleGlobalSearchSelectPlaylist}
+        onSelectOnlineWork={handleGlobalSearchSelectOnlineWork}
       />
 
       {addToPlaylistTarget && (

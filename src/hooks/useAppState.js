@@ -1005,6 +1005,14 @@ export function useAppState() {
     setShowGlobalSearch(false)
   }, [setCurrentView, setShowGlobalSearch])
 
+  const handleGlobalSearchSelectOnlineWork = useCallback((work) => {
+    setCurrentView('discover')
+    setShowGlobalSearch(false)
+    if (handleSelectOnlineWork && work?.id) {
+      handleSelectOnlineWork(work)
+    }
+  }, [handleSelectOnlineWork, setCurrentView, setShowGlobalSearch])
+
   return {
     // Refs
     playerRef,
@@ -1206,5 +1214,6 @@ export function useAppState() {
     handleGlobalSearchSelectWork,
     handleGlobalSearchPlayAudio,
     handleGlobalSearchSelectPlaylist,
+    handleGlobalSearchSelectOnlineWork,
   }
 }

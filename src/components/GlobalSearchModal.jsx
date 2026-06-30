@@ -8,10 +8,13 @@ const RESULT_TYPE = {
   PLAYING: 'playing',
   PLAYLIST: 'playlist',
   HISTORY: 'history',
+  TRACK: 'track',
+  ONLINE_WORK: 'onlineWork',
 }
 
 const SEARCH_HISTORY_KEY = 'lingyin_search_history'
 const MAX_HISTORY = 10
+const DEBOUNCE_DELAY = 300
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -34,19 +37,45 @@ export default function GlobalSearchModal({
   isOpen,
   onClose,
   works,
+  audioFilesMap,
   currentAudio,
   currentWork,
   favoriteIds,
   onSelectWork,
   onPlayAudio,
   onSelectPlaylist,
+  onSelectOnlineWork,
 }) {
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [playlists, setPlaylists] = useState([])
   const [searchHistory, setSearchHistory] = useState([])
+  const [onlineWorks, setOnlineWorks] = useState([])
+  const [isOnlineLoading, setIsOnlineLoading] = useState(false)
+  const [onlineError, setOnlineError] = useState(null)
   const inputRef = useRef(null)
   const listRef = useRef(null)
+  const debounceTimerRef = useRef(null)
+  const onlineAbortRef = useRef(null)
+
+  useEffect(() => {
+    if (query.trim() === debouncedQuery.trim()) return
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, DEBOUNCE_DELAY)
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [query, debouncedQuery])
 
   const playingResult = useMemo(() => {
     if (!currentAudio || !currentWork) return null
@@ -65,8 +94,8 @@ export default function GlobalSearchModal({
   }, [works, favoriteIds])
 
   const localResults = useMemo(() => {
-    if (!query.trim()) return []
-    const q = query.toLowerCase().trim()
+    if (!debouncedQuery.trim()) return []
+    const q = debouncedQuery.toLowerCase().trim()
     const results = []
 
     for (const work of works) {
@@ -94,11 +123,39 @@ export default function GlobalSearchModal({
     }
 
     return results.slice(0, 10)
-  }, [works, query])
+  }, [works, debouncedQuery])
+
+  const trackResults = useMemo(() => {
+    if (!debouncedQuery.trim() || !audioFilesMap) return []
+    const q = debouncedQuery.toLowerCase().trim()
+    const results = []
+
+    for (const [workId, audios] of Object.entries(audioFilesMap)) {
+      const work = works.find(w => w.id === workId)
+      if (!work || !audios) continue
+
+      for (const audio of audios) {
+        const audioName = (audio.name || '').toLowerCase()
+        if (audioName.includes(q)) {
+          results.push({
+            type: RESULT_TYPE.TRACK,
+            audio,
+            work,
+            displayTitle: audio.name,
+            displaySub: work.title || work.folderName || '',
+          })
+          if (results.length >= 8) break
+        }
+      }
+      if (results.length >= 8) break
+    }
+
+    return results
+  }, [audioFilesMap, works, debouncedQuery])
 
   const favoriteResults = useMemo(() => {
-    if (!query.trim()) return []
-    const q = query.toLowerCase().trim()
+    if (!debouncedQuery.trim()) return []
+    const q = debouncedQuery.toLowerCase().trim()
     const results = []
 
     for (const work of favoriteWorks) {
@@ -124,11 +181,11 @@ export default function GlobalSearchModal({
     }
 
     return results.slice(0, 5)
-  }, [favoriteWorks, query])
+  }, [favoriteWorks, debouncedQuery])
 
   const playlistResults = useMemo(() => {
-    if (!query.trim()) return []
-    const q = query.toLowerCase().trim()
+    if (!debouncedQuery.trim()) return []
+    const q = debouncedQuery.toLowerCase().trim()
     const results = []
 
     for (const pl of playlists) {
@@ -144,11 +201,11 @@ export default function GlobalSearchModal({
     }
 
     return results.slice(0, 5)
-  }, [playlists, query])
+  }, [playlists, debouncedQuery])
 
   const historyResults = useMemo(() => {
-    if (!query.trim()) return []
-    const q = query.toLowerCase().trim()
+    if (!debouncedQuery.trim()) return []
+    const q = debouncedQuery.toLowerCase().trim()
     return searchHistory
       .filter(h => h.toLowerCase().includes(q))
       .slice(0, 5)
@@ -158,16 +215,29 @@ export default function GlobalSearchModal({
         displayTitle: h,
         displaySub: '搜索历史',
       }))
-  }, [searchHistory, query])
+  }, [searchHistory, debouncedQuery])
+
+  const onlineResults = useMemo(() => {
+    if (!debouncedQuery.trim() || onlineWorks.length === 0) return []
+    return onlineWorks.map(work => ({
+      type: RESULT_TYPE.ONLINE_WORK,
+      work,
+      displayTitle: work.title,
+      displaySub: work.name || '',
+      cover: work.mainCoverUrl,
+    }))
+  }, [onlineWorks, debouncedQuery])
 
   const allResults = useMemo(() => {
     return [
       ...historyResults,
       ...localResults,
+      ...trackResults,
       ...favoriteResults,
       ...playlistResults,
+      ...onlineResults,
     ]
-  }, [historyResults, localResults, favoriteResults, playlistResults])
+  }, [historyResults, localResults, trackResults, favoriteResults, playlistResults, onlineResults])
 
   const groupedResults = useMemo(() => {
     const groups = []
@@ -175,7 +245,10 @@ export default function GlobalSearchModal({
       groups.push({ title: '搜索历史', items: historyResults })
     }
     if (localResults.length > 0) {
-      groups.push({ title: '作品', items: localResults })
+      groups.push({ title: '本地作品', items: localResults })
+    }
+    if (trackResults.length > 0) {
+      groups.push({ title: '曲目', items: trackResults })
     }
     if (favoriteResults.length > 0) {
       groups.push({ title: '收藏', items: favoriteResults })
@@ -183,22 +256,72 @@ export default function GlobalSearchModal({
     if (playlistResults.length > 0) {
       groups.push({ title: '播放列表', items: playlistResults })
     }
+    if (onlineResults.length > 0) {
+      groups.push({ title: '在线作品', items: onlineResults })
+    }
     return groups
-  }, [historyResults, localResults, favoriteResults, playlistResults])
+  }, [historyResults, localResults, trackResults, favoriteResults, playlistResults, onlineResults])
 
   useEffect(() => {
     setSelectedIndex(0)
-  }, [query])
+  }, [debouncedQuery])
 
   useEffect(() => {
     if (isOpen) {
       setQuery('')
+      setDebouncedQuery('')
       setSelectedIndex(0)
+      setOnlineWorks([])
+      setOnlineError(null)
+      setIsOnlineLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
       loadPlaylists()
       loadSearchHistory()
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
+      setOnlineWorks([])
+      setIsOnlineLoading(false)
+      setOnlineError(null)
+      return
+    }
+
+    let cancelled = false
+    setIsOnlineLoading(true)
+    setOnlineError(null)
+
+    const fetchOnline = async () => {
+      try {
+        const result = await window.electronAPI.asmrOneGetWorks({
+          keyword: debouncedQuery,
+          page: 1,
+          pageSize: 8,
+          order: 'create_date',
+          sort: 'desc',
+        })
+        if (!cancelled && result?.works) {
+          setOnlineWorks(result.works)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setOnlineError(e.message || '搜索失败')
+          setOnlineWorks([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsOnlineLoading(false)
+        }
+      }
+    }
+
+    fetchOnline()
+
+    return () => {
+      cancelled = true
+    }
+  }, [debouncedQuery])
 
   const loadPlaylists = useCallback(async () => {
     try {
@@ -280,6 +403,7 @@ export default function GlobalSearchModal({
         e.preventDefault()
         if (query.trim()) {
           setQuery('')
+          setDebouncedQuery('')
         } else {
           onClose()
         }
@@ -294,8 +418,20 @@ export default function GlobalSearchModal({
 
   const handleSelect = useCallback((result) => {
     if (result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE) {
-      addToHistory(query)
+      addToHistory(debouncedQuery)
       onSelectWork(result.work)
+      onClose()
+    } else if (result.type === RESULT_TYPE.ONLINE_WORK) {
+      addToHistory(debouncedQuery)
+      if (onSelectOnlineWork) {
+        onSelectOnlineWork(result.work)
+      }
+      onClose()
+    } else if (result.type === RESULT_TYPE.TRACK) {
+      addToHistory(debouncedQuery)
+      if (onPlayAudio && result.audio && result.work) {
+        onPlayAudio(result.audio, result.work)
+      }
       onClose()
     } else if (result.type === RESULT_TYPE.PLAYING) {
       if (onPlayAudio) {
@@ -309,9 +445,10 @@ export default function GlobalSearchModal({
       onClose()
     } else if (result.type === RESULT_TYPE.HISTORY) {
       setQuery(result.query)
+      setDebouncedQuery(result.query)
       setTimeout(() => inputRef.current?.focus(), 0)
     }
-  }, [query, addToHistory, onSelectWork, onPlayAudio, onSelectPlaylist, onClose])
+  }, [debouncedQuery, addToHistory, onSelectWork, onPlayAudio, onSelectPlaylist, onSelectOnlineWork, onClose])
 
   const handleOverlayClick = useCallback((e) => {
     if (e.target === e.currentTarget) {
@@ -321,14 +458,177 @@ export default function GlobalSearchModal({
 
   if (!isOpen) return null
 
-  const showEmptyState = query.trim() && allResults.length === 0
-  const showHistoryEmpty = !query.trim() && searchHistory.length === 0 && !playingResult
-  const showHistory = !query.trim() && (searchHistory.length > 0 || playingResult)
+  const showEmptyState = debouncedQuery.trim() && allResults.length === 0 && !isOnlineLoading
+  const showHistoryEmpty = !debouncedQuery.trim() && searchHistory.length === 0 && !playingResult
+  const showHistory = !debouncedQuery.trim() && (searchHistory.length > 0 || playingResult)
+  const showLoadingMore = isOnlineLoading && debouncedQuery.trim()
 
   let flatIndex = -1
   const getFlatIndex = () => {
     flatIndex++
     return flatIndex
+  }
+
+  const getResultIcon = (type) => {
+    switch (type) {
+      case RESULT_TYPE.WORK:
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+        )
+      case RESULT_TYPE.FAVORITE:
+        return (
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        )
+      case RESULT_TYPE.PLAYLIST:
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        )
+      case RESULT_TYPE.HISTORY:
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        )
+      case RESULT_TYPE.TRACK:
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+        )
+      case RESULT_TYPE.ONLINE_WORK:
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        )
+      default:
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+          </svg>
+        )
+    }
+  }
+
+  const renderResultItem = (result, idx) => {
+    const isTrack = result.type === RESULT_TYPE.TRACK
+    const isOnline = result.type === RESULT_TYPE.ONLINE_WORK
+
+    return (
+      <div
+        key={
+          result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE ? `work-${result.work.id}` :
+          result.type === RESULT_TYPE.ONLINE_WORK ? `online-${result.work.id}` :
+          result.type === RESULT_TYPE.PLAYLIST ? `playlist-${result.playlist.id}` :
+          result.type === RESULT_TYPE.HISTORY ? `history-${result.query}` :
+          result.type === RESULT_TYPE.TRACK ? `track-${result.work?.id}-${result.audio?.path}` :
+          `audio-${result.work?.id}-${result.audio?.path}`
+        }
+        data-index={idx}
+        className={`global-search-result-item ${idx === selectedIndex ? 'selected' : ''} ${result.type === RESULT_TYPE.PLAYING ? 'playing' : ''} ${isOnline ? 'online-result' : ''}`}
+        onClick={() => handleSelect(result)}
+        onMouseEnter={() => setSelectedIndex(idx)}
+      >
+        <div className={`result-icon ${result.type === RESULT_TYPE.PLAYING ? 'playing-icon' : ''} ${isOnline ? 'online-icon' : ''}`}>
+          {getResultIcon(result.type)}
+        </div>
+        <div className="result-info">
+          <div className="result-title">
+            {result.type === RESULT_TYPE.HISTORY ? (
+              highlightText(result.query, debouncedQuery)
+            ) : result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE || result.type === RESULT_TYPE.ONLINE_WORK ? (
+              highlightText(result.displayTitle, debouncedQuery)
+            ) : result.type === RESULT_TYPE.PLAYLIST ? (
+              highlightText(result.displayTitle, debouncedQuery)
+            ) : result.type === RESULT_TYPE.TRACK ? (
+              highlightText(result.displayTitle, debouncedQuery)
+            ) : (
+              result.audio?.name
+            )}
+          </div>
+          <div className="result-sub">
+            {(result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE) && (
+              <>
+                <span className="result-badge">
+                  {result.matchField === 'title' ? '作品' :
+                   result.matchField === 'rjCode' ? 'RJ号' :
+                   result.matchField === 'cv' ? 'CV' :
+                   result.matchField === 'circle' ? '社团' : '标签'}
+                </span>
+                {result.displaySub && <span className="result-sub-text">{result.displaySub}</span>}
+              </>
+            )}
+            {result.type === RESULT_TYPE.ONLINE_WORK && (
+              <>
+                <span className="result-badge online-badge">在线</span>
+                {result.displaySub && <span className="result-sub-text">{result.displaySub}</span>}
+              </>
+            )}
+            {result.type === RESULT_TYPE.PLAYLIST && (
+              <>
+                <span className="result-badge">播放列表</span>
+                <span className="result-sub-text">{result.displaySub}</span>
+              </>
+            )}
+            {result.type === RESULT_TYPE.HISTORY && (
+              <>
+                <span className="result-badge history-badge">历史</span>
+                <span className="result-sub-text">点击重新搜索</span>
+              </>
+            )}
+            {result.type === RESULT_TYPE.TRACK && (
+              <>
+                <span className="result-badge track-badge">曲目</span>
+                <span className="result-sub-text">{result.displaySub}</span>
+              </>
+            )}
+            {result.type === RESULT_TYPE.PLAYING && (
+              <>
+                <span className="result-badge playing-badge">播放中</span>
+                <span className="result-sub-text">{result.displaySub}</span>
+              </>
+            )}
+          </div>
+        </div>
+        {result.type === RESULT_TYPE.HISTORY && (
+          <button
+            className="history-remove-btn"
+            onClick={(e) => removeHistoryItem(result.query, e)}
+            title="删除历史记录"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
+        {(result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE || result.type === RESULT_TYPE.ONLINE_WORK) && (result.work?.cover || result.cover) && (
+          <img
+            src={result.cover || result.work.cover}
+            alt=""
+            className="result-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+      </div>
+    )
   }
 
   return (
@@ -343,14 +643,21 @@ export default function GlobalSearchModal({
             ref={inputRef}
             type="text"
             className="global-search-input"
-            placeholder="搜索作品、RJ号、CV、社团、播放列表..."
+            placeholder="搜索作品、曲目、RJ号、CV、社团、播放列表..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          {query.trim() && (
+          {isOnlineLoading && (
+            <div className="search-loading-spinner" title="搜索中...">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+            </div>
+          )}
+          {query.trim() && !isOnlineLoading && (
             <button
               className="search-clear-btn"
-              onClick={() => setQuery('')}
+              onClick={() => { setQuery(''); setDebouncedQuery('') }}
               title="清除"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -374,7 +681,7 @@ export default function GlobalSearchModal({
           </div>
         )}
 
-        {query.trim() && allResults.length > 0 && (
+        {debouncedQuery.trim() && (allResults.length > 0 || showLoadingMore) && (
           <div className="global-search-results" ref={listRef}>
             {groupedResults.map((group, gi) => (
               <div key={gi} className="search-results-group">
@@ -384,120 +691,26 @@ export default function GlobalSearchModal({
                 </div>
                 {group.items.map((result) => {
                   const idx = getFlatIndex()
-                  return (
-                    <div
-                      key={
-                        result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE ? `work-${result.work.id}` :
-                        result.type === RESULT_TYPE.PLAYLIST ? `playlist-${result.playlist.id}` :
-                        result.type === RESULT_TYPE.HISTORY ? `history-${result.query}` :
-                        `audio-${result.work?.id}-${result.audio?.path}`
-                      }
-                      data-index={idx}
-                      className={`global-search-result-item ${idx === selectedIndex ? 'selected' : ''} ${result.type === RESULT_TYPE.PLAYING ? 'playing' : ''}`}
-                      onClick={() => handleSelect(result)}
-                      onMouseEnter={() => setSelectedIndex(idx)}
-                    >
-                      <div className="result-icon">
-                        {result.type === RESULT_TYPE.WORK ? (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                          </svg>
-                        ) : result.type === RESULT_TYPE.FAVORITE ? (
-                          <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                          </svg>
-                        ) : result.type === RESULT_TYPE.PLAYLIST ? (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="8" y1="6" x2="21" y2="6"/>
-                            <line x1="8" y1="12" x2="21" y2="12"/>
-                            <line x1="8" y1="18" x2="21" y2="18"/>
-                            <line x1="3" y1="6" x2="3.01" y2="6"/>
-                            <line x1="3" y1="12" x2="3.01" y2="12"/>
-                            <line x1="3" y1="18" x2="3.01" y2="18"/>
-                          </svg>
-                        ) : result.type === RESULT_TYPE.HISTORY ? (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                        ) : (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M9 18V5l12-2v13" />
-                            <circle cx="6" cy="18" r="3" />
-                            <circle cx="18" cy="16" r="3" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="result-info">
-                        <div className="result-title">
-                          {result.type === RESULT_TYPE.HISTORY ? (
-                            highlightText(result.query, query)
-                          ) : result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE ? (
-                            highlightText(result.displayTitle, query)
-                          ) : result.type === RESULT_TYPE.PLAYLIST ? (
-                            highlightText(result.displayTitle, query)
-                          ) : (
-                            result.audio?.name
-                          )}
-                        </div>
-                        <div className="result-sub">
-                          {(result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE) && (
-                            <>
-                              <span className="result-badge">
-                                {result.matchField === 'title' ? '作品' :
-                                 result.matchField === 'rjCode' ? 'RJ号' :
-                                 result.matchField === 'cv' ? 'CV' :
-                                 result.matchField === 'circle' ? '社团' : '标签'}
-                              </span>
-                              {result.displaySub && <span className="result-sub-text">{result.displaySub}</span>}
-                            </>
-                          )}
-                          {result.type === RESULT_TYPE.PLAYLIST && (
-                            <>
-                              <span className="result-badge">播放列表</span>
-                              <span className="result-sub-text">{result.displaySub}</span>
-                            </>
-                          )}
-                          {result.type === RESULT_TYPE.HISTORY && (
-                            <>
-                              <span className="result-badge history-badge">历史</span>
-                              <span className="result-sub-text">点击重新搜索</span>
-                            </>
-                          )}
-                          {result.type === RESULT_TYPE.AUDIO && (
-                            <>
-                              <span className="result-badge">曲目</span>
-                              <span className="result-sub-text">{result.work?.title || result.work?.folderName}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {result.type === RESULT_TYPE.HISTORY && (
-                        <button
-                          className="history-remove-btn"
-                          onClick={(e) => removeHistoryItem(result.query, e)}
-                          title="删除历史记录"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      )}
-                      {(result.type === RESULT_TYPE.WORK || result.type === RESULT_TYPE.FAVORITE) && result.work?.cover && (
-                        <img
-                          src={result.work.cover}
-                          alt=""
-                          className="result-cover"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      )}
-                    </div>
-                  )
+                  return renderResultItem(result, idx)
                 })}
               </div>
             ))}
+            {showLoadingMore && (
+              <div className="search-loading-more">
+                <div className="loading-spinner-small"></div>
+                <span>正在搜索在线作品...</span>
+              </div>
+            )}
+            {onlineError && onlineWorks.length === 0 && !isOnlineLoading && (
+              <div className="search-online-error">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>在线搜索失败：{onlineError}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -506,26 +719,7 @@ export default function GlobalSearchModal({
             {playingResult && (
               <div className="search-results-group">
                 <div className="results-section-title">正在播放</div>
-                <div
-                  key="playing"
-                  data-index={0}
-                  className={`global-search-result-item playing ${selectedIndex === 0 ? 'selected' : ''}`}
-                  onClick={() => handleSelect(playingResult)}
-                  onMouseEnter={() => setSelectedIndex(0)}
-                >
-                  <div className="result-icon playing-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
-                    </svg>
-                  </div>
-                  <div className="result-info">
-                    <div className="result-title">{playingResult.displayTitle}</div>
-                    <div className="result-sub">
-                      <span className="result-badge playing-badge">播放中</span>
-                      <span className="result-sub-text">{playingResult.displaySub}</span>
-                    </div>
-                  </div>
-                </div>
+                {renderResultItem(playingResult, 0)}
               </div>
             )}
             {searchHistory.length > 0 && (
@@ -540,42 +734,43 @@ export default function GlobalSearchModal({
                     清除全部
                   </button>
                 </div>
-                {searchHistory.map((h, i) => (
-                  <div
-                    key={`history-${h}-${i}`}
-                    data-index={playingResult ? i + 1 : i}
-                    className={`global-search-result-item history-item ${selectedIndex === (playingResult ? i + 1 : i) ? 'selected' : ''}`}
-                    onClick={() => {
-                      setQuery(h)
-                      setTimeout(() => inputRef.current?.focus(), 0)
-                    }}
-                    onMouseEnter={() => setSelectedIndex(playingResult ? i + 1 : i)}
-                  >
-                    <div className="result-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                    </div>
-                    <div className="result-info">
-                      <div className="result-title">{h}</div>
-                      <div className="result-sub">
-                        <span className="result-badge history-badge">历史</span>
-                        <span className="result-sub-text">点击重新搜索</span>
-                      </div>
-                    </div>
-                    <button
-                      className="history-remove-btn"
-                      onClick={(e) => removeHistoryItem(h, e)}
-                      title="删除历史记录"
+                {searchHistory.map((h, i) => {
+                  const idx = playingResult ? i + 1 : i
+                  return (
+                    <div
+                      key={`history-${h}-${i}`}
+                      data-index={idx}
+                      className={`global-search-result-item history-item ${selectedIndex === idx ? 'selected' : ''}`}
+                      onClick={() => {
+                        setQuery(h)
+                        setDebouncedQuery(h)
+                        setTimeout(() => inputRef.current?.focus(), 0)
+                      }}
+                      onMouseEnter={() => setSelectedIndex(idx)}
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                      <div className="result-icon">
+                        {getResultIcon(RESULT_TYPE.HISTORY)}
+                      </div>
+                      <div className="result-info">
+                        <div className="result-title">{h}</div>
+                        <div className="result-sub">
+                          <span className="result-badge history-badge">历史</span>
+                          <span className="result-sub-text">点击重新搜索</span>
+                        </div>
+                      </div>
+                      <button
+                        className="history-remove-btn"
+                        onClick={(e) => removeHistoryItem(h, e)}
+                        title="删除历史记录"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
