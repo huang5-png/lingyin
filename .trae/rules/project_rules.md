@@ -610,6 +610,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 下载队列在 Electron 主进程管理（`electron/main.js`），不依赖渲染进程
 - 状态通过 IPC `download:getState` + `download:update`（广播）同步到 UI
 - 支持关闭下载弹窗后后台继续下载
+- 支持任务级和文件级重试
+- 支持下载完成自动导入媒体库
 
 #### 任务状态
 - `queued` — 排队中
@@ -617,6 +619,39 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - `completed` — 已完成
 - `failed` — 下载失败
 - `cancelled` — 已取消
+
+#### 任务结构
+```js
+{
+  id,
+  workId,
+  workTitle,
+  workCover,
+  saveDir,          // 保存根目录
+  workFolder,       // 作品文件夹名
+  rjCode,           // RJ 码
+  workCircle,       // 社团
+  workVAs,          // CV 列表
+  workTags,         // 标签列表
+  files: [{
+    fileId,
+    fileName,
+    fileSize,
+    status,         // pending/downloading/done/failed/cancelled
+    progress,       // 0-100
+    speed,          // bytes/s
+    error,
+  }],
+  status,
+  currentIndex,
+  totalSize,
+  downloadedSize,
+  speed,
+  createdAt,
+  startedAt,
+  completedAt,
+}
+```
 
 #### IPC API
 | 接口 | 说明 |
@@ -626,12 +661,35 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 | `download:cancelTask` | 取消指定任务 |
 | `download:removeTask` | 删除指定任务 |
 | `download:clearCompleted` | 清空所有已完成任务 |
+| `download:retryTask` | 重试失败的任务（重新下载所有失败文件） |
+| `download:retryFile` | 重试单个失败文件 |
 | `download:update` | 主进程 → 渲染进程广播状态变更 |
+| `download:taskComplete` | 任务完成广播（含作品元数据） |
+| `download:taskFailed` | 任务失败广播（含失败数量） |
 
 #### 队列处理
 - `processDownloadQueue()` — 空闲时自动处理下一个任务
-- 同一时间只有一个文件在下载
-- 文件下载顺序：API 获取 presigned URL → stream 下载 → 写入磁盘 → 播放下一个
+- 支持配置并发下载数（`settings.downloadConcurrency`，默认 3）
+- 同一任务内多个文件并行下载
+- 文件下载顺序：API 获取 presigned URL → stream 下载 → 写入磁盘
+- 任务完成/失败时广播事件到渲染进程
+
+#### 自动导入媒体库
+- 下载完成后可自动添加到本地媒体库（`settings.autoImportDownloaded`）
+- 使用作品元数据（标题/封面/CV/社团/标签）初始化作品
+- 去重逻辑：按 workId 或 folderPath 判断是否已存在
+
+#### 下载设置
+- `downloadConcurrency` — 最大同时下载数（1-8，默认 3）
+- `downloadNotify` — 下载完成通知开关（默认开启）
+- `autoImportDownloaded` — 自动导入媒体库开关（默认开启）
+
+#### DownloadView 组件
+- 顶部操作区：设置按钮、清空已完成按钮
+- 任务卡片：封面、标题、状态、进度条、速度、失败数量
+- 展开文件列表：每个文件状态、进度、重试按钮（失败时）
+- 失败任务显示重试按钮，失败文件 hover 显示重试按钮
+- 失败数量徽标显示在任务状态旁
 
 ### 17. 使用统计
 
