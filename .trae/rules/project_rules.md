@@ -322,6 +322,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - DiscoverView（作品卡片骨架）
 - RecentPlaysView（最近播放条目骨架）
 - PlaylistView（播放列表条目 + 曲目行骨架）
+- Sidebar（我的库作品列表骨架，支持网格/列表双视图）
 
 #### 已使用 StateView 的组件
 - WorkDetail（曲目加载/错误态）
