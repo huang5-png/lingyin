@@ -25,6 +25,7 @@ import { useMediaLibrary } from './hooks/useMediaLibrary'
 import { useOnlineWork } from './hooks/useOnlineWork'
 import { usePlaybackHistory } from './hooks/usePlaybackHistory'
 import { useFilters } from './hooks/useFilters'
+import { useTheme } from './hooks/useTheme'
 import { scanFolder, extractRJCode, getExtension } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
@@ -324,73 +325,17 @@ export default function App() {
     setIsImmersive(false)
   }, [])
 
-  const zoomRef = useRef(1)
-
-  useEffect(() => {
-    const BASE_WIDTH = 1400
-    const BASE_HEIGHT = 900
-    const MIN_ZOOM = 0.6
-    const MAX_ZOOM = 1.2
-
-    const updateZoom = () => {
-      const winWidth = window.innerWidth
-      const winHeight = window.innerHeight
-      const zoomX = winWidth / BASE_WIDTH
-      const zoomY = winHeight / BASE_HEIGHT
-      const zoom = Math.min(zoomX, zoomY)
-      const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom))
-      document.body.style.zoom = clampedZoom
-      zoomRef.current = clampedZoom
-    }
-
-    updateZoom()
-    window.addEventListener('resize', updateZoom)
-    return () => window.removeEventListener('resize', updateZoom)
-  }, [])
-
   useEffect(() => {
     loadWorks()
-    async function loadDbSettings() {
-      try {
-        const dbSettings = await window.electronAPI.dbGetSettings()
-        if (dbSettings && Object.keys(dbSettings).length > 0) {
-          setSettings((prev) => ({ ...dbSettings, ...prev }))
-          if (dbSettings.showLyric !== undefined) {
-            setShowLyric(dbSettings.showLyric)
-          }
-        }
-      } catch (e) {
-        console.error('Failed to load settings from db:', e)
-      }
-    }
-    loadDbSettings()
   }, [])
 
-
-
-  // 记住上一次的主题，用于检测主题变化
-  const prevThemeRef = useRef(settings.theme)
-
-  useEffect(() => {
-    const root = document.documentElement
-    const appRoot = document.getElementById('root')
-    root.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`)
-    root.style.setProperty('--lyric-width', `${settings.lyricWidth}px`)
-    root.style.setProperty('--player-height', `${settings.playerHeight}px`)
-    if (settings.theme) {
-      // 主题切换时添加过渡动画
-      if (prevThemeRef.current && prevThemeRef.current !== settings.theme && appRoot) {
-        appRoot.classList.add('theme-transitioning')
-        root.setAttribute('data-theme', settings.theme)
-        const timer = setTimeout(() => {
-          appRoot.classList.remove('theme-transitioning')
-        }, 550)
-        return () => clearTimeout(timer)
-      }
-      root.setAttribute('data-theme', settings.theme)
-      prevThemeRef.current = settings.theme
-    }
-  }, [settings])
+  // ===== 主题与缩放 Hook =====
+  useTheme({
+    settings,
+    setSettings,
+    setShowLyric,
+    showToast,
+  })
 
   const handleSelectWork = useCallback(
     (work) => {
