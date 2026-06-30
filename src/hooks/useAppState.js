@@ -85,6 +85,7 @@ export function useAppState() {
   // ===== 媒体库管理 Hook =====
   const {
     works,
+    isLoadingWorks,
     setWorks,
     loadWorks,
     handleAddFolder,
@@ -544,6 +545,7 @@ export function useAppState() {
 
     // 媒体库
     works,
+    isLoadingWorks,
     setWorks,
     audioFiles,
     setAudioFiles,

@@ -3,6 +3,7 @@ import { scanFolder, scanMediaLibrary, extractRJCode } from '../utils/scanner'
 
 export function useMediaLibrary({ showToast, setSelectedWork }) {
   const [works, setWorks] = useState([])
+  const [isLoadingWorks, setIsLoadingWorks] = useState(true)
   const [audioFiles, setAudioFiles] = useState([])
   const [allSubtitleFiles, setAllSubtitleFiles] = useState([])
 
@@ -47,11 +48,14 @@ export function useMediaLibrary({ showToast, setSelectedWork }) {
 
   // 加载所有作品
   const loadWorks = useCallback(async () => {
+    setIsLoadingWorks(true)
     try {
       const data = await window.electronAPI.dbGetAllWorks()
       setWorks(data || [])
     } catch (e) {
       console.error('Failed to load works:', e)
+    } finally {
+      setIsLoadingWorks(false)
     }
   }, [])
 
@@ -222,6 +226,7 @@ export function useMediaLibrary({ showToast, setSelectedWork }) {
 
   return {
     works,
+    isLoadingWorks,
     setWorks,
     loadWorks,
     handleAddFolder,

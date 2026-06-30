@@ -59,6 +59,7 @@ export default function App() {
 
     // 媒体库
     works,
+    isLoadingWorks,
     audioFiles,
     handleAddFolder,
     handleAddMediaLibrary,
@@ -210,6 +211,7 @@ export default function App() {
           selectedWork={selectedWork}
           settings={settings}
           filteredWorks={filteredWorks}
+          isLoadingWorks={isLoadingWorks}
           onSelectWork={handleSelectWork}
           onAddFolder={handleAddFolder}
           onAddMediaLibrary={handleAddMediaLibrary}

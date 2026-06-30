@@ -7,6 +7,7 @@ const LibraryLayout = memo(function LibraryLayout({
   selectedWork,
   settings,
   filteredWorks,
+  isLoadingWorks,
   onSelectWork,
   onAddFolder,
   onAddMediaLibrary,
@@ -77,6 +78,7 @@ const LibraryLayout = memo(function LibraryLayout({
       <div className="library-main">
         <Sidebar
           works={filteredWorks}
+          isLoadingWorks={isLoadingWorks}
           selectedWorkId={selectedWork?.id}
           onSelectWork={onSelectWork}
           onAddFolder={onAddFolder}

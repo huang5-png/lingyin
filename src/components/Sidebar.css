@@ -1641,3 +1641,115 @@
   transition: width 0.3s ease;
 }
 
+/* ===== 骨架屏加载样式 ===== */
+.skeleton-item {
+  pointer-events: none !important;
+  animation: none !important;
+  cursor: default !important;
+}
+
+.skeleton-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-card);
+  padding: 12px;
+  align-content: flex-start;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+/* 卡片骨架 */
+.skeleton-card-cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.skeleton-card-title {
+  height: 14px;
+  width: 90%;
+  margin-bottom: 6px;
+}
+
+.skeleton-card-meta {
+  height: 11px;
+  width: 60%;
+  margin-bottom: 8px;
+}
+
+.skeleton-card-tag {
+  height: 18px;
+  width: 48px;
+  border-radius: 9999px;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.skeleton-card-progress {
+  height: 3px;
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 2px;
+}
+
+/* 列表骨架 */
+.skeleton-row-cover {
+  width: 50px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-row-title {
+  height: 14px;
+  width: 80%;
+  margin-bottom: 6px;
+}
+
+.skeleton-row-meta {
+  height: 11px;
+  width: 50%;
+  margin-bottom: 6px;
+}
+
+.skeleton-row-tag {
+  height: 16px;
+  width: 40px;
+  border-radius: 9999px;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.skeleton-row-progress {
+  height: 2px;
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 1px;
+}
+
+/* 高DPI适配 */
+@media (min-resolution: 1.5dppx) {
+  .skeleton-card-title { height: 16px; }
+  .skeleton-card-meta { height: 13px; }
+  .skeleton-card-tag { height: 20px; width: 52px; }
+  .skeleton-row-cover { width: 58px; height: 72px; }
+  .skeleton-row-title { height: 16px; }
+  .skeleton-row-meta { height: 13px; }
+  .skeleton-row-tag { height: 18px; width: 44px; }
+}
+
+@media (min-resolution: 2dppx) {
+  .skeleton-card-title { height: 18px; }
+  .skeleton-card-meta { height: 14px; }
+  .skeleton-card-tag { height: 22px; width: 56px; }
+  .skeleton-row-cover { width: 64px; height: 80px; }
+  .skeleton-row-title { height: 18px; }
+  .skeleton-row-meta { height: 14px; }
+  .skeleton-row-tag { height: 20px; width: 48px; }
+}
+

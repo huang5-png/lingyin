@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, memo } from 'react'
 import './Sidebar.css'
 import StateView from './StateView'
 
-export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts }) {
+function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showGroups, setShowGroups] = useState(true)
   const [editingGroupId, setEditingGroupId] = useState(null)
@@ -11,10 +11,15 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
   const [newGroupName, setNewGroupName] = useState('')
   const [workGroupMenu, setWorkGroupMenu] = useState(null)
   const [workProgressMap, setWorkProgressMap] = useState({})
+  const [progressLoading, setProgressLoading] = useState(false)
 
-  // 加载所有作品的播放进度
+  // 加载所有作品的播放进度（防抖，避免频繁 works 变化导致重复加载）
   const loadWorkProgress = useCallback(async () => {
-    if (!works || works.length === 0) return
+    if (!works || works.length === 0) {
+      setWorkProgressMap({})
+      return
+    }
+    setProgressLoading(true)
     try {
       const progressEntries = await Promise.all(
         works.map(async (work) => {
@@ -36,11 +41,16 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
       setWorkProgressMap(map)
     } catch (e) {
       console.error('Failed to load work progress:', e)
+    } finally {
+      setProgressLoading(false)
     }
   }, [works])
 
   useEffect(() => {
-    loadWorkProgress()
+    const timer = setTimeout(() => {
+      loadWorkProgress()
+    }, 300)
+    return () => clearTimeout(timer)
   }, [loadWorkProgress])
 
   const filteredWorks = useMemo(() => {
@@ -53,8 +63,9 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
       const cvs = (work.cvs || []).join(' ').toLowerCase()
       const circle = (work.circle || '').toLowerCase()
       const folderName = (work.folderName || '').toLowerCase()
+      const tags = (work.tags || []).join(' ').toLowerCase()
 
-      return title.includes(query) || rjCode.includes(query) || cvs.includes(circle) || circle.includes(query) || folderName.includes(query)
+      return title.includes(query) || rjCode.includes(query) || cvs.includes(query) || circle.includes(query) || folderName.includes(query) || tags.includes(query)
     })
   }, [works, searchQuery])
 
@@ -367,7 +378,21 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
         </div>
 
       <div className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`} style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}>
-        {filteredWorks.length === 0 ? (
+        {isLoadingWorks ? (
+          viewMode === 'grid' ? (
+            <div className="skeleton-grid">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="skeleton-list">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
+            </div>
+          )
+        ) : filteredWorks.length === 0 ? (
           <StateView
             type="empty"
             iconType={searchQuery ? 'search' : 'music'}
@@ -510,3 +535,45 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
     </div>
   )
 }
+
+const SkeletonCard = memo(function SkeletonCard() {
+  return (
+    <div className="work-item card skeleton-item">
+      <div className="card-cover skeleton-cover skeleton-card-cover" />
+      <div className="card-info">
+        <div className="skeleton-line skeleton-card-title" />
+        <div className="skeleton-line skeleton-card-meta" />
+        <div className="card-tags">
+          <div className="skeleton-line skeleton-card-tag" />
+          <div className="skeleton-line skeleton-card-tag" />
+          <div className="skeleton-line skeleton-card-tag" />
+        </div>
+        <div className="card-progress">
+          <div className="skeleton-line skeleton-card-progress" />
+        </div>
+      </div>
+    </div>
+  )
+})
+
+const SkeletonRow = memo(function SkeletonRow() {
+  return (
+    <div className="work-item row skeleton-item">
+      <div className="skeleton-cover skeleton-row-cover" />
+      <div className="work-info">
+        <div className="skeleton-line skeleton-row-title" />
+        <div className="skeleton-line skeleton-row-meta" />
+        <div className="work-tags-row">
+          <div className="skeleton-line skeleton-row-tag" />
+          <div className="skeleton-line skeleton-row-tag" />
+          <div className="skeleton-line skeleton-row-tag" />
+        </div>
+        <div className="work-progress-bar-container">
+          <div className="skeleton-line skeleton-row-progress" />
+        </div>
+      </div>
+    </div>
+  )
+})
+
+export default memo(Sidebar)
