@@ -237,6 +237,75 @@ export default function App() {
     settings.subtitleImmersiveShadowBlur,
   ])
 
+  // 共享的布局 props（LibraryLayout 和 DiscoverLayout 共用部分）
+  const commonLayoutProps = useMemo(() => ({
+    // 播放相关
+    audioFiles,
+    currentAudio,
+    cues: currentCues,
+    currentTime,
+    onSeek: handleSeek,
+    // 字幕相关
+    subtitleOptions,
+    selectedSubtitleIndex,
+    onSelectSubtitle: handleSelectSubtitle,
+    onAddSubtitleFile: handleAddSubtitleFile,
+    onToggleTranslate: handleToggleTranslate,
+    hasTranslation,
+    subtitleFontSize: settings.subtitleFontSize,
+    subtitleStyleSettings: lyricSubtitleStyle,
+    // 翻译相关
+    onTranslate: handleTranslate,
+    onTranslateBatch: handleTranslateBatch,
+    getTranslatedText,
+    isTranslated,
+    isTranslating,
+    isAnyTranslating,
+    // 元数据相关
+    onEditMetadata: handleEditMetadata,
+    onRefreshMetadata: handleRefreshMetadata,
+    onRefreshSubtitles: handleRefreshSubtitles,
+    // 播放操作相关
+    onAddToPlaylist: handleOpenAddToPlaylistForAudio,
+    onAddToQueue: handleAddToQueue,
+    onPlayNext: handlePlayNext,
+    // 作品相关
+    selectedWork,
+    isFavorite: isFavorite(selectedWork?.id),
+    onCloseDetail: () => setSelectedWork(null),
+    contentAreaRef,
+    // 书签相关
+    bookmarks,
+    onAddBookmark,
+    onUpdateBookmark,
+    onDeleteBookmark,
+    // 右侧面板
+    rightPanelWidth,
+    onSplitterMouseDown: handleSplitterMouseDown,
+    rightTab,
+    onTabChange: setRightTab,
+    // 筛选相关
+    onFilterCV: (cv) => handleFilterChange('cv', cv),
+    onFilterTag: (tag) => handleFilterChange('tag', tag),
+    onCircleClick: (circle) => handleFilterChange('circle', circle),
+    activeCV: cvFilter,
+    activeTag: tagFilter,
+    // 设置
+    settings,
+  }), [
+    audioFiles, currentAudio, currentCues, currentTime, handleSeek,
+    subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
+    handleToggleTranslate, hasTranslation, settings.subtitleFontSize, lyricSubtitleStyle,
+    handleTranslate, handleTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating,
+    handleEditMetadata, handleRefreshMetadata, handleRefreshSubtitles,
+    handleOpenAddToPlaylistForAudio, handleAddToQueue, handlePlayNext,
+    selectedWork, isFavorite,
+    bookmarks, onAddBookmark, onUpdateBookmark, onDeleteBookmark,
+    rightPanelWidth, handleSplitterMouseDown, rightTab, setRightTab,
+    handleFilterChange, cvFilter, tagFilter,
+    settings,
+  ])
+
   return (
     <ErrorBoundary>
       <div className="app-container">
@@ -272,8 +341,7 @@ export default function App() {
         <div className="right-content-area">
       {currentView === 'library' && (
         <LibraryLayout
-          selectedWork={selectedWork}
-          settings={settings}
+          {...commonLayoutProps}
           filteredWorks={filteredWorks}
           isLoadingWorks={isLoadingWorks}
           onSelectWork={handleSelectWork}
@@ -288,12 +356,6 @@ export default function App() {
           onDeleteWork={handleDeleteWork}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
-          onTranslate={handleTranslate}
-          onTranslateBatch={handleTranslateBatch}
-          getTranslatedText={getTranslatedText}
-          isTranslated={isTranslated}
-          isTranslating={isTranslating}
-          isAnyTranslating={isAnyTranslating}
           showOnlyFavorites={showOnlyFavorites}
           onToggleFavoritesFilter={handleToggleFavoritesFilter}
           favoriteIds={favoriteIds}
@@ -306,49 +368,13 @@ export default function App() {
           onDeleteGroup={deleteGroup}
           onSetWorkGroup={setWorkGroup}
           groupWorkCounts={groupWorkCounts}
-          audioFiles={audioFiles}
-          currentAudio={currentAudio}
           onSelectAudio={handleSelectAudio}
-          onEditMetadata={handleEditMetadata}
-          onRefreshMetadata={handleRefreshMetadata}
-          onRefreshSubtitles={handleRefreshSubtitles}
-          onFilterCV={(cv) => handleFilterChange('cv', cv)}
-          onFilterTag={(tag) => handleFilterChange('tag', tag)}
-          onCircleClick={(circle) => handleFilterChange('circle', circle)}
-          activeCV={cvFilter}
-          activeTag={tagFilter}
-          onAddToPlaylist={handleOpenAddToPlaylistForAudio}
-          onAddToQueue={handleAddToQueue}
-          onPlayNext={handlePlayNext}
-          isFavorite={isFavorite(selectedWork?.id)}
-          onCloseDetail={() => setSelectedWork(null)}
-          contentAreaRef={contentAreaRef}
-          rightPanelWidth={rightPanelWidth}
-          onSplitterMouseDown={handleSplitterMouseDown}
-          rightTab={rightTab}
-          onTabChange={setRightTab}
-          cues={currentCues}
-          currentTime={currentTime}
-          onSeek={handleSeek}
-          subtitleOptions={subtitleOptions}
-          selectedSubtitleIndex={selectedSubtitleIndex}
-          onSelectSubtitle={handleSelectSubtitle}
-          onAddSubtitleFile={handleAddSubtitleFile}
-          onToggleTranslate={handleToggleTranslate}
-          hasTranslation={hasTranslation}
-          subtitleFontSize={settings.subtitleFontSize}
-          subtitleStyleSettings={lyricSubtitleStyle}
           isFavoritesView={false}
-          bookmarks={bookmarks}
-          onAddBookmark={addBookmark}
-          onUpdateBookmark={updateBookmark}
-          onDeleteBookmark={deleteBookmark}
         />
       )}
       {currentView === 'favorites' && (
         <LibraryLayout
-          selectedWork={selectedWork}
-          settings={settings}
+          {...commonLayoutProps}
           filteredWorks={favoriteFilteredWorks}
           isLoadingWorks={isLoadingWorks}
           onSelectWork={handleSelectWork}
@@ -363,12 +389,6 @@ export default function App() {
           onDeleteWork={handleDeleteWork}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
-          onTranslate={handleTranslate}
-          onTranslateBatch={handleTranslateBatch}
-          getTranslatedText={getTranslatedText}
-          isTranslated={isTranslated}
-          isTranslating={isTranslating}
-          isAnyTranslating={isAnyTranslating}
           showOnlyFavorites={true}
           onToggleFavoritesFilter={handleToggleFavoritesFilter}
           favoriteIds={favoriteIds}
@@ -381,63 +401,15 @@ export default function App() {
           onDeleteGroup={deleteGroup}
           onSetWorkGroup={setWorkGroup}
           groupWorkCounts={groupWorkCounts}
-          audioFiles={audioFiles}
-          currentAudio={currentAudio}
           onSelectAudio={handleSelectAudio}
-          onEditMetadata={handleEditMetadata}
-          onRefreshMetadata={handleRefreshMetadata}
-          onRefreshSubtitles={handleRefreshSubtitles}
-          onFilterCV={(cv) => handleFilterChange('cv', cv)}
-          onFilterTag={(tag) => handleFilterChange('tag', tag)}
-          onCircleClick={(circle) => handleFilterChange('circle', circle)}
-          activeCV={cvFilter}
-          activeTag={tagFilter}
-          onAddToPlaylist={handleOpenAddToPlaylistForAudio}
-          onAddToQueue={handleAddToQueue}
-          onPlayNext={handlePlayNext}
-          isFavorite={isFavorite(selectedWork?.id)}
-          onCloseDetail={() => setSelectedWork(null)}
-          contentAreaRef={contentAreaRef}
-          rightPanelWidth={rightPanelWidth}
-          onSplitterMouseDown={handleSplitterMouseDown}
-          rightTab={rightTab}
-          onTabChange={setRightTab}
-          cues={currentCues}
-          currentTime={currentTime}
-          onSeek={handleSeek}
-          subtitleOptions={subtitleOptions}
-          selectedSubtitleIndex={selectedSubtitleIndex}
-          onSelectSubtitle={handleSelectSubtitle}
-          onAddSubtitleFile={handleAddSubtitleFile}
-          onToggleTranslate={handleToggleTranslate}
-          hasTranslation={hasTranslation}
-          subtitleFontSize={settings.subtitleFontSize}
-          subtitleStyleSettings={lyricSubtitleStyle}
           isFavoritesView={true}
-          bookmarks={bookmarks}
-          onAddBookmark={addBookmark}
-          onUpdateBookmark={updateBookmark}
-          onDeleteBookmark={deleteBookmark}
         />
       )}
       {currentView === 'discover' && (
         <DiscoverLayout
-          selectedWork={selectedWork}
-          settings={settings}
+          {...commonLayoutProps}
           discoverViewRef={discoverViewRef}
           onSelectWork={handleSelectOnlineWork}
-          onTranslate={handleTranslate}
-          onTranslateBatch={handleTranslateBatch}
-          getTranslatedText={getTranslatedText}
-          isTranslated={isTranslated}
-          isTranslating={isTranslating}
-          isAnyTranslating={isAnyTranslating}
-          audioFiles={audioFiles}
-          currentAudio={currentAudio}
-          onSelectAudio={handleSelectAudio}
-          onEditMetadata={handleEditMetadata}
-          onRefreshMetadata={handleRefreshMetadata}
-          onRefreshSubtitles={handleRefreshSubtitles}
           onFilterCV={handleFilterCVInDiscover}
           onFilterTag={handleFilterTagInDiscover}
           onCircleClick={handleCircleClickInDiscover}
@@ -445,31 +417,6 @@ export default function App() {
           activeTag={''}
           onDownload={() => setShowDownloadModal(true)}
           onReloadTracks={handleReloadOnlineTracks}
-          onAddToPlaylist={handleOpenAddToPlaylistForAudio}
-          onAddToQueue={handleAddToQueue}
-          onPlayNext={handlePlayNext}
-          isFavorite={isFavorite(selectedWork?.id)}
-          onCloseDetail={() => setSelectedWork(null)}
-          contentAreaRef={contentAreaRef}
-          rightPanelWidth={rightPanelWidth}
-          onSplitterMouseDown={handleSplitterMouseDown}
-          rightTab={rightTab}
-          onTabChange={setRightTab}
-          cues={currentCues}
-          currentTime={currentTime}
-          onSeek={handleSeek}
-          subtitleOptions={subtitleOptions}
-          selectedSubtitleIndex={selectedSubtitleIndex}
-          onSelectSubtitle={handleSelectSubtitle}
-          onAddSubtitleFile={handleAddSubtitleFile}
-          onToggleTranslate={handleToggleTranslate}
-          hasTranslation={hasTranslation}
-          subtitleFontSize={settings.subtitleFontSize}
-          subtitleStyleSettings={lyricSubtitleStyle}
-          bookmarks={bookmarks}
-          onAddBookmark={addBookmark}
-          onUpdateBookmark={updateBookmark}
-          onDeleteBookmark={deleteBookmark}
         />
       )}
       {currentView === 'annual-report' && (
