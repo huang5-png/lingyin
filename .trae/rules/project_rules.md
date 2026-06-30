@@ -1017,47 +1017,86 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 ### 20. 睡眠定时器
 
 #### 功能概述
-- 用户可设置播放一段时间后自动停止播放
+- 三种定时模式：倒计时、曲目结束、指定时间点
+- 渐弱音量：停止前 30 秒逐渐降低音量，更自然的入睡体验
 - 适合睡前听 ASMR 的使用场景
 - 不持久化到设置，每次启动重置
 
-#### 核心状态（App.jsx）
-- `sleepTimerMinutes` — 设置的分钟数，0 表示关闭
-- `sleepTimerRemaining` — 剩余秒数
+#### 三种定时模式
+| 模式 | 说明 |
+|------|------|
+| **倒计时** | 设置分钟数后倒计时停止，支持 5/15/30/45/60/90 分钟预设和自定义分钟数（1-300 分钟） |
+| **曲目结束** | 当前曲目播放完毕后自动停止 |
+| **指定时间** | 在设定的时间点自动停止（如 23:00），跨天自动顺延到第二天 |
 
-#### 定时器选项
+#### 核心状态
+- `sleepTimerMode` — 当前模式（`countdown` / `trackEnd` / `timePoint`）
+- `sleepTimerActive` — 定时器是否激活
+- `sleepTimerFading` — 是否处于渐弱阶段
+- `sleepTimerRemaining` — 剩余秒数
+- `sleepTimerFadeEnabled` — 渐弱音量开关（默认开启）
+- `targetTime` — 指定时间模式的目标时间（如 "23:00"）
+
+#### 渐弱音量（Fade Out）
+- 停止前 30 秒开始逐渐降低音量
+- 使用 100ms 间隔，共 300 步平滑过渡
+- 取消定时器时恢复原始音量
+- 可在定时器面板中开关此功能
+
+#### 预设与常量
 ```js
-export const SLEEP_TIMER_OPTIONS = [
-  { label: '关闭', value: 0 },
-  { label: '5 分钟', value: 5 },
-  { label: '10 分钟', value: 10 },
-  { label: '15 分钟', value: 15 },
-  { label: '30 分钟', value: 30 },
-  { label: '45 分钟', value: 45 },
-  { label: '60 分钟', value: 60 },
-  { label: '90 分钟', value: 90 },
-]
+export const SLEEP_TIMER_PRESETS = [5, 15, 30, 45, 60, 90]  // 倒计时预设（分钟）
+
+export const SLEEP_TIMER_MODES = {
+  COUNTDOWN: 'countdown',   // 倒计时模式
+  TRACK_END: 'trackEnd',     // 曲目结束模式
+  TIME_POINT: 'timePoint',   // 指定时间模式
+}
+
+const FADE_DURATION = 30  // 渐弱时长（秒）
 ```
 
 #### 倒计时逻辑
-- `useEffect` 监听 `sleepTimerMinutes` 变化，启动/停止倒计时
-- 每秒减少 `sleepTimerRemaining`
+- `useEffect` 监听 `isActive + mode` 变化，启动/停止倒计时
+- 每秒减少 `remainingSeconds`
+- 剩余时间 <= 30 秒且渐弱开启时：触发渐弱效果
 - 倒计时到 0 时：
   - 调用 `playerRef.current.playPause()` 暂停播放
-  - 重置 `sleepTimerMinutes` 为 0
+  - 重置所有定时器状态
   - 显示 Toast 通知
+
+#### 曲目结束模式
+- AudioPlayer 在 `onFinish` 事件中先调用 `handleTrackFinish()`
+- 如果定时器激活且为曲目结束模式，返回 `true` 表示已处理（阻止后续 onFinish 执行）
+- 否则返回 `false`，继续执行原有的 onFinish 逻辑
 
 #### UI 入口
 - `AudioPlayer.jsx` 播放器右侧区域
-- 位于队列控制按钮旁边
-- 月亮图标按钮，点击展开下拉菜单
-- 激活时按钮高亮 + 显示剩余时间徽标
+- 位于播放速度按钮旁边
+- 月亮图标按钮，点击展开下拉面板
+- 激活时按钮高亮 + 显示剩余时间/状态徽标
+- 渐弱时按钮有呼吸动画效果
+
+#### 增强版面板 UI
+- 三 Tab 切换：倒计时 / 曲目结束 / 指定时间
+- 倒计时模式：3x2 预设网格 + 自定义分钟数输入
+- 曲目结束模式：说明文字 + 启用按钮
+- 指定时间模式：time 输入框 + 设定按钮
+- 底部渐弱音量开关（带说明文字）
+- 激活状态显示"关闭"按钮，一键取消
 
 #### 格式化函数
 ```js
-function formatSleepTimerRemaining(seconds) {
-  // 小于60分钟：M:SS 格式
-  // 大于等于60分钟：H:MM:SS 格式
+function formatRemaining(seconds) {
+  // 小于3600秒：M:SS 格式
+  // 大于等于3600秒：H:MM:SS 格式
+}
+
+function getStatusText() {
+  // 未激活：返回空
+  // 渐弱中：返回"渐弱中..."
+  // 曲目结束模式：返回"曲目结束"
+  // 其他模式：返回格式化剩余时间
 }
 ```
 
