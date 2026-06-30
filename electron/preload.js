@@ -177,4 +177,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('miniPlayer:nextTrack', handler)
     return () => ipcRenderer.removeListener('miniPlayer:nextTrack', handler)
   },
+
+  // 全局媒体快捷键
+  globalShortcutRegister: () => ipcRenderer.invoke('globalShortcut:register'),
+  globalShortcutUnregister: () => ipcRenderer.invoke('globalShortcut:unregister'),
+  globalShortcutIsRegistered: () => ipcRenderer.invoke('globalShortcut:isRegistered'),
+  onGlobalShortcutPlayPause: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('globalShortcut:playPause', handler)
+    return () => ipcRenderer.removeListener('globalShortcut:playPause', handler)
+  },
+  onGlobalShortcutNextTrack: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('globalShortcut:nextTrack', handler)
+    return () => ipcRenderer.removeListener('globalShortcut:nextTrack', handler)
+  },
+  onGlobalShortcutPrevTrack: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('globalShortcut:prevTrack', handler)
+    return () => ipcRenderer.removeListener('globalShortcut:prevTrack', handler)
+  },
+  onGlobalShortcutStop: (callback) => {
+    const handler = () => callback()
+    ipcRenderer.on('globalShortcut:stop', handler)
+    return () => ipcRenderer.removeListener('globalShortcut:stop', handler)
+  },
+
+  // 系统通知
+  notificationShow: (opts) => ipcRenderer.invoke('notification:show', opts),
 })

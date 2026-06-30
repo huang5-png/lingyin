@@ -36,6 +36,9 @@ const DEFAULT_SETTINGS = {
   subtitleImmersiveFontWeight: 500,
   subtitleImmersiveShadow: true,
   subtitleImmersiveShadowBlur: 4,
+  globalMediaKeys: true,
+  trackChangeNotification: true,
+  enableMediaSession: true,
 }
 
 function loadSettings() {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut, Notification } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const http = require('http')
@@ -32,7 +32,7 @@ app.commandLine.appendSwitch('disable-background-timer-throttling')
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 // 禁用不必要的 Chromium 功能
-app.commandLine.appendSwitch('disable-features', 'TranslateUI,Translate,MediaRouter,SpareRendererForSitePerProcess,HardwareMediaKeyHandling')
+app.commandLine.appendSwitch('disable-features', 'TranslateUI,Translate,MediaRouter,SpareRendererForSitePerProcess')
 // 限制缓存大小
 app.commandLine.appendSwitch('disk-cache-size', '104857600')
 
@@ -172,6 +172,92 @@ function updateTrayPlayState(playing, title) {
         playItem.label = isPlaying ? '暂停' : '播放'
       }
     }
+  }
+}
+
+// ========== 全局媒体快捷键 ==========
+let globalShortcutsRegistered = false
+
+async function registerGlobalShortcuts() {
+  try {
+    const settings = await getSettings()
+    if (settings.globalMediaKeys === false) {
+      unregisterGlobalShortcuts()
+      return
+    }
+
+    if (globalShortcutsRegistered) return
+
+    const playPauseRegistered = globalShortcut.register('MediaPlayPause', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('globalShortcut:playPause')
+      }
+    })
+
+    const nextRegistered = globalShortcut.register('MediaNextTrack', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('globalShortcut:nextTrack')
+      }
+    })
+
+    const prevRegistered = globalShortcut.register('MediaPreviousTrack', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('globalShortcut:prevTrack')
+      }
+    })
+
+    const stopRegistered = globalShortcut.register('MediaStop', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('globalShortcut:stop')
+      }
+    })
+
+    globalShortcutsRegistered = playPauseRegistered || nextRegistered || prevRegistered || stopRegistered
+    logger.info('全局媒体快捷键注册:', { playPause: playPauseRegistered, next: nextRegistered, prev: prevRegistered, stop: stopRegistered })
+  } catch (e) {
+    logger.warn('注册全局媒体快捷键失败:', e.message)
+  }
+}
+
+function unregisterGlobalShortcuts() {
+  try {
+    globalShortcut.unregisterAll()
+    globalShortcutsRegistered = false
+    logger.info('已注销全局媒体快捷键')
+  } catch (e) {
+    logger.warn('注销全局媒体快捷键失败:', e.message)
+  }
+}
+
+// ========== 系统通知 ==========
+let currentNotification = null
+
+function showTrackNotification(title, body, coverUrl) {
+  try {
+    if (currentNotification) {
+      currentNotification.close()
+      currentNotification = null
+    }
+
+    const notificationOptions = {
+      title: title || '聆音',
+      body: body || '',
+      silent: true,
+    }
+
+    if (coverUrl && coverUrl.startsWith('http')) {
+      notificationOptions.icon = coverUrl
+    }
+
+    currentNotification = new Notification(notificationOptions)
+
+    currentNotification.on('click', () => {
+      showMainWindow()
+    })
+
+    currentNotification.show()
+  } catch (e) {
+    logger.warn('显示系统通知失败:', e.message)
   }
 }
 
@@ -383,6 +469,7 @@ app.whenReady().then(async () => {
 
   createWindow()
   createTray()
+  registerGlobalShortcuts()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -410,6 +497,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', (e) => {
   logger.info('App before quit')
   app.isQuiting = true
+  unregisterGlobalShortcuts()
   if (tray) {
     try {
       tray.destroy()
@@ -801,6 +889,27 @@ ipcMain.handle('tray:updatePlayState', (_, playing, title) => {
 
 ipcMain.handle('tray:setCloseToTray', (_, enabled) => {
   logger.info('设置关闭最小化到托盘:', enabled)
+  return true
+})
+
+// 全局媒体快捷键 IPC
+ipcMain.handle('globalShortcut:register', async () => {
+  await registerGlobalShortcuts()
+  return true
+})
+
+ipcMain.handle('globalShortcut:unregister', () => {
+  unregisterGlobalShortcuts()
+  return true
+})
+
+ipcMain.handle('globalShortcut:isRegistered', () => {
+  return globalShortcutsRegistered
+})
+
+// 系统通知 IPC
+ipcMain.handle('notification:show', (_, { title, body, icon }) => {
+  showTrackNotification(title, body, icon)
   return true
 })
 

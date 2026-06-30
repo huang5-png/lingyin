@@ -108,6 +108,9 @@ const DEFAULT_SETTINGS = {
   subtitleImmersiveFontWeight: 500,
   subtitleImmersiveShadow: true,
   subtitleImmersiveShadowBlur: 4,
+  globalMediaKeys: true,
+  trackChangeNotification: true,
+  enableMediaSession: true,
 };
 
 const TABS = [
@@ -281,6 +284,56 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
             <ToggleSwitch
               checked={settings.closeToTray}
               onChange={() => handleToggle('closeToTray')}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-section-title">系统媒体集成</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">系统媒体控制</div>
+            <div className="setting-desc">在 Windows 系统音量面板中显示播放信息和控制按钮</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.enableMediaSession}
+              onChange={() => handleToggle('enableMediaSession')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">全局媒体快捷键</div>
+            <div className="setting-desc">使用键盘媒体键（播放/暂停/上一曲/下一曲）控制播放，无需切换到窗口</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.globalMediaKeys}
+              onChange={() => {
+                handleToggle('globalMediaKeys')
+                if (window.electronAPI?.globalShortcutRegister) {
+                  setTimeout(() => {
+                    if (settings.globalMediaKeys) {
+                      window.electronAPI.globalShortcutUnregister?.()
+                    } else {
+                      window.electronAPI.globalShortcutRegister?.()
+                    }
+                  }, 0)
+                }
+              }}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">曲目切换通知</div>
+            <div className="setting-desc">切换曲目时显示系统通知，显示曲目和作品信息</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.trackChangeNotification}
+              onChange={() => handleToggle('trackChangeNotification')}
             />
           </div>
         </div>
