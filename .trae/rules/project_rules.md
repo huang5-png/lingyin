@@ -108,7 +108,7 @@
 
 | 文件 | 职责 |
 |------|------|
-| `App.jsx` | 根组件，核心状态管理（selectedWork/playingWork/currentAudio/currentView/isImmersive/flipState），集成自定义 Hooks |
+| `App.jsx` | 根组件，集成所有自定义 Hooks，组合状态与 UI 渲染 |
 | `hooks/useTranslate.js` | 翻译功能 Hook：翻译缓存、批量翻译、字幕翻译切换、自动翻译 |
 | `hooks/usePlayQueue.js` | 播放队列 Hook：队列管理、循环模式、随机播放、跨作品播放、队列操作 |
 | `hooks/useKeyboardShortcuts.js` | 全局快捷键 Hook：快捷键解析匹配、按键事件处理、ESC 弹窗优先级 |
@@ -124,6 +124,9 @@
 | `hooks/useToast.js` | Toast 通知 Hook：Toast 状态（toasts/showToast/removeToast） |
 | `hooks/useImmersive.js` | 沉浸式模式 Hook：沉浸式 state、字幕滚动、开关控制 |
 | `hooks/useSplitter.js` | 可拖拽分割线 Hook：分割线拖拽 state 和逻辑，支持宽度约束 |
+| `hooks/useAppSettings.js` | 设置管理 Hook：设置加载/保存、默认值、视图模式切换、showLyric 同步 |
+| `hooks/useViewNavigation.js` | 视图导航 Hook：视图切换、作品选择、模态框状态管理、最近播放自动播放 |
+| `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：播放列表曲目播放、跳转到作品、加入播放列表弹窗 |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
