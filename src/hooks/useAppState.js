@@ -23,6 +23,7 @@ import { useFavorites } from './useFavorites'
 import { useFolderGroups } from './useFolderGroups'
 import { useDownloadImport } from './useDownloadImport'
 import { useBookmarks } from './useBookmarks'
+import { useBulkSelection } from './useBulkSelection'
 
 export function useAppState() {
   const playerRef = useRef(null)
@@ -167,6 +168,31 @@ export function useAppState() {
   const filteredWorks = useMemo(() => {
     return filterFavorites(filterByTagWorks)
   }, [filterByTagWorks, filterFavorites])
+
+  // ===== 批量选择 Hook =====
+  const {
+    bulkMode,
+    setBulkMode,
+    toggleBulkMode,
+    selectedIds: bulkSelectedIds,
+    selectedCount: bulkSelectedCount,
+    allSelected: bulkAllSelected,
+    someSelected: bulkSomeSelected,
+    toggleSelect: toggleBulkSelect,
+    selectAll: selectAllBulk,
+    clearSelection: clearBulkSelection,
+    toggleSelectAll: toggleSelectAllBulk,
+    getSelectedWorks: getBulkSelectedWorks,
+    handleBulkFavorite,
+    handleBulkDelete,
+    handleBulkMoveToGroup,
+  } = useBulkSelection({
+    works: filteredWorks,
+    onToggleFavorite: toggleFavorite,
+    onDeleteWork: mediaLibraryDeleteWork,
+    onSetWorkGroup: setWorkGroup,
+    showToast,
+  })
 
   // ===== 播放历史记录 Hook =====
   const { recordHistoryIfNeeded } = usePlaybackHistory()
@@ -1100,6 +1126,23 @@ export function useAppState() {
     renameGroup,
     deleteGroup,
     setWorkGroup,
+
+    // 批量选择
+    bulkMode,
+    setBulkMode,
+    toggleBulkMode,
+    bulkSelectedIds,
+    bulkSelectedCount,
+    bulkAllSelected,
+    bulkSomeSelected,
+    toggleBulkSelect,
+    selectAllBulk,
+    clearBulkSelection,
+    toggleSelectAllBulk,
+    getBulkSelectedWorks,
+    handleBulkFavorite,
+    handleBulkDelete,
+    handleBulkMoveToGroup,
 
     // 筛选
     cvFilter,

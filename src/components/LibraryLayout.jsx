@@ -75,6 +75,15 @@ const LibraryLayout = memo(function LibraryLayout({
   onAddBookmark,
   onUpdateBookmark,
   onDeleteBookmark,
+  bulkMode,
+  bulkSelectedIds,
+  onToggleBulkMode,
+  onToggleBulkSelect,
+  onSelectAllBulk,
+  onClearBulkSelection,
+  onBulkFavorite,
+  onBulkDelete,
+  onBulkMoveToGroup,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -117,6 +126,15 @@ const LibraryLayout = memo(function LibraryLayout({
           onSetWorkGroup={onSetWorkGroup}
           groupWorkCounts={groupWorkCounts}
           isFavoritesView={isFavoritesView}
+          bulkMode={bulkMode}
+          selectedIds={bulkSelectedIds}
+          onToggleBulkMode={onToggleBulkMode}
+          onToggleSelect={onToggleBulkSelect}
+          onSelectAll={onSelectAllBulk}
+          onClearSelection={onClearBulkSelection}
+          onBulkFavorite={onBulkFavorite}
+          onBulkDelete={onBulkDelete}
+          onBulkMoveToGroup={onBulkMoveToGroup}
         />
       </div>
       {selectedWork && (

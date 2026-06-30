@@ -1753,3 +1753,233 @@
   .skeleton-row-tag { height: 20px; width: 48px; }
 }
 
+/* ===== 批量选择模式样式 ===== */
+.bulk-mode-btn {
+  transition: all var(--transition-fast);
+}
+
+.bulk-mode-btn.active {
+  color: var(--accent-primary);
+  background: var(--accent-gradient-soft);
+}
+
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--accent-gradient-soft);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-glow);
+  margin-bottom: 10px;
+}
+
+.bulk-select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  border: 2px solid var(--border-color);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  padding: 0;
+  color: transparent;
+}
+
+.bulk-checkbox:hover {
+  border-color: var(--accent-primary);
+}
+
+.bulk-checkbox.checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.bulk-checkbox.indeterminate {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+  position: relative;
+}
+
+.bulk-checkbox.indeterminate::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+}
+
+.bulk-checkbox.indeterminate svg {
+  display: none;
+}
+
+.bulk-count {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bulk-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.bulk-action-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.bulk-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulk-action-btn.danger:hover:not(:disabled) {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.bulk-action-dropdown {
+  position: relative;
+}
+
+.group-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  min-width: 140px;
+  z-index: var(--z-index-dropdown);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.group-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+}
+
+.group-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.group-menu-item .group-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 批量模式下作品项 */
+.work-list.bulk-mode .work-item {
+  cursor: pointer;
+}
+
+.work-item.selected {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 2px var(--accent-glow), var(--card-shadow);
+}
+
+.bulk-select-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+}
+
+.item-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  padding: 0;
+  color: transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.item-checkbox:hover {
+  border-color: white;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.item-checkbox.checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.work-item.row .bulk-select-checkbox {
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+}
+
+.work-item.row .item-checkbox {
+  width: 20px;
+  height: 20px;
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+.work-item.row .item-checkbox:hover {
+  border-color: var(--accent-primary);
+}
+
+.work-item.row .item-checkbox.checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+

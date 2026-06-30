@@ -94,6 +94,19 @@ export default function App() {
     deleteGroup,
     setWorkGroup,
 
+    // 批量选择
+    bulkMode,
+    toggleBulkMode,
+    bulkSelectedIds,
+    bulkSelectedCount,
+    bulkAllSelected,
+    toggleBulkSelect,
+    selectAllBulk,
+    clearBulkSelection,
+    handleBulkFavorite,
+    handleBulkDelete,
+    handleBulkMoveToGroup,
+
     // 筛选
     cvFilter,
     circleFilter,
@@ -427,6 +440,15 @@ export default function App() {
           groupWorkCounts={groupWorkCounts}
           onSelectAudio={handleSelectAudio}
           isFavoritesView={false}
+          bulkMode={bulkMode}
+          bulkSelectedIds={bulkSelectedIds}
+          onToggleBulkMode={toggleBulkMode}
+          onToggleBulkSelect={toggleBulkSelect}
+          onSelectAllBulk={selectAllBulk}
+          onClearBulkSelection={clearBulkSelection}
+          onBulkFavorite={handleBulkFavorite}
+          onBulkDelete={handleBulkDelete}
+          onBulkMoveToGroup={handleBulkMoveToGroup}
         />
       )}
       {currentView === 'favorites' && (
@@ -460,6 +482,15 @@ export default function App() {
           groupWorkCounts={groupWorkCounts}
           onSelectAudio={handleSelectAudio}
           isFavoritesView={true}
+          bulkMode={bulkMode}
+          bulkSelectedIds={bulkSelectedIds}
+          onToggleBulkMode={toggleBulkMode}
+          onToggleBulkSelect={toggleBulkSelect}
+          onSelectAllBulk={selectAllBulk}
+          onClearBulkSelection={clearBulkSelection}
+          onBulkFavorite={handleBulkFavorite}
+          onBulkDelete={handleBulkDelete}
+          onBulkMoveToGroup={handleBulkMoveToGroup}
         />
       )}
       {currentView === 'discover' && (

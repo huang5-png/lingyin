@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useCallback, memo } from 'react'
+import { useState, useMemo, useEffect, useCallback, memo, useRef } from 'react'
 import './Sidebar.css'
 import StateView from './StateView'
 
-function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView }) {
+function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView, bulkMode, selectedIds, onToggleBulkMode, onToggleSelect, onSelectAll, onClearSelection, onBulkFavorite, onBulkDelete, onBulkMoveToGroup }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showGroups, setShowGroups] = useState(true)
   const [editingGroupId, setEditingGroupId] = useState(null)
@@ -171,6 +171,20 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
                 ) : (
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c0 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
                 )}
+              </button>
+            )}
+            {onToggleBulkMode && !isFavoritesView && (
+              <button
+                className={`settings-btn-icon bulk-mode-btn ${bulkMode ? 'active' : ''}`}
+                onClick={onToggleBulkMode}
+                title={bulkMode ? '退出批量选择' : '批量选择'}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
               </button>
             )}
           </div>
@@ -375,9 +389,107 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
             </div>
           </div>
         </div>
+        {bulkMode && (
+          <div className="bulk-action-bar">
+            <div className="bulk-select-all">
+              <button
+                className={`bulk-checkbox ${selectedIds?.size === filteredWorks.length && filteredWorks.length > 0 ? 'checked' : ''} ${selectedIds?.size > 0 && selectedIds?.size < filteredWorks.length ? 'indeterminate' : ''}`}
+                onClick={() => {
+                  if (selectedIds?.size === filteredWorks.length) {
+                    onClearSelection?.()
+                  } else {
+                    onSelectAll?.()
+                  }
+                }}
+                title={selectedIds?.size === filteredWorks.length ? '取消全选' : '全选'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+              <span className="bulk-count">已选 {selectedIds?.size || 0} / {filteredWorks.length}</span>
+            </div>
+            <div className="bulk-actions">
+              <button
+                className="bulk-action-btn"
+                onClick={onBulkFavorite}
+                disabled={!selectedIds?.size}
+                title="批量收藏/取消收藏"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span>收藏</span>
+              </button>
+              {onBulkMoveToGroup && folderGroups && folderGroups.length > 0 && (
+                <div className="bulk-action-dropdown">
+                  <button
+                    className="bulk-action-btn"
+                    disabled={!selectedIds?.size}
+                    title="批量移动到分组"
+                    onClick={(e) => {
+                      setWorkGroupMenu(workGroupMenu === 'bulk' ? null : 'bulk')
+                      e.stopPropagation()
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span>分组</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                  {workGroupMenu === 'bulk' && (
+                    <div className="group-menu-dropdown" ref={(el) => {
+                      if (el && !el.contains(document.activeElement)) {
+                        setTimeout(() => setWorkGroupMenu(null), 100)
+                      }
+                    }}>
+                      <div
+                        className="group-menu-item"
+                        onClick={() => {
+                          onBulkMoveToGroup?.('ungrouped')
+                          setWorkGroupMenu(null)
+                        }}
+                      >
+                        未分组
+                      </div>
+                      {folderGroups.map((group) => (
+                        <div
+                          key={group.id}
+                          className="group-menu-item"
+                          onClick={() => {
+                            onBulkMoveToGroup?.(group.id)
+                            setWorkGroupMenu(null)
+                          }}
+                        >
+                          <div className="group-color-dot" style={{ backgroundColor: group.color || 'var(--accent-primary)' }} />
+                          {group.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                className="bulk-action-btn danger"
+                onClick={onBulkDelete}
+                disabled={!selectedIds?.size}
+                title="批量删除"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                <span>删除</span>
+              </button>
+            </div>
+          </div>
+        )}
         </div>
 
-      <div className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'}`} style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}>
+      <div className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'} ${bulkMode ? 'bulk-mode' : ''}`} style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}>
         {isLoadingWorks ? (
           viewMode === 'grid' ? (
             <div className="skeleton-grid">
@@ -404,9 +516,30 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
           filteredWorks.map((work) => (
             <div
               key={work.id}
-              className={`work-item ${viewMode === 'grid' ? 'card' : 'row'} ${selectedWorkId === work.id ? 'active' : ''}`}
-              onClick={() => onSelectWork(work)}
+              className={`work-item ${viewMode === 'grid' ? 'card' : 'row'} ${selectedWorkId === work.id ? 'active' : ''} ${bulkMode && selectedIds?.has(work.id) ? 'selected' : ''}`}
+              onClick={() => {
+                if (bulkMode) {
+                  onToggleSelect?.(work.id)
+                } else {
+                  onSelectWork(work)
+                }
+              }}
             >
+              {bulkMode && (
+                <div className="bulk-select-checkbox">
+                  <button
+                    className={`item-checkbox ${selectedIds?.has(work.id) ? 'checked' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleSelect?.(work.id)
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
               {viewMode === 'grid' ? (
                 <>
                   <div className="card-cover">
