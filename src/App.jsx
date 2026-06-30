@@ -26,8 +26,11 @@ import { useOnlineWork } from './hooks/useOnlineWork'
 import { usePlaybackHistory } from './hooks/usePlaybackHistory'
 import { useFilters } from './hooks/useFilters'
 import { useTheme } from './hooks/useTheme'
+import { useToast } from './hooks/useToast'
+import { useImmersive } from './hooks/useImmersive'
+import { useSplitter } from './hooks/useSplitter'
 import { scanFolder, extractRJCode, getExtension } from './utils/scanner'
-import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
+import { parseSubtitle } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
 
@@ -75,60 +78,25 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
-  const [isImmersive, setIsImmersive] = useState(false)
   const [addToPlaylistTarget, setAddToPlaylistTarget] = useState(null) // { audio, work } 待加入曲目
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
-  const [toasts, setToasts] = useState([])
-  // ===== 右侧面板宽度拖拽调整 =====
-  const [rightPanelWidth, setRightPanelWidth] = useState(320) // 默认宽度
-  const [isDraggingSplitter, setIsDraggingSplitter] = useState(false)
+  // ===== Toast 通知 Hook =====
+  const { toasts, showToast, removeToast } = useToast()
+
+  // ===== 右侧面板宽度拖拽 Hook =====
   const contentAreaRef = useRef(null)
-
-  // 右侧面板宽度拖拽调整
-  const handleSplitterMouseDown = useCallback((e) => {
-    e.preventDefault()
-    setIsDraggingSplitter(true)
-  }, [])
-
-  const handleSplitterMouseMove = useCallback((e) => {
-    if (!isDraggingSplitter || !contentAreaRef.current) return
-    const rect = contentAreaRef.current.getBoundingClientRect()
-    const newWidth = rect.right - e.clientX
-    // 限制宽度范围 240px - 600px
-    const clampedWidth = Math.min(600, Math.max(240, newWidth))
-    setRightPanelWidth(clampedWidth)
-  }, [isDraggingSplitter])
-
-  const handleSplitterMouseUp = useCallback(() => {
-    setIsDraggingSplitter(false)
-  }, [])
-
-  // 全局鼠标事件用于 splitter 拖拽
-  useEffect(() => {
-    if (isDraggingSplitter) {
-      document.addEventListener('mousemove', handleSplitterMouseMove)
-      document.addEventListener('mouseup', handleSplitterMouseUp)
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
-    }
-    return () => {
-      document.removeEventListener('mousemove', handleSplitterMouseMove)
-      document.removeEventListener('mouseup', handleSplitterMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-  }, [isDraggingSplitter, handleSplitterMouseMove, handleSplitterMouseUp])
-
-  // Toast 通知
-  const showToast = useCallback((message, type = 'info') => {
-    const id = Date.now() + Math.random()
-    setToasts(prev => [...prev, { id, message, type }])
-  }, [])
-
-  const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }, [])
+  const {
+    width: rightPanelWidth,
+    setWidth: setRightPanelWidth,
+    isDragging: isDraggingSplitter,
+    handleMouseDown: handleSplitterMouseDown,
+  } = useSplitter({
+    defaultWidth: 320,
+    minWidth: 240,
+    maxWidth: 600,
+    containerRef: contentAreaRef,
+  })
 
   const playerRef = useRef(null)
   const handleSelectAudioRef = useRef(null)
@@ -293,37 +261,21 @@ export default function App() {
     showToast,
   })
 
-  const currentCueIndex = useMemo(() => {
-    return findCurrentCue(currentCues, currentTime)
-  }, [currentCues, currentTime])
-
-  const immersiveLyricRef = useRef(null)
-
-  const immersiveLyricCues = useMemo(() => {
-    return currentCues.map((cue, idx) => ({
-      ...cue,
-      realIndex: idx,
-      isActive: idx === currentCueIndex,
-    }))
-  }, [currentCues, currentCueIndex])
-
-  useEffect(() => {
-    if (!isImmersive) return
-    const activeEl = immersiveLyricRef.current?.querySelector(`.immersive-lyric-line.active`)
-    if (activeEl && immersiveLyricRef.current) {
-      const container = immersiveLyricRef.current
-      const offsetTop = activeEl.offsetTop - container.offsetTop
-      const targetScroll = offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2
-      container.scrollTo({
-        top: targetScroll,
-        behavior: 'smooth',
-      })
-    }
-  }, [currentCueIndex, isImmersive])
-
-  const handleCloseImmersive = useCallback(() => {
-    setIsImmersive(false)
-  }, [])
+  // ===== 沉浸式模式 Hook =====
+  const {
+    isImmersive,
+    setIsImmersive,
+    immersiveLyricRef,
+    immersiveLyricCues,
+    currentCueIndex,
+    handleCloseImmersive,
+    handleToggleImmersive,
+  } = useImmersive({
+    currentCues,
+    currentTime,
+    subtitleFontSize: settings.subtitleFontSize,
+    playerRef,
+  })
 
   useEffect(() => {
     loadWorks()
@@ -496,8 +448,8 @@ export default function App() {
     }
 
     // 已经在播放的作品，切换沉浸式
-    setIsImmersive(!isImmersive)
-  }, [playingWork, selectedWork, isImmersive])
+    handleToggleImmersive()
+  }, [playingWork, selectedWork, handleToggleImmersive])
 
   const handlePrevAudio = useCallback(() => {
     // 队列模式优先
