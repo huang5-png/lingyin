@@ -335,7 +335,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
         <div className="waveform-wrapper">
           <div
             ref={waveformContainerRef}
-            className="waveform-container"
+            className={`waveform-container ${isLoading ? 'loading' : ''} ${isPlaying ? 'playing' : ''}`}
             style={{ height: `${waveformHeight}px` }}
             onMouseMove={handleWaveformMouseMove}
             onMouseLeave={handleWaveformMouseLeave}
