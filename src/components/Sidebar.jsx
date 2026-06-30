@@ -2,8 +2,14 @@ import { useState, useMemo } from 'react'
 import './Sidebar.css'
 import StateView from './StateView'
 
-export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite }) {
+export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [showGroups, setShowGroups] = useState(true)
+  const [editingGroupId, setEditingGroupId] = useState(null)
+  const [editingGroupName, setEditingGroupName] = useState('')
+  const [showNewGroupInput, setShowNewGroupInput] = useState(false)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [workGroupMenu, setWorkGroupMenu] = useState(null)
 
   const filteredWorks = useMemo(() => {
     const query = searchQuery.toLowerCase().trim()
@@ -115,6 +121,169 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
               </button>
             )}
           </div>
+        </div>
+        <div className="folder-groups-section">
+          <div className="folder-groups-header" onClick={() => setShowGroups(prev => !prev)}>
+            <div className="folder-groups-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span>文件夹分组</span>
+              <span className="group-count-badge">{folderGroups?.length || 0}</span>
+            </div>
+            <div className="folder-groups-actions">
+              <button
+                className="group-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowNewGroupInput(true)
+                  setNewGroupName('')
+                }}
+                title="新建分组"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+              <svg className={`chevron-icon ${showGroups ? 'expanded' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+          </div>
+          {showGroups && (
+            <div className="folder-groups-list">
+              {showNewGroupInput && (
+                <div className="group-item new-group-input">
+                  <input
+                    type="text"
+                    className="group-name-input"
+                    placeholder="输入分组名称..."
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newGroupName.trim()) {
+                        onCreateGroup?.(newGroupName.trim())
+                        setNewGroupName('')
+                        setShowNewGroupInput(false)
+                      } else if (e.key === 'Escape') {
+                        setShowNewGroupInput(false)
+                        setNewGroupName('')
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    className="group-cancel-btn"
+                    onClick={() => {
+                      setShowNewGroupInput(false)
+                      setNewGroupName('')
+                    }}
+                    title="取消"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <div
+                className={`group-item ${activeGroupId === 'all' ? 'active' : ''}`}
+                onClick={() => onGroupChange?.('all')}
+              >
+                <svg className="group-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                <span className="group-name">全部作品</span>
+                <span className="group-count">{groupWorkCounts?.get('all') || 0}</span>
+              </div>
+              <div
+                className={`group-item ${activeGroupId === 'ungrouped' ? 'active' : ''}`}
+                onClick={() => onGroupChange?.('ungrouped')}
+              >
+                <svg className="group-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+                <span className="group-name">未分组</span>
+                <span className="group-count">{groupWorkCounts?.get('ungrouped') || 0}</span>
+              </div>
+              {folderGroups?.map((group) => (
+                <div
+                  key={group.id}
+                  className={`group-item ${activeGroupId === group.id ? 'active' : ''}`}
+                  onClick={() => onGroupChange?.(group.id)}
+                >
+                  {editingGroupId === group.id ? (
+                    <input
+                      type="text"
+                      className="group-name-input inline-edit"
+                      value={editingGroupName}
+                      onChange={(e) => setEditingGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && editingGroupName.trim()) {
+                          onRenameGroup?.(group.id, editingGroupName.trim())
+                          setEditingGroupId(null)
+                          setEditingGroupName('')
+                        } else if (e.key === 'Escape') {
+                          setEditingGroupId(null)
+                          setEditingGroupName('')
+                        }
+                      }}
+                      onBlur={() => {
+                        if (editingGroupName.trim()) {
+                          onRenameGroup?.(group.id, editingGroupName.trim())
+                        }
+                        setEditingGroupId(null)
+                        setEditingGroupName('')
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <div
+                        className="group-color-dot"
+                        style={{ backgroundColor: group.color || 'var(--accent-primary)' }}
+                      />
+                      <span className="group-name">{group.name}</span>
+                      <span className="group-count">{groupWorkCounts?.get(group.id) || 0}</span>
+                    </>
+                  )}
+                  <div className="group-item-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      className="group-item-btn"
+                      onClick={() => {
+                        setEditingGroupId(group.id)
+                        setEditingGroupName(group.name)
+                      }}
+                      title="重命名"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                      </svg>
+                    </button>
+                    <button
+                      className="group-item-btn delete"
+                      onClick={() => {
+                        if (confirm(`确定删除分组「${group.name}」吗？\n分组内的作品将变为未分组。`)) {
+                          onDeleteGroup?.(group.id)
+                        }
+                      }}
+                      title="删除分组"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="sidebar-filters">
           <div className="filter-group search-group">

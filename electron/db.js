@@ -17,6 +17,7 @@ async function initDB() {
     playlists: [],
     translateCache: {},
     favorites: [],
+    folderGroups: [],
   }
 
   try {
@@ -561,6 +562,121 @@ async function toggleFavorite(workId, workInfo = {}) {
   }
 }
 
+// ===== 文件夹分组 =====
+// FolderGroup 结构：{ id, name, color, order, createdAt, updatedAt }
+// 作品通过 work.folderGroupId 关联到分组
+
+function genGroupId() {
+  return `fg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function ensureFolderGroups() {
+  if (!Array.isArray(dbData.folderGroups)) dbData.folderGroups = []
+  return dbData.folderGroups
+}
+
+async function getAllFolderGroups() {
+  const groups = ensureFolderGroups()
+  return groups.sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+async function createFolderGroup(name, color = '') {
+  const groups = ensureFolderGroups()
+  const now = Date.now()
+  const safeName = (name && String(name).trim()) || '未命名分组'
+  const maxOrder = groups.reduce((max, g) => Math.max(max, g.order || 0), 0)
+  const group = {
+    id: genGroupId(),
+    name: safeName,
+    color: color || '',
+    order: maxOrder + 1,
+    createdAt: now,
+    updatedAt: now,
+  }
+  groups.push(group)
+  saveDB()
+  return group
+}
+
+async function renameFolderGroup(id, name) {
+  const groups = ensureFolderGroups()
+  const group = groups.find(g => g.id === id)
+  if (!group) return null
+  const safeName = (name && String(name).trim()) || '未命名分组'
+  group.name = safeName
+  group.updatedAt = Date.now()
+  saveDB()
+  return group
+}
+
+async function setFolderGroupColor(id, color) {
+  const groups = ensureFolderGroups()
+  const group = groups.find(g => g.id === id)
+  if (!group) return null
+  group.color = color || ''
+  group.updatedAt = Date.now()
+  saveDB()
+  return group
+}
+
+async function deleteFolderGroup(id, moveToGroupId = null) {
+  const groups = ensureFolderGroups()
+  const idx = groups.findIndex(g => g.id === id)
+  if (idx < 0) return false
+
+  // 将该分组下的作品移动到目标分组或移除分组
+  if (dbData.works) {
+    for (const work of dbData.works) {
+      if (work.folderGroupId === id) {
+        work.folderGroupId = moveToGroupId || null
+        work.updatedAt = Date.now()
+      }
+    }
+  }
+
+  groups.splice(idx, 1)
+  saveDB()
+  return true
+}
+
+async function reorderFolderGroups(groupIds) {
+  const groups = ensureFolderGroups()
+  if (!Array.isArray(groupIds)) return groups
+  const map = new Map(groups.map(g => [g.id, g]))
+  let order = 0
+  for (const gid of groupIds) {
+    const g = map.get(gid)
+    if (g) {
+      g.order = order++
+      map.delete(gid)
+    }
+  }
+  // 未在列表中的追加到末尾
+  for (const remaining of map.values()) {
+    remaining.order = order++
+  }
+  saveDB()
+  return getAllFolderGroups()
+}
+
+async function setWorkFolderGroup(workId, groupId) {
+  if (!dbData.works) return null
+  const work = dbData.works.find(w => w.id === workId)
+  if (!work) return null
+  work.folderGroupId = groupId || null
+  work.updatedAt = Date.now()
+  saveDB()
+  return work
+}
+
+async function getWorksByFolderGroup(groupId) {
+  if (!dbData.works) return []
+  if (groupId === null || groupId === 'ungrouped') {
+    return dbData.works.filter(w => !w.folderGroupId)
+  }
+  return dbData.works.filter(w => w.folderGroupId === groupId)
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -596,4 +712,12 @@ module.exports = {
   addFavorite,
   removeFavorite,
   toggleFavorite,
+  getAllFolderGroups,
+  createFolderGroup,
+  renameFolderGroup,
+  setFolderGroupColor,
+  deleteFolderGroup,
+  reorderFolderGroups,
+  setWorkFolderGroup,
+  getWorksByFolderGroup,
 }

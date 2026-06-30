@@ -89,4 +89,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   favoritesAdd: (workId, workInfo) => ipcRenderer.invoke('favorites:add', workId, workInfo),
   favoritesRemove: (workId) => ipcRenderer.invoke('favorites:remove', workId),
   favoritesToggle: (workId, workInfo) => ipcRenderer.invoke('favorites:toggle', workId, workInfo),
+
+  // 文件夹分组
+  folderGroupsGetAll: () => ipcRenderer.invoke('folderGroups:getAll'),
+  folderGroupsCreate: (name, color) => ipcRenderer.invoke('folderGroups:create', name, color),
+  folderGroupsRename: (id, name) => ipcRenderer.invoke('folderGroups:rename', id, name),
+  folderGroupsSetColor: (id, color) => ipcRenderer.invoke('folderGroups:setColor', id, color),
+  folderGroupsDelete: (id, moveToGroupId) => ipcRenderer.invoke('folderGroups:delete', id, moveToGroupId),
+  folderGroupsReorder: (groupIds) => ipcRenderer.invoke('folderGroups:reorder', groupIds),
+  folderGroupsSetWorkGroup: (workId, groupId) => ipcRenderer.invoke('folderGroups:setWorkGroup', workId, groupId),
+  folderGroupsGetWorks: (groupId) => ipcRenderer.invoke('folderGroups:getWorks', groupId),
 })

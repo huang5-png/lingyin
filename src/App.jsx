@@ -37,6 +37,7 @@ import { useViewNavigation } from './hooks/useViewNavigation'
 import { usePlaylistPlayback } from './hooks/usePlaylistPlayback'
 import { useSubtitleRefresh } from './hooks/useSubtitleRefresh'
 import { useFavorites } from './hooks/useFavorites'
+import { useFolderGroups } from './hooks/useFolderGroups'
 import './App.css'
 
 export default function App() {
@@ -116,17 +117,6 @@ export default function App() {
     setSelectedWork,
   })
 
-  // ===== 筛选状态 Hook =====
-  const {
-    cvFilter,
-    circleFilter,
-    tagFilter,
-    allCVs,
-    allCircles,
-    filteredWorks: filterByTagWorks,
-    handleFilterChange,
-  } = useFilters(works)
-
   // ===== 收藏功能 Hook =====
   const {
     favoriteIds,
@@ -136,6 +126,35 @@ export default function App() {
     isFavorite,
     filterFavorites,
   } = useFavorites({ showToast })
+
+  // ===== 文件夹分组 Hook =====
+  const {
+    folderGroups,
+    activeGroupId,
+    setActiveGroupId,
+    groupMap,
+    groupWorkCounts,
+    filteredWorks: groupFilteredWorks,
+    createGroup,
+    renameGroup,
+    deleteGroup,
+    setWorkGroup,
+  } = useFolderGroups({
+    showToast,
+    works,
+    setWorks,
+  })
+
+  // ===== 筛选状态 Hook =====
+  const {
+    cvFilter,
+    circleFilter,
+    tagFilter,
+    allCVs,
+    allCircles,
+    filteredWorks: filterByTagWorks,
+    handleFilterChange,
+  } = useFilters(groupFilteredWorks)
 
   const filteredWorks = useMemo(() => {
     return filterFavorites(filterByTagWorks)
@@ -499,6 +518,14 @@ export default function App() {
               onToggleFavoritesFilter={handleToggleFavoritesFilter}
               favoriteIds={favoriteIds}
               onToggleFavorite={handleToggleFavorite}
+              folderGroups={folderGroups}
+              activeGroupId={activeGroupId}
+              onGroupChange={setActiveGroupId}
+              onCreateGroup={createGroup}
+              onRenameGroup={renameGroup}
+              onDeleteGroup={deleteGroup}
+              onSetWorkGroup={setWorkGroup}
+              groupWorkCounts={groupWorkCounts}
             />
           </div>
           {selectedWork && (
@@ -538,6 +565,8 @@ export default function App() {
                     onPlayNext={handlePlayNext}
                     isFavorite={isFavorite(selectedWork?.id)}
                     onToggleFavorite={handleToggleFavorite}
+                    folderGroups={folderGroups}
+                    onSetWorkGroup={setWorkGroup}
                   />
                 </div>
                 <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />

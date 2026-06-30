@@ -3,15 +3,23 @@ import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
 import StateView from './StateView'
 
-export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite }) {
+export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
+  const [showGroupMenu, setShowGroupMenu] = useState(false)
   const coverImgRef = useRef(null)
 
   useEffect(() => {
     setCurrentDirPath(null)
   }, [work?.id])
+
+  useEffect(() => {
+    if (!showGroupMenu) return
+    const handleClickOutside = () => setShowGroupMenu(false)
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [showGroupMenu])
 
   const directoryTree = useMemo(() => {
     if (!work || !audioFiles || audioFiles.length === 0) return null
@@ -236,6 +244,52 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
                 </svg>
                 {isFavorite ? '已收藏' : '收藏'}
               </button>
+              {folderGroups && folderGroups.length > 0 && !work.isOnline && (
+                <div className="action-btn-group">
+                  <button
+                    className="action-btn move-group-btn"
+                    onClick={() => setShowGroupMenu(prev => !prev)}
+                    title="移动到分组"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    移动到分组
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                  {showGroupMenu && (
+                    <div className="group-menu-dropdown" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className={`group-menu-item ${!work.folderGroupId ? 'active' : ''}`}
+                        onClick={() => {
+                          onSetWorkGroup?.(work.id, null)
+                          setShowGroupMenu(false)
+                        }}
+                      >
+                        未分组
+                      </div>
+                      {folderGroups.map(group => (
+                        <div
+                          key={group.id}
+                          className={`group-menu-item ${work.folderGroupId === group.id ? 'active' : ''}`}
+                          onClick={() => {
+                            onSetWorkGroup?.(work.id, group.id)
+                            setShowGroupMenu(false)
+                          }}
+                        >
+                          <div
+                            className="group-menu-dot"
+                            style={{ backgroundColor: group.color || 'var(--accent-primary)' }}
+                          />
+                          {group.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <button className="action-btn primary" onClick={handleEdit}>
                 <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3"/>

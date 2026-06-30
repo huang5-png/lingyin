@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -347,6 +347,39 @@ ipcMain.handle('favorites:remove', async (_, workId) => {
 
 ipcMain.handle('favorites:toggle', async (_, workId, workInfo) => {
   return toggleFavorite(workId, workInfo)
+})
+
+// ===== 文件夹分组 IPC =====
+ipcMain.handle('folderGroups:getAll', async () => {
+  return getAllFolderGroups()
+})
+
+ipcMain.handle('folderGroups:create', async (_, name, color) => {
+  return createFolderGroup(name, color)
+})
+
+ipcMain.handle('folderGroups:rename', async (_, id, name) => {
+  return renameFolderGroup(id, name)
+})
+
+ipcMain.handle('folderGroups:setColor', async (_, id, color) => {
+  return setFolderGroupColor(id, color)
+})
+
+ipcMain.handle('folderGroups:delete', async (_, id, moveToGroupId) => {
+  return deleteFolderGroup(id, moveToGroupId)
+})
+
+ipcMain.handle('folderGroups:reorder', async (_, groupIds) => {
+  return reorderFolderGroups(groupIds)
+})
+
+ipcMain.handle('folderGroups:setWorkGroup', async (_, workId, groupId) => {
+  return setWorkFolderGroup(workId, groupId)
+})
+
+ipcMain.handle('folderGroups:getWorks', async (_, groupId) => {
+  return getWorksByFolderGroup(groupId)
 })
 
 ipcMain.handle('log:info', async (_, message, ...args) => {
