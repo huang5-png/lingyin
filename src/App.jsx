@@ -329,7 +329,10 @@ export default function App() {
 
       {currentView === 'download' && (
         <div className="download-view-wrapper">
-          <DownloadView />
+          <DownloadView
+            onToast={showToast}
+            onOpenSettings={handleOpenSettings}
+          />
         </div>
       )}
 

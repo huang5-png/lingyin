@@ -40,7 +40,7 @@ function getTotalDownloaded(task) {
   return { downloaded, total, speed }
 }
 
-export default function DownloadView() {
+export default function DownloadView({ onToast, onOpenSettings }) {
   const [downloadState, setDownloadState] = useState({ queue: [], active: null })
   const [expandedTasks, setExpandedTasks] = useState(new Set())
 
@@ -75,6 +75,25 @@ export default function DownloadView() {
     await window.electronAPI.downloadClearCompleted()
   }, [])
 
+  const handleRetryTask = useCallback(async (taskId) => {
+    const success = await window.electronAPI.downloadRetryTask(taskId)
+    if (success) {
+      onToast?.('已重新加入下载队列', 'success')
+    } else {
+      onToast?.('重试失败', 'error')
+    }
+  }, [onToast])
+
+  const handleRetryFile = useCallback(async (taskId, fileIndex, e) => {
+    e.stopPropagation()
+    const success = await window.electronAPI.downloadRetryFile(taskId, fileIndex)
+    if (success) {
+      onToast?.('已重新加入下载队列', 'success')
+    } else {
+      onToast?.('重试失败', 'error')
+    }
+  }, [onToast])
+
   const allTasks = []
   if (downloadState.active) allTasks.push(downloadState.active)
   for (const t of downloadState.queue) allTasks.push(t)
@@ -85,6 +104,8 @@ export default function DownloadView() {
 
   const downloadingTask = downloadState.active
   const activeStats = downloadingTask ? getTotalDownloaded(downloadingTask) : { downloaded: 0, total: 0, speed: 0 }
+
+  const failedCount = allTasks.filter(t => t.status === 'failed').length
 
   return (
     <div className="download-view">
@@ -103,6 +124,19 @@ export default function DownloadView() {
             <span className="downloading-speed">
               下载中 · {formatSpeed(activeStats.speed)}
             </span>
+          )}
+          {failedCount > 0 && (
+            <span className="failed-count-badge">
+              {failedCount} 个失败
+            </span>
+          )}
+          {onOpenSettings && (
+            <button className="download-settings-btn" onClick={() => onOpenSettings('download')} title="下载设置">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
           )}
           {completedCount > 0 && (
             <button className="clear-completed-btn" onClick={handleClearCompleted}>
@@ -135,7 +169,7 @@ export default function DownloadView() {
                 <div className="task-header" onClick={() => toggleExpand(task.id)}>
                   <div className="task-cover">
                     {task.workCover ? (
-                      <img src={task.workCover} alt="" />
+                      <img src={task.workCover} alt="" loading="lazy" decoding="async" />
                     ) : (
                       <div className="task-cover-placeholder">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -182,6 +216,14 @@ export default function DownloadView() {
                         </svg>
                       </button>
                     )}
+                    {task.status === 'failed' && (
+                      <button className="task-action-btn retry" onClick={() => handleRetryTask(task.id)} title="重试全部">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10" />
+                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                      </button>
+                    )}
                     {isFinished && (
                       <button className="task-action-btn remove" onClick={() => handleRemove(task.id)} title="删除任务">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -210,7 +252,20 @@ export default function DownloadView() {
                           </span>
                         )}
                         {file.status === 'failed' && (
-                          <span className="file-error" title={file.error}>{file.error}</span>
+                          <>
+                            <span className="file-error" title={file.error}>{file.error}</span>
+                            <button
+                              className="file-retry-btn"
+                              onClick={(e) => handleRetryFile(task.id, idx, e)}
+                              title="重试此文件"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+                                <polyline points="23 4 23 10 17 10" />
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                              </svg>
+                              重试
+                            </button>
+                          </>
                         )}
                         {file.status === 'done' && (
                           <span className="file-done">✓</span>

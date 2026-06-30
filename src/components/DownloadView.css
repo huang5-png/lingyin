@@ -47,6 +47,36 @@
   font-weight: 500;
 }
 
+.download-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.download-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.download-settings-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.download-settings-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .clear-completed-btn {
   background: transparent;
   border: 1px solid var(--border-color);
@@ -418,4 +448,42 @@
 .file-done {
   color: #22c55e;
   flex-shrink: 0;
+}
+
+.retry-task-btn {
+  color: var(--accent-primary);
+}
+
+.retry-task-btn:hover {
+  background: rgba(201, 100, 66, 0.1);
+  color: var(--accent-primary);
+}
+
+.file-retry-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.2s;
+}
+
+.task-file-row:hover .file-retry-btn {
+  opacity: 1;
+}
+
+.file-retry-btn:hover {
+  background: rgba(201, 100, 66, 0.1);
+}
+
+.file-retry-btn svg {
+  width: 12px;
+  height: 12px;
 }
