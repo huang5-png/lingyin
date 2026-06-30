@@ -137,6 +137,8 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
   const [loading, setLoading] = useState(true)
   const [isFetching, setIsFetching] = useState(false)
   const [tagsLoading, setTagsLoading] = useState(true)
+  const [tagsRetryCount, setTagsRetryCount] = useState(0)
+  const [worksRetryCount, setWorksRetryCount] = useState(0)
   const [error, setError] = useState(null)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(20)
@@ -176,15 +178,38 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
   const buildSearchQueryRef = useRef(null)
   const debounceTimerRef = useRef(null)
 
+  // 带指数退避的重试辅助函数
+  const fetchWithRetry = async (fetchFn, maxRetries = 5, baseDelay = 1000) => {
+    let lastError = null
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fetchFn()
+      } catch (e) {
+        lastError = e
+        if (attempt < maxRetries) {
+          const delay = baseDelay * attempt // 指数退避: 0s, 1s, 2s, 3s, 4s
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+    }
+    throw lastError
+  }
+
   useEffect(() => {
     const fetchTags = async () => {
+      setTagsLoading(true)
+      setTagsRetryCount(0)
       try {
-        const tags = await window.electronAPI.asmrOneGetTags()
+        const tags = await fetchWithRetry(async () => {
+          return await window.electronAPI.asmrOneGetTags()
+        }, 4, 1000)
         setAllTags(tags || [])
       } catch (e) {
-        console.error('Failed to fetch tags:', e)
+        console.error('Failed to fetch tags after retries:', e)
+        setAllTags([])
       } finally {
         setTagsLoading(false)
+        setTagsRetryCount(0)
       }
     }
     fetchTags()
@@ -255,24 +280,30 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
     if (works.length === 0) setLoading(true)
     setIsFetching(true)
     setError(null)
+    setWorksRetryCount(0)
     try {
       const keyword = buildSearchQueryRef.current ? buildSearchQueryRef.current() : ''
-      const data = await window.electronAPI.asmrOneGetWorks({
-        page: pageRef.current,
-        pageSize,
-        order: sortBy,
-        sort: sortOrder,
-        subtitle: hasSubtitle ? 1 : 0,
-        keyword
-      })
+      const data = await fetchWithRetry(async () => {
+        setWorksRetryCount(prev => prev + 1)
+        return await window.electronAPI.asmrOneGetWorks({
+          page: pageRef.current,
+          pageSize,
+          order: sortBy,
+          sort: sortOrder,
+          subtitle: hasSubtitle ? 1 : 0,
+          keyword
+        })
+      }, 4, 1000)
       setWorks(data.works || [])
       if (data.pagination) {
         const total = Math.ceil((data.pagination.totalCount || 0) / pageSize)
         setTotalPages(total)
       }
+      setWorksRetryCount(0)
     } catch (e) {
-      console.error('Failed to fetch works:', e)
+      console.error('Failed to fetch works after retries:', e)
       if (works.length === 0) setError('加载失败，请检查网络连接')
+      setWorksRetryCount(0)
     } finally {
       setLoading(false)
       setIsFetching(false)
@@ -1127,7 +1158,11 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
           {isFetching && (
             <div className="discover-fetching-bar">
               <div className="fetching-spinner" />
-              <span>正在刷新...</span>
+              <span>
+                {worksRetryCount > 0 
+                  ? `正在刷新...（第 ${worksRetryCount} 次重试）` 
+                  : '正在刷新...'}
+              </span>
             </div>
           )}
           <div className="discover-grid">
