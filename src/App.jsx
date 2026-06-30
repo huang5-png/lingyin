@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import AudioPlayer from './components/AudioPlayer'
-import LyricView from './components/LyricView'
-import SettingsModal from './components/SettingsModal'
 import ErrorBoundary from './components/ErrorBoundary'
+import LeftNavBar from './components/LeftNavBar'
+import ImmersiveView from './components/ImmersiveView'
+import LibraryLayout from './components/LibraryLayout'
+import DiscoverLayout from './components/DiscoverLayout'
+import AudioPlayer from './components/AudioPlayer'
 import UsageReport from './components/UsageReport'
 import DownloadView from './components/DownloadView'
 import DownloadModal from './components/DownloadModal'
@@ -11,57 +12,29 @@ import RecentPlaysView from './components/RecentPlaysView'
 import GlobalSearchModal from './components/GlobalSearchModal'
 import Toast from './components/Toast'
 import AddToPlaylistModal from './components/AddToPlaylistModal'
-import LeftNavBar from './components/LeftNavBar'
-import ImmersiveView from './components/ImmersiveView'
-import LibraryLayout from './components/LibraryLayout'
-import DiscoverLayout from './components/DiscoverLayout'
-import { useTranslate } from './hooks/useTranslate'
-import { usePlayQueue } from './hooks/usePlayQueue'
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import { useSleepTimer, SLEEP_TIMER_OPTIONS } from './hooks/useSleepTimer'
-import { useSubtitle } from './hooks/useSubtitle'
-import { useMediaLibrary } from './hooks/useMediaLibrary'
-import { useOnlineWork } from './hooks/useOnlineWork'
-import { usePlaybackHistory } from './hooks/usePlaybackHistory'
-import { useFilters } from './hooks/useFilters'
-import { useTheme } from './hooks/useTheme'
-import { useToast } from './hooks/useToast'
-import { useImmersive } from './hooks/useImmersive'
-import { useSplitter } from './hooks/useSplitter'
-import { usePlayer } from './hooks/usePlayer'
-import { useWorkMetadata } from './hooks/useWorkMetadata'
-import { useAppSettings } from './hooks/useAppSettings'
-import { useViewNavigation } from './hooks/useViewNavigation'
-import { usePlaylistPlayback } from './hooks/usePlaylistPlayback'
-import { useSubtitleRefresh } from './hooks/useSubtitleRefresh'
-import { useFavorites } from './hooks/useFavorites'
-import { useFolderGroups } from './hooks/useFolderGroups'
+import SettingsModal from './components/SettingsModal'
+import { useAppState } from './hooks/useAppState'
 import './App.css'
 
 export default function App() {
-  const playerRef = useRef(null)
-  const handleSelectAudioRef = useRef(null)
-  const discoverViewRef = useRef(null)
-
-  // ===== Toast 通知 Hook =====
-  const { toasts, showToast, removeToast } = useToast()
-
-  // ===== 设置管理 Hook =====
   const {
+    // Refs
+    playerRef,
+    discoverViewRef,
+    contentAreaRef,
+
+    // Toast
+    toasts,
+    showToast,
+    removeToast,
+
+    // 设置
     settings,
-    setSettings,
     viewMode,
-    showLyric,
-    setShowLyric,
     handleSaveSettings,
     handleViewModeChange,
-  } = useAppSettings({
-    playerRef,
-    showToast,
-  })
 
-  // ===== 视图导航 Hook =====
-  const {
+    // 视图导航
     selectedWork,
     setSelectedWork,
     currentView,
@@ -76,173 +49,88 @@ export default function App() {
     setShowGlobalSearch,
     settingsDefaultTab,
     handleOpenSettings,
-    handleOpenSubtitleSettings,
-    pendingAutoPlayRef,
     handleSelectWork,
     handleRecentPlayAutoPlay,
-    handlePlayerCoverClick,
-  } = useViewNavigation({ showToast })
 
-  // ===== 右侧面板宽度拖拽 Hook =====
-  const contentAreaRef = useRef(null)
-  const {
-    width: rightPanelWidth,
-    setWidth: setRightPanelWidth,
-    isDragging: isDraggingSplitter,
-    handleMouseDown: handleSplitterMouseDown,
-  } = useSplitter({
-    defaultWidth: 320,
-    minWidth: 240,
-    maxWidth: 600,
-    containerRef: contentAreaRef,
-  })
+    // 右侧面板拖拽
+    rightPanelWidth,
+    handleSplitterMouseDown,
 
-  // ===== 媒体库管理 Hook =====
-  const {
+    // 媒体库
     works,
-    setWorks,
-    loadWorks,
+    audioFiles,
     handleAddFolder,
     handleAddMediaLibrary,
-    handleDeleteWork: mediaLibraryDeleteWork,
-    audioFiles,
-    setAudioFiles,
-    allSubtitleFiles,
-    setAllSubtitleFiles,
-    latestAudioFilesRef,
-  } = useMediaLibrary({
-    showToast,
-    setSelectedWork,
-  })
+    handleDeleteWork,
 
-  // ===== 收藏功能 Hook =====
-  const {
+    // 收藏
     favoriteIds,
     showOnlyFavorites,
-    setShowOnlyFavorites,
-    toggleFavorite,
+    handleToggleFavorite,
     isFavorite,
-    filterFavorites,
-  } = useFavorites({ showToast })
+    handleToggleFavoritesFilter,
 
-  // ===== 文件夹分组 Hook =====
-  const {
+    // 文件夹分组
     folderGroups,
     activeGroupId,
     setActiveGroupId,
-    groupMap,
     groupWorkCounts,
-    filteredWorks: groupFilteredWorks,
     createGroup,
     renameGroup,
     deleteGroup,
     setWorkGroup,
-  } = useFolderGroups({
-    showToast,
-    works,
-    setWorks,
-  })
 
-  // ===== 筛选状态 Hook =====
-  const {
+    // 筛选
     cvFilter,
     circleFilter,
     tagFilter,
     allCVs,
     allCircles,
-    filteredWorks: filterByTagWorks,
+    filteredWorks,
     handleFilterChange,
-  } = useFilters(groupFilteredWorks)
 
-  const filteredWorks = useMemo(() => {
-    return filterFavorites(filterByTagWorks)
-  }, [filterByTagWorks, filterFavorites])
-
-  // ===== 播放历史记录 Hook =====
-  const { recordHistoryIfNeeded } = usePlaybackHistory()
-
-  // ===== 翻译功能 Hook =====
-  const {
-    translateCacheRef,
-    translateVersion,
-    setTranslateVersion,
-    translate: handleTranslate,
-    translateBatch: handleTranslateBatch,
+    // 翻译
+    handleTranslate,
+    handleTranslateBatch,
     getTranslatedText,
     isTranslated,
     isTranslating,
     isAnyTranslating,
-    toggleSubtitleTranslate,
-  } = useTranslate(showToast)
+    handleToggleTranslate,
+    hasTranslation,
 
-  const {
+    // 播放队列
     playQueue,
-    setPlayQueue,
     queueIndex,
-    setQueueIndex,
     loopMode,
-    setLoopMode,
     shuffle,
-    setShuffle,
     showQueuePanel,
-    setShowQueuePanel,
-    pendingQueuePlayRef,
-    playFromQueue: handlePlayFromQueue,
-    advanceQueue,
-    buildQueueItem,
-    addToQueue: handleAddToQueue,
-    playNext: handlePlayNext,
-    removeFromQueue: handleRemoveFromQueue,
-    clearQueue: handleClearQueue,
-    reorderQueue: handleReorderQueue,
-    toggleLoopMode: handleToggleLoopMode,
-    toggleShuffle: handleToggleShuffle,
-    toggleQueuePanel: handleToggleQueuePanel,
-  } = usePlayQueue({
-    selectedWork,
-    audioFiles,
-    settings,
-    showToast,
-    playerRef,
-    handleSelectAudioRef,
-    setCurrentView,
-    setSelectedWork,
-  })
+    handlePlayFromQueue,
+    handleAddToQueue,
+    handlePlayNext,
+    handleRemoveFromQueue,
+    handleClearQueue,
+    handleReorderQueue,
+    handleToggleLoopMode,
+    handleToggleShuffle,
+    handleToggleQueuePanel,
 
-  const {
+    // 睡眠定时器
     sleepTimerMinutes,
     sleepTimerRemaining,
-    setSleepTimer: handleSetSleepTimer,
-  } = useSleepTimer({ playerRef, showToast })
+    handleSetSleepTimer,
 
-  const {
+    // 字幕
     subtitleOptions,
-    setSubtitleOptions,
     selectedSubtitleIndex,
-    setSelectedSubtitleIndex,
-    detectSubtitleLanguagesAsync,
-    findMatchedSubtitles,
-    loadSavedSubtitle,
-    selectSubtitleByPriority,
     handleSelectSubtitle,
     handleAddSubtitleFile,
-    handleAutoTranslate,
-  } = useSubtitle({
-    selectedWork,
-    allSubtitleFiles,
-    settings,
-    translateCacheRef,
-    setTranslateVersion,
-    showToast,
-  })
 
-  // ===== 核心播放控制 Hook =====
-  const {
+    // 播放控制
     playingWork,
     currentAudio,
     currentCues,
     currentTime,
-    duration,
     handleSelectAudio,
     handleTimeUpdate,
     handleReady,
@@ -250,212 +138,40 @@ export default function App() {
     handlePrevAudio,
     handleNextAudio,
     handleFinish,
-    setCurrentCues,
-    setCurrentTime,
-    setDuration,
-    setPlayingWork,
-    setCurrentAudio,
-    durationRef,
-  } = usePlayer({
-    selectedWork,
-    audioFiles,
-    settings,
-    playerRef,
-    showToast,
-    findMatchedSubtitles,
-    detectSubtitleLanguagesAsync,
-    loadSavedSubtitle,
-    selectSubtitleByPriority,
-    handleAutoTranslate,
-    setSubtitleOptions,
-    setSelectedSubtitleIndex,
-    queueIndex,
-    playQueue,
-    advanceQueue,
-    recordHistoryIfNeeded,
-    handleSelectAudioRef,
-  })
 
-  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
-
-  const handleToggleTranslate = useCallback(() => {
-    toggleSubtitleTranslate({
-      selectedWork,
-      currentAudio,
-      currentCues,
-      setCurrentCues,
-    })
-  }, [selectedWork, currentAudio, currentCues, toggleSubtitleTranslate])
-
-  // 包装 handleDeleteWork，注入 selectedWork 和清理回调
-  const handleDeleteWork = useCallback(
-    async (work) => {
-      const onDelete = () => {
-        setSelectedWork(null)
-        setCurrentAudio(null)
-        setCurrentCues([])
-      }
-      await mediaLibraryDeleteWork(work, selectedWork, onDelete)
-    },
-    [mediaLibraryDeleteWork, selectedWork, setCurrentAudio, setCurrentCues],
-  )
-
-  // 收藏相关处理
-  const handleToggleFavorite = useCallback(
-    async (work) => {
-      if (!work) return
-      const workInfo = {
-        title: work.title || work.folderName || '',
-        cover: work.cover || '',
-        circle: work.circle || '',
-        isOnline: !!work.isOnline,
-      }
-      await toggleFavorite(work.id, workInfo)
-    },
-    [toggleFavorite],
-  )
-
-  const handleToggleFavoritesFilter = useCallback(() => {
-    setShowOnlyFavorites(prev => !prev)
-  }, [setShowOnlyFavorites])
-
-  // ===== 在线作品 Hook =====
-  const {
+    // 在线作品
     handleSelectOnlineWork,
     handleReloadOnlineTracks,
-    extractAudiosFromTracks,
-  } = useOnlineWork({
-    showToast,
-    setSelectedWork,
-    setAudioFiles,
-    setCurrentAudio,
-    setCurrentCues,
-    setCurrentTime,
-    setDuration,
-    setAllSubtitleFiles,
-    setSubtitleOptions,
-    setSelectedSubtitleIndex,
-  })
 
-  // ===== 元数据编辑与刷新 Hook =====
-  const {
+    // 元数据
     handleEditMetadata,
     handleRefreshMetadata,
-  } = useWorkMetadata({
-    selectedWork,
-    setSelectedWork,
-    setWorks,
-    showToast,
-  })
 
-  // ===== 沉浸式模式 Hook =====
-  const {
+    // 沉浸式
     isImmersive,
-    setIsImmersive,
-    immersiveLyricRef,
     handleCloseImmersive,
-    handleToggleImmersive,
-  } = useImmersive()
+    handlePlayerCoverClickWrapped,
 
-  useEffect(() => {
-    loadWorks()
-  }, [])
-
-  // ===== 主题与缩放 Hook =====
-  useTheme({
-    settings,
-    setSettings,
-    setShowLyric,
-    showToast,
-  })
-
-  // 监听 audioFiles 加载完成后自动播放（最近播放）
-  useEffect(() => {
-    if (!pendingAutoPlayRef?.current || !audioFiles.length) return
-
-    const pending = pendingAutoPlayRef.current
-    const timeout = Date.now() - pending.startedAt > 10000
-    if (timeout) {
-      pendingAutoPlayRef.current = null
-      return
-    }
-
-    let targetAudio = null
-    if (pending.audioPath) {
-      targetAudio = audioFiles.find(a => a.path === pending.audioPath)
-    }
-    if (!targetAudio && audioFiles.length > 0) {
-      targetAudio = audioFiles[0]
-    }
-
-    if (targetAudio) {
-      pendingAutoPlayRef.current = null
-      handleSelectAudio(targetAudio)
-    }
-  }, [audioFiles, handleSelectAudio, pendingAutoPlayRef])
-
-  const handlePlayerCoverClickWrapped = useCallback(() => {
-    handlePlayerCoverClick({
-      playingWork,
-      onToggleImmersive: handleToggleImmersive,
-    })
-  }, [playingWork, handleToggleImmersive, handlePlayerCoverClick])
-
-  useKeyboardShortcuts({
-    settings,
-    playerRef,
-    isImmersive,
-    setIsImmersive,
-    showGlobalSearch,
-    setShowGlobalSearch,
-    showSettingsModal,
-    setShowSettingsModal,
-    showDownloadModal,
-    setShowDownloadModal,
-    showQueuePanel,
-    setShowQueuePanel,
-    currentAudio,
-    handlePrevAudio,
-    handleNextAudio,
-  })
-
-  // ===== 字幕刷新 Hook =====
-  const {
+    // 字幕刷新
     handleRefreshSubtitles,
-  } = useSubtitleRefresh({
-    selectedWork,
-    currentAudio,
-    subtitleOptions,
-    selectedSubtitleIndex,
-    findMatchedSubtitles,
-    detectSubtitleLanguagesAsync,
-    setAudioFiles,
-    setAllSubtitleFiles,
-    setSubtitleOptions,
-    setSelectedSubtitleIndex,
-    setCurrentCues,
-    showToast,
-  })
 
-  // ===== 播放列表播放 Hook =====
-  const {
+    // 播放列表
     addToPlaylistTarget,
-    handleOpenAddToPlaylist,
     handleCloseAddToPlaylist,
     handlePlayPlaylistItem,
     handleNavigateToWorkFromPlaylist,
-  } = usePlaylistPlayback({
-    works,
-    showToast,
-    handleSelectAudio,
-    setCurrentView,
-    setSelectedWork,
-    latestAudioFilesRef,
-  })
+    handleOpenAddToPlaylistForAudio,
 
-  const handleOpenAddToPlaylistForAudio = useCallback((audio) => {
-    handleOpenAddToPlaylist(audio, selectedWork)
-  }, [handleOpenAddToPlaylist, selectedWork])
+    // 发现页筛选
+    handleFilterCVInDiscover,
+    handleFilterTagInDiscover,
+    handleCircleClickInDiscover,
+
+    // 全局搜索
+    handleGlobalSearchSelectWork,
+    handleGlobalSearchPlayAudio,
+    handleGlobalSearchSelectPlaylist,
+  } = useAppState()
 
   return (
     <ErrorBoundary>
@@ -574,21 +290,9 @@ export default function App() {
           onEditMetadata={handleEditMetadata}
           onRefreshMetadata={handleRefreshMetadata}
           onRefreshSubtitles={handleRefreshSubtitles}
-          onFilterCV={(cv) => {
-            if (cv && discoverViewRef.current) {
-              discoverViewRef.current.toggleVa(cv)
-            }
-          }}
-          onFilterTag={(tag) => {
-            if (tag && discoverViewRef.current) {
-              discoverViewRef.current.toggleTag(tag)
-            }
-          }}
-          onCircleClick={(circle) => {
-            if (circle && discoverViewRef.current) {
-              discoverViewRef.current.toggleCircle(circle)
-            }
-          }}
+          onFilterCV={handleFilterCVInDiscover}
+          onFilterTag={handleFilterTagInDiscover}
+          onCircleClick={handleCircleClickInDiscover}
           activeCV={''}
           activeTag={''}
           onDownload={() => setShowDownloadModal(true)}
@@ -730,24 +434,9 @@ export default function App() {
         currentAudio={currentAudio}
         currentWork={selectedWork}
         favoriteIds={favoriteIds}
-        onSelectWork={(work) => {
-          setCurrentView('library')
-          handleSelectWork(work)
-        }}
-        onPlayAudio={(audio, work) => {
-          if (work) {
-            setCurrentView(work.isOnline ? 'discover' : 'library')
-            if (work.isOnline) {
-              handleSelectOnlineWork({ id: work.onlineId, title: work.title, mainCoverUrl: work.cover, name: work.circle, vas: (work.cvs || []).map(c => ({ name: c })), tags: (work.tags || []).map(t => ({ name: t })) })
-            } else {
-              handleSelectWork(work)
-            }
-          }
-        }}
-        onSelectPlaylist={(playlist) => {
-          setCurrentView('playlist')
-          setShowGlobalSearch(false)
-        }}
+        onSelectWork={handleGlobalSearchSelectWork}
+        onPlayAudio={handleGlobalSearchPlayAudio}
+        onSelectPlaylist={handleGlobalSearchSelectPlaylist}
       />
 
       {addToPlaylistTarget && (
