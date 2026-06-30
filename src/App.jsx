@@ -273,6 +273,77 @@ export default function App() {
           onToggleTranslate={handleToggleTranslate}
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
+          isFavoritesView={false}
+        />
+      )}
+      {currentView === 'favorites' && (
+        <LibraryLayout
+          selectedWork={selectedWork}
+          settings={settings}
+          filteredWorks={filteredWorks}
+          isLoadingWorks={isLoadingWorks}
+          onSelectWork={handleSelectWork}
+          onAddFolder={handleAddFolder}
+          onAddMediaLibrary={handleAddMediaLibrary}
+          cvFilter={cvFilter}
+          circleFilter={circleFilter}
+          onFilterChange={handleFilterChange}
+          allCVs={allCVs}
+          allCircles={allCircles}
+          onOpenSettings={handleOpenSettings}
+          onDeleteWork={handleDeleteWork}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          onTranslate={handleTranslate}
+          onTranslateBatch={handleTranslateBatch}
+          getTranslatedText={getTranslatedText}
+          isTranslated={isTranslated}
+          isTranslating={isTranslating}
+          isAnyTranslating={isAnyTranslating}
+          showOnlyFavorites={true}
+          onToggleFavoritesFilter={handleToggleFavoritesFilter}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={handleToggleFavorite}
+          folderGroups={folderGroups}
+          activeGroupId={activeGroupId}
+          onGroupChange={setActiveGroupId}
+          onCreateGroup={createGroup}
+          onRenameGroup={renameGroup}
+          onDeleteGroup={deleteGroup}
+          onSetWorkGroup={setWorkGroup}
+          groupWorkCounts={groupWorkCounts}
+          audioFiles={audioFiles}
+          currentAudio={currentAudio}
+          onSelectAudio={handleSelectAudio}
+          onEditMetadata={handleEditMetadata}
+          onRefreshMetadata={handleRefreshMetadata}
+          onRefreshSubtitles={handleRefreshSubtitles}
+          onFilterCV={(cv) => handleFilterChange('cv', cv)}
+          onFilterTag={(tag) => handleFilterChange('tag', tag)}
+          onCircleClick={(circle) => handleFilterChange('circle', circle)}
+          activeCV={cvFilter}
+          activeTag={tagFilter}
+          onAddToPlaylist={handleOpenAddToPlaylistForAudio}
+          onAddToQueue={handleAddToQueue}
+          onPlayNext={handlePlayNext}
+          isFavorite={isFavorite(selectedWork?.id)}
+          onCloseDetail={() => setSelectedWork(null)}
+          contentAreaRef={contentAreaRef}
+          rightPanelWidth={rightPanelWidth}
+          onSplitterMouseDown={handleSplitterMouseDown}
+          rightTab={rightTab}
+          onTabChange={setRightTab}
+          cues={currentCues}
+          currentTime={currentTime}
+          onSeek={handleSeek}
+          subtitleOptions={subtitleOptions}
+          selectedSubtitleIndex={selectedSubtitleIndex}
+          onSelectSubtitle={handleSelectSubtitle}
+          onAddSubtitleFile={handleAddSubtitleFile}
+          onToggleTranslate={handleToggleTranslate}
+          hasTranslation={hasTranslation}
+          subtitleFontSize={settings.subtitleFontSize}
+          isFavoritesView={true}
         />
       )}
       <div style={{ display: currentView === 'discover' ? '' : 'none' }}>

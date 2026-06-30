@@ -69,12 +69,13 @@ const LibraryLayout = memo(function LibraryLayout({
   onToggleTranslate,
   hasTranslation,
   subtitleFontSize,
+  isFavoritesView,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
 
   return (
-    <div className={`library-layout ${hasDetail ? 'has-detail' : ''} ${shouldHideSidebar ? 'hide-sidebar' : ''}`}>
+    <div className={`library-layout ${hasDetail ? 'has-detail' : ''} ${shouldHideSidebar ? 'hide-sidebar' : ''} ${isFavoritesView ? 'favorites-view' : ''}`}>
       <div className="library-main">
         <Sidebar
           works={filteredWorks}
@@ -110,6 +111,7 @@ const LibraryLayout = memo(function LibraryLayout({
           onDeleteGroup={onDeleteGroup}
           onSetWorkGroup={onSetWorkGroup}
           groupWorkCounts={groupWorkCounts}
+          isFavoritesView={isFavoritesView}
         />
       </div>
       {selectedWork && (
