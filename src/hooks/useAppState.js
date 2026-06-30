@@ -99,6 +99,7 @@ export function useAppState() {
   } = useMediaLibrary({
     showToast,
     setSelectedWork,
+    selectedWork,
   })
 
   // ===== 收藏功能 Hook =====

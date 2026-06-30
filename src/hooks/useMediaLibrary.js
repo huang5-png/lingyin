@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { scanFolder, scanMediaLibrary, extractRJCode } from '../utils/scanner'
 
-export function useMediaLibrary({ showToast, setSelectedWork }) {
+export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
   const [works, setWorks] = useState([])
   const [isLoadingWorks, setIsLoadingWorks] = useState(true)
   const [audioFiles, setAudioFiles] = useState([])
