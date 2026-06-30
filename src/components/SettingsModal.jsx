@@ -122,6 +122,7 @@ const TABS = [
   { id: 'main', label: '主界面' },
   { id: 'player', label: '播放界面' },
   { id: 'shortcuts', label: '快捷键' },
+  { id: 'data', label: '数据管理' },
   { id: 'about', label: '关于' },
 ];
 
@@ -976,6 +977,205 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
     </div>
   );
 
+  const [dataStats, setDataStats] = useState(null);
+  const [exportKeys, setExportKeys] = useState([]);
+  const [importMode, setImportMode] = useState('merge');
+  const [importResult, setImportResult] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'data') {
+      loadDataStats();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadDataStats = async () => {
+    try {
+      const stats = await window.electronAPI.backupGetStats();
+      setDataStats(stats);
+      if (stats?.exportableKeys) {
+        setExportKeys([...stats.exportableKeys]);
+      }
+    } catch (e) {
+      console.error('Failed to load data stats:', e);
+    }
+  };
+
+  const handleToggleExportKey = (key) => {
+    setExportKeys((prev) => {
+      if (prev.includes(key)) {
+        return prev.filter((k) => k !== key);
+      }
+      return [...prev, key];
+    });
+  };
+
+  const handleSelectAllExport = () => {
+    if (dataStats?.exportableKeys) {
+      setExportKeys([...dataStats.exportableKeys]);
+    }
+  };
+
+  const handleDeselectAllExport = () => {
+    setExportKeys([]);
+  };
+
+  const handleExport = async () => {
+    if (exportKeys.length === 0) return;
+    setIsExporting(true);
+    setImportResult(null);
+    try {
+      const jsonString = await window.electronAPI.backupExport(exportKeys);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filePath = await window.electronAPI.backupSaveFile(jsonString, `lingyin-backup-${dateStr}.json`);
+      if (filePath) {
+        setImportResult({ type: 'export-success', message: `备份已保存到：${filePath}` });
+      }
+    } catch (e) {
+      setImportResult({ type: 'error', message: `导出失败：${e.message || '未知错误'}` });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async () => {
+    setIsImporting(true);
+    setImportResult(null);
+    try {
+      const result = await window.electronAPI.backupOpenFile();
+      if (!result) {
+        setIsImporting(false);
+        return;
+      }
+      const importRes = await window.electronAPI.backupImport(result.content, importMode);
+      if (importRes.success) {
+        setImportResult({
+          type: 'import-success',
+          message: `导入成功！导入了 ${importRes.importedKeys.length} 项数据`,
+          detail: importRes.importedKeys.join('、'),
+        });
+        await loadDataStats();
+      } else {
+        setImportResult({ type: 'error', message: `导入失败：${importRes.error}` });
+      }
+    } catch (e) {
+      setImportResult({ type: 'error', message: `导入失败：${e.message || '未知错误'}` });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const formatBytes = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const renderDataTab = () => (
+    <div className="settings-tab-content data-tab">
+      {importResult && (
+        <div className={`data-result-banner ${importResult.type}`}>
+          <div className="result-message">{importResult.message}</div>
+          {importResult.detail && <div className="result-detail">{importResult.detail}</div>}
+          <button className="result-close" onClick={() => setImportResult(null)}>×</button>
+        </div>
+      )}
+
+      <div className="settings-section">
+        <div className="settings-section-title">数据统计</div>
+        {dataStats ? (
+          <div className="data-stats-grid">
+            {dataStats.exportableKeys.map((key) => (
+              <div key={key} className="data-stat-item">
+                <div className="data-stat-label">{dataStats.keyLabels[key] || key}</div>
+                <div className="data-stat-value">
+                  {dataStats.stats[key]?.type === 'array' ? `${dataStats.stats[key]?.count || 0} 条` :
+                   dataStats.stats[key]?.type === 'object' ? `${dataStats.stats[key]?.count || 0} 项` :
+                   dataStats.stats[key]?.count || 0}
+                </div>
+              </div>
+            ))}
+            <div className="data-stat-item total">
+              <div className="data-stat-label">总大小</div>
+              <div className="data-stat-value">{formatBytes(dataStats.totalSize)}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="data-loading">加载中...</div>
+        )}
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">导出备份</div>
+        <div className="setting-desc">选择要导出的数据类型，保存为 JSON 备份文件</div>
+        <div className="data-export-actions">
+          <button className="link-btn" onClick={handleSelectAllExport}>全选</button>
+          <button className="link-btn" onClick={handleDeselectAllExport}>取消全选</button>
+        </div>
+        <div className="data-keys-grid">
+          {dataStats?.exportableKeys.map((key) => (
+            <label key={key} className="data-key-item">
+              <input
+                type="checkbox"
+                checked={exportKeys.includes(key)}
+                onChange={() => handleToggleExportKey(key)}
+              />
+              <span>{dataStats.keyLabels[key] || key}</span>
+            </label>
+          ))}
+        </div>
+        <button
+          className="primary-btn data-action-btn"
+          onClick={handleExport}
+          disabled={exportKeys.length === 0 || isExporting}
+        >
+          {isExporting ? '导出中...' : '导出备份'}
+        </button>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">导入备份</div>
+        <div className="setting-desc">从备份文件中恢复数据</div>
+        <div className="data-import-mode">
+          <div className="import-mode-label">导入模式：</div>
+          <div className="import-mode-options">
+            <label className="import-mode-option">
+              <input
+                type="radio"
+                name="importMode"
+                value="merge"
+                checked={importMode === 'merge'}
+                onChange={() => setImportMode('merge')}
+              />
+              <span>合并（保留现有数据，添加新数据）</span>
+            </label>
+            <label className="import-mode-option">
+              <input
+                type="radio"
+                name="importMode"
+                value="overwrite"
+                checked={importMode === 'overwrite'}
+                onChange={() => setImportMode('overwrite')}
+              />
+              <span>覆盖（替换所有现有数据）</span>
+            </label>
+          </div>
+        </div>
+        <button
+          className="secondary-btn data-action-btn"
+          onClick={handleImport}
+          disabled={isImporting}
+        >
+          {isImporting ? '导入中...' : '选择文件并导入'}
+        </button>
+        <div className="import-warning">
+          ⚠️ 覆盖模式将删除所有现有数据，请谨慎操作
+        </div>
+      </div>
+    </div>
+  );
+
   const renderAboutTab = () => (
     <div className="settings-tab-content about-tab">
       <div className="about-logo">
@@ -1020,6 +1220,8 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
         return renderPlayerTab();
       case 'shortcuts':
         return renderShortcutsTab();
+      case 'data':
+        return renderDataTab();
       case 'about':
         return renderAboutTab();
       default:
