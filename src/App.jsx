@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LeftNavBar from './components/LeftNavBar'
 import ImmersiveView from './components/ImmersiveView'
@@ -175,6 +176,10 @@ export default function App() {
     handleGlobalSearchSelectPlaylist,
   } = useAppState()
 
+  const favoriteFilteredWorks = useMemo(() => {
+    return filteredWorks.filter(work => favoriteIds.has(work.id))
+  }, [filteredWorks, favoriteIds])
+
   return (
     <ErrorBoundary>
       <div className="app-container">
@@ -280,7 +285,7 @@ export default function App() {
         <LibraryLayout
           selectedWork={selectedWork}
           settings={settings}
-          filteredWorks={filteredWorks}
+          filteredWorks={favoriteFilteredWorks}
           isLoadingWorks={isLoadingWorks}
           onSelectWork={handleSelectWork}
           onAddFolder={handleAddFolder}
@@ -346,7 +351,7 @@ export default function App() {
           isFavoritesView={true}
         />
       )}
-      <div style={{ display: currentView === 'discover' ? '' : 'none' }}>
+      {currentView === 'discover' && (
         <DiscoverLayout
           selectedWork={selectedWork}
           settings={settings}
@@ -392,7 +397,7 @@ export default function App() {
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
         />
-      </div>
+      )}
 
       {currentView === 'annual-report' && (
         <div className="report-view">
@@ -487,6 +492,10 @@ export default function App() {
           subtitleFontSize={settings.subtitleFontSize}
           playerRef={playerRef}
           onClose={handleCloseImmersive}
+          upscalePreset={settings.upscalePreset}
+          hasTranslation={hasTranslation}
+          onToggleTranslate={handleToggleTranslate}
+          isTranslating={isAnyTranslating}
         />
       )}
 

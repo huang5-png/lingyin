@@ -156,8 +156,10 @@
 | `components/AddToPlaylistModal.jsx` | 加入播放列表弹窗（选择已有列表或新建列表并加入） |
 | `components/LibraryLayout.jsx` | 我的库布局组件（左侧 Sidebar + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
 | `components/DiscoverLayout.jsx` | 发现布局组件（左侧 DiscoverView + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
+| `components/UpscaledImage.jsx` | 图片超分组件（WebGL 多 Pass 渲染，Lanczos + Anime4K + USM 管线，自适应输出分辨率） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
+| `utils/upscaleShaders.js` | 图片超分 WebGL 着色器（Lanczos2/3、Bicubic、Anime4K 线条增强、双边滤波、USM 锐化、色彩调整）+ 9 档预设 |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
 
 ## 开发命令
@@ -323,6 +325,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - RecentPlaysView（最近播放条目骨架）
 - PlaylistView（播放列表条目 + 曲目行骨架）
 - Sidebar（我的库作品列表骨架，支持网格/列表双视图）
+- WorkDetail（作品详情页曲目列表骨架）
 
 #### 已使用 StateView 的组件
 - WorkDetail（曲目加载/错误态）
@@ -1052,6 +1055,74 @@ function formatSleepTimerRemaining(seconds) {
 - 深色模式完整适配
 - 高 DPI 屏幕自动放大（1.5dppx / 2dppx）
 
+### 25. 图片超分
+
+#### 功能概述
+- 使用 WebGL 着色器实现高质量图片放大，参考 Magpie 和 Anime4K 的算法思路
+- 多 Pass 渲染管线：Lanczos 高质量重采样 + Anime4K 风格线条增强 + 双边滤波去噪 + USM 锐化 + 色彩调整
+- 9 档预设可选，从「性能」到「最高」，满足不同画质和性能需求
+- 自适应输出分辨率，根据容器大小和 devicePixelRatio 自动计算，避免 CSS 拉伸模糊
+- 目前应用于沉浸式播放模式的封面图片
+
+#### 算法管线
+**核心滤镜：**
+
+| 滤镜类型 | 说明 | Shader 文件 |
+|---------|------|------------|
+| Lanczos 3 | 高质量 sinc 重采样（7x7 核），保留细节最好 | `FRAGMENT_LANCZOS3` |
+| Lanczos 2 | 中等质量 sinc 重采样（5x5 核），速度更快 | `FRAGMENT_LANCZOS2` |
+| Bicubic | 双三次插值（Mitchell-Netravali），速度最快 | `FRAGMENT_BICUBIC` |
+| Anime4K Thin Lines | 细线增强，检测边缘并增强细线条 | `FRAGMENT_ANIME4K_THIN_LINES` |
+| Anime4K Dark Lines | 深色线加深，增强暗部线条对比度 | `FRAGMENT_ANIME4K_DARK_LINES` |
+| Bilateral Filter | 双边滤波，保边去噪，平滑色块同时保留边缘 | `FRAGMENT_BILATERAL_SMOOTH` |
+| USM Sharpen | Unsharp Mask 锐化，增强整体清晰度 | `FRAGMENT_UNSHARP_MASK` |
+| Adjust | 亮度/对比度/饱和度微调 | `FRAGMENT_ADJUST` |
+
+#### 预设档位
+| 预设 | 缩放 | 滤镜组合 | 适用场景 |
+|------|------|---------|---------|
+| 性能 | 1x+ | Bicubic | 速度优先，低配机器 |
+| 平衡 | 1.5x+ | Lanczos2 + USM Soft | 速度与质量平衡 |
+| 质量 | 2x+ | Lanczos3 + USM | 常规高质量放大 |
+| 高 | 2x+ | Lanczos3 + ThinLine + USM | 带线条增强的高质量 |
+| 特高 | 2x+ | Lanczos3 + ThinLine + DarkLine + USM | 双重线条增强 |
+| 超高 | 2x+ | Lanczos3 + Thin + Dark + Bilateral + Thin + USM Strong + Adjust | 完整管线 + 去噪 |
+| 最高 | 2x+ | Lanczos3 + Thin + Dark + Bilateral + Thin + Dark + USM Strong + Adjust | 旗舰级，最多 Pass |
+| 动漫优化 | 2x+ | Lanczos3 + Thin + Dark + Bilateral + Thin + USM + Adjust | 动漫画风专用 |
+| 柔和 | 1.5x+ | Lanczos2 + Bilateral + USM Soft | 柔和自然，不过度锐化 |
+
+#### UpscaledImage 组件
+- **props**：
+  - `src` — 图片 URL
+  - `preset` — 预设名称，默认 `'high'`
+  - `fit` — object-fit 模式，`contain` / `cover` / `fill`，默认 `contain`
+  - `className` — 额外 CSS 类名
+- **自适应分辨率**：
+  - 监听容器大小变化（ResizeObserver）
+  - 输出分辨率 = max(容器尺寸 × devicePixelRatio, 原图 × minScale)
+  - 确保放大后的图片像素密度不低于屏幕，避免 CSS 拉伸模糊
+- **降级方案**：WebGL 不可用时自动回退到 Canvas 2D + high quality smoothing
+- **延迟加载**：图片加载时显示占位图，处理完成后淡入
+
+#### Shader 坐标计算约定
+- **输入纹理尺寸**：`u_srcSize`（原始图片像素尺寸）
+- **输出图像尺寸**：`u_dstSize`（目标输出像素尺寸）
+- **输出像素坐标**：`dstPixel = v_texCoord * u_dstSize`
+- **对应输入像素坐标**：`srcPixel = dstPixel / (u_dstSize / u_srcSize) = v_texCoord * u_srcSize`
+- **参考像素中心**：`srcPixelFloor = floor(srcPixel - 0.5) + 0.5`
+- **像素偏移量**：`frac = srcPixel - srcPixelFloor`
+- **采样 UV**：`sampleUV = (srcPixelFloor + offset) / u_srcSize`
+
+#### 关键文件
+- `src/utils/upscaleShaders.js` — WebGL 着色器、WebGLUpscaler 类、预设配置
+- `src/components/UpscaledImage.jsx` — React 超分图片组件
+- `src/components/UpscaledImage.css` — 组件样式
+
+#### 设置集成
+- 设置项：`settings.upscalePreset`，默认值 `'anime'`
+- 设置入口：「设置 → 外观 → 图片超分 → 沉浸式封面质量」
+- 预设列表通过 `getPresetList()` 获取
+
 ## 已知约定
 
 - 代码注释用中文
@@ -1065,6 +1136,82 @@ function formatSleepTimerRemaining(seconds) {
 - CSS 类名使用 kebab-case
 
 ## 常见问题处理
+
+### 白屏问题排查与修复（重要）
+
+**白屏是 Electron 应用最常见的问题之一，AI 迭代更新后尤其容易出现。请按以下顺序排查：**
+
+#### 1. 常见原因速查
+
+| 原因 | 概率 | 排查方法 | 修复方式 |
+|------|------|----------|----------|
+| GPU / 硬件加速崩溃 | ⭐⭐⭐⭐⭐ | 查看日志是否有「GPU process isn't usable」「render-process-gone」 | 禁用硬件加速（见下方） |
+| 渲染进程 JS 报错 | ⭐⭐⭐⭐ | 打开开发者工具（F12）看 Console 错误 | 修复 JS 错误 / 检查 ErrorBoundary |
+| 生产模式路径错误 | ⭐⭐⭐ | 日志显示「加载 index.html 失败」 | 检查 `loadFile` 路径、`vite.config.js` 的 `base` 配置 |
+| preload.js 加载失败 | ⭐⭐ | 日志显示 preload 相关错误 | 检查 preload 路径是否正确、文件是否存在 |
+| sandbox 初始化失败 | ⭐⭐ | 日志有 sandbox 相关报错 | 添加 `no-sandbox` 开关 |
+| ready-to-show 永不触发 | ⭐ | 窗口一直不显示 | 添加超时兜底显示机制 |
+
+#### 2. 已内置的白屏防护机制（main.js）
+
+无需手动配置，构建版默认开启：
+
+```js
+// 1. 生产模式禁用硬件加速（最有效）
+app.disableHardwareAcceleration()
+app.commandLine.appendSwitch('disable-gpu')
+app.commandLine.appendSwitch('disable-gpu-compositing')
+
+// 2. 禁用 sandbox（防止权限问题崩溃）
+app.commandLine.appendSwitch('no-sandbox')
+app.commandLine.appendSwitch('disable-setuid-sandbox')
+
+// 3. 超时兜底显示（5秒强制显示，防止 ready-to-show 永不触发）
+const showTimeout = setTimeout(() => {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+    mainWindow.show()
+  }
+}, 5000)
+
+// 4. 渲染进程崩溃自动重载
+mainWindow.webContents.on('render-process-gone', () => {
+  setTimeout(() => mainWindow.reload(), 1000)
+})
+
+// 5. 控制台错误写入日志（便于排查）
+mainWindow.webContents.on('console-message', (level, message) => {
+  if (level === 3) logger.error('[渲染控制台错误]', message)
+})
+```
+
+#### 3. 开发模式下调试白屏
+
+1. **打开开发者工具**：按 `F12` 或 `Ctrl+Shift+I`
+2. **查看 Console 标签页**：有没有红色错误
+3. **查看 Network 标签页**：资源是否加载成功，有没有 404
+4. **查看主进程日志**：`C:\Users\{用户}\AppData\Roaming\lingyin\logs\`
+
+#### 4. AI 更新后出现白屏的检查清单
+
+每次 AI 提交代码后如果白屏，按顺序检查：
+
+- [ ] **前端代码能正常构建吗？** 运行 `npm run build:vite` 确认无报错
+- [ ] **有没有修改 main.js？** 主进程代码修改后需要重启应用
+- [ ] **有没有新增/删除文件导致路径错误？** 检查 import 路径是否正确
+- [ ] **有没有修改 preload.js？** preload 语法错误会导致整个渲染进程挂掉
+- [ ] **React 组件有没有语法错误？** ErrorBoundary 会捕获并显示错误页
+- [ ] **State / Hooks 用法对吗？** 检查 hooks 规则（不能在条件语句里用）
+
+#### 5. 紧急修复方案
+
+如果用户反馈打开白屏，优先让用户尝试：
+
+1. **确认是不是最新版**：有时候是旧版本缓存问题
+2. **查看日志文件**：`%APPDATA%\lingyin\logs\`，找最新的日志文件
+3. **临时启用开发工具**：按 F12 看看 Console 有没有报错
+4. **重装应用**：有时候是文件损坏（但概率低）
+
+**注意：禁用硬件加速会略微增加 CPU 占用，但 ASMR 播放器对 GPU 要求极低，完全可接受。**
 
 ### 启动开发服务器
 
