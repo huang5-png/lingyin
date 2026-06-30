@@ -1035,8 +1035,9 @@ async function processDownloadQueue() {
   logger.info(`[下载队列] 开始任务: ${task.workTitle}, 共 ${task.files.length} 个文件`)
 
   try {
-    // 多线程并发下载：同时下载 N 个文件
-    const MAX_CONCURRENT = 3
+    const settings = await getSettings()
+    const maxConcurrent = settings.downloadConcurrency || 3
+
     const pendingFiles = task.files.filter(f => f.status !== 'done')
     let cancelled = false
 
@@ -1061,7 +1062,7 @@ async function processDownloadQueue() {
       }
     }
 
-    const concurrency = Math.min(MAX_CONCURRENT, pendingFiles.length)
+    const concurrency = Math.min(maxConcurrent, pendingFiles.length)
     const workers = Array.from({ length: concurrency }, () => downloadWorker())
     await Promise.all(workers)
 
@@ -1070,17 +1071,41 @@ async function processDownloadQueue() {
       const anyFailed = task.files.some((f) => f.status === 'failed')
       if (allDone) {
         task.status = 'completed'
+        task.completedAt = Date.now()
         logger.info(`[下载队列] 任务完成: ${task.workTitle}`)
+        if (mainWindow) {
+          mainWindow.webContents.send('download:taskComplete', {
+            taskId: task.id,
+            workTitle: task.workTitle,
+            workCover: task.workCover,
+            saveDir: task.saveDir,
+            workFolder: task.workFolder,
+            rjCode: task.rjCode,
+            workCircle: task.workCircle,
+            workVAs: task.workVAs,
+            workTags: task.workTags,
+          })
+        }
       } else if (anyFailed) {
         task.status = 'failed'
+        task.completedAt = Date.now()
         logger.warn(`[下载队列] 任务部分失败: ${task.workTitle}`)
+        if (mainWindow) {
+          mainWindow.webContents.send('download:taskFailed', {
+            taskId: task.id,
+            workTitle: task.workTitle,
+            failedCount: task.files.filter(f => f.status === 'failed').length,
+          })
+        }
       }
     }
   } catch (e) {
     task.status = 'failed'
+    task.completedAt = Date.now()
     logger.error(`[下载队列] 任务出错: ${task.workTitle}, ${e.message}`)
   }
 
+  const finishedTask = activeDownloadTask
   activeDownloadTask = null
   activeAbortControllers.clear()
   broadcastDownloadState()
@@ -1115,10 +1140,16 @@ ipcMain.handle('download:addTask', async (event, { work, files, saveDir }) => {
     workTitle: work.title || '',
     workCover: work.cover || '',
     rjCode: work.rjCode || '',
+    workCircle: work.circle || '',
+    workVAs: work.vas || [],
+    workTags: work.tags || [],
+    saveDir: saveDir || '',
+    workFolder: workFolder,
     files: taskFiles,
     status: 'queued',
     currentIndex: 0,
     createdAt: Date.now(),
+    completedAt: null,
   }
 
   downloadQueue.push(task)
@@ -1182,5 +1213,85 @@ ipcMain.handle('download:clearCompleted', async () => {
     }
   }
   broadcastDownloadState()
+  return true
+})
+
+// 重试整个任务
+ipcMain.handle('download:retryTask', async (_, taskId) => {
+  let targetTask = null
+  let taskIndex = -1
+
+  if (activeDownloadTask && activeDownloadTask.id === taskId) {
+    return false
+  }
+
+  taskIndex = downloadQueue.findIndex((t) => t.id === taskId)
+  if (taskIndex >= 0) {
+    targetTask = downloadQueue[taskIndex]
+  }
+
+  if (!targetTask) return false
+  if (targetTask.status !== 'failed') return false
+
+  targetTask.files.forEach((f) => {
+    if (f.status === 'failed') {
+      f.status = 'pending'
+      f.progress = 0
+      f.downloaded = 0
+      f.speed = 0
+      f.error = ''
+    }
+  })
+
+  targetTask.status = 'queued'
+  targetTask.completedAt = null
+  targetTask.currentIndex = 0
+
+  logger.info(`[下载队列] 重试任务: ${targetTask.workTitle}`)
+  broadcastDownloadState()
+  processDownloadQueue()
+
+  return true
+})
+
+// 重试单个文件
+ipcMain.handle('download:retryFile', async (_, taskId, fileIndex) => {
+  let targetTask = null
+  let isActive = false
+
+  if (activeDownloadTask && activeDownloadTask.id === taskId) {
+    targetTask = activeDownloadTask
+    isActive = true
+  } else {
+    const idx = downloadQueue.findIndex((t) => t.id === taskId)
+    if (idx >= 0) {
+      targetTask = downloadQueue[idx]
+    }
+  }
+
+  if (!targetTask) return false
+  if (!targetTask.files[fileIndex]) return false
+
+  const file = targetTask.files[fileIndex]
+  if (file.status !== 'failed') return false
+
+  file.status = 'pending'
+  file.progress = 0
+  file.downloaded = 0
+  file.speed = 0
+  file.error = ''
+
+  if (targetTask.status === 'failed') {
+    targetTask.status = 'queued'
+    targetTask.completedAt = null
+  }
+
+  logger.info(`[下载队列] 重试文件: ${targetTask.workTitle} - ${file.fileName}`)
+  broadcastDownloadState()
+
+  if (!isActive) {
+    processDownloadQueue()
+  }
+
   return true
 })

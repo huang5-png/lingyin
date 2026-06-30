@@ -66,10 +66,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   downloadCancelTask: (taskId) => ipcRenderer.invoke('download:cancelTask', taskId),
   downloadRemoveTask: (taskId) => ipcRenderer.invoke('download:removeTask', taskId),
   downloadClearCompleted: () => ipcRenderer.invoke('download:clearCompleted'),
+  downloadRetryTask: (taskId) => ipcRenderer.invoke('download:retryTask', taskId),
+  downloadRetryFile: (taskId, fileIndex) => ipcRenderer.invoke('download:retryFile', taskId, fileIndex),
   onDownloadState: (callback) => {
     const handler = (_, data) => callback(data)
     ipcRenderer.on('download:state', handler)
     return () => ipcRenderer.removeListener('download:state', handler)
+  },
+  onDownloadTaskComplete: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('download:taskComplete', handler)
+    return () => ipcRenderer.removeListener('download:taskComplete', handler)
+  },
+  onDownloadTaskFailed: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('download:taskFailed', handler)
+    return () => ipcRenderer.removeListener('download:taskFailed', handler)
   },
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),
   windowMaximize: () => ipcRenderer.invoke('window:maximize'),
