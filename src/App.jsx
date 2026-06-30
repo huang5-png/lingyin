@@ -346,9 +346,9 @@ export default function App() {
     contentAreaRef,
     // 书签相关
     bookmarks,
-    onAddBookmark,
-    onUpdateBookmark,
-    onDeleteBookmark,
+    onAddBookmark: addBookmark,
+    onUpdateBookmark: updateBookmark,
+    onDeleteBookmark: deleteBookmark,
     // 右侧面板
     rightPanelWidth,
     onSplitterMouseDown: handleSplitterMouseDown,
@@ -370,7 +370,7 @@ export default function App() {
     handleEditMetadata, handleRefreshMetadata, handleRefreshSubtitles,
     handleOpenAddToPlaylistForAudio, handleAddToQueue, handlePlayNext,
     selectedWork, isFavorite,
-    bookmarks, onAddBookmark, onUpdateBookmark, onDeleteBookmark,
+    bookmarks, addBookmark, updateBookmark, deleteBookmark,
     rightPanelWidth, handleSplitterMouseDown, rightTab, setRightTab,
     handleFilterChange, cvFilter, tagFilter,
     settings,
