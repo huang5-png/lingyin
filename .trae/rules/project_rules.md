@@ -58,7 +58,7 @@
     - **作品详情区**（卡片，`work-detail-wrapper`）：作品详情 + 曲目列表
     - **可拖拽分割线**（`content-splitter`）：8px 宽，可拖动调整右侧面板宽度（240-600px）
     - **右侧标签栏**（卡片，`right-tab-bar`）：Details / Subtitles / Related / Playlists
-  - **底部播放栏**（卡片，`global-player-bar`）：波形、播放控制、快进快退、音量、沉浸式、睡眠定时器、队列
+  - **底部播放栏**（卡片，`global-player-bar`）：波形、播放控制、快进快退、音量、播放速度、沉浸式、睡眠定时器、队列
     - 默认高度 96px（可在设置中调整）
     - 仅占右侧内容区宽度，不延伸到左侧导航栏下方
 - 所有面板间距：`--spacing-card: 16px`
@@ -108,7 +108,8 @@
 
 | 文件 | 职责 |
 |------|------|
-| `App.jsx` | 根组件，集成所有自定义 Hooks，组合状态与 UI 渲染 |
+| `App.jsx` | 根组件，使用 `useAppState` 组合 Hook，专注于 UI 渲染 |
+| `hooks/useAppState.js` | 应用状态组合 Hook：集成所有底层 Hooks，提供统一的状态与方法接口，封装组合逻辑与副作用 |
 | `hooks/useTranslate.js` | 翻译功能 Hook：翻译缓存、批量翻译、字幕翻译切换、自动翻译 |
 | `hooks/usePlayQueue.js` | 播放队列 Hook：队列管理、循环模式、随机播放、跨作品播放、队列操作 |
 | `hooks/useKeyboardShortcuts.js` | 全局快捷键 Hook：快捷键解析匹配、按键事件处理、ESC 弹窗优先级 |
@@ -131,7 +132,7 @@
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
 | `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、自动居中、点击跳转） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
 | `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
@@ -834,14 +835,43 @@ function formatSleepTimerRemaining(seconds) {
 }
 ```
 
-### 21. 收藏功能
+### 21. 播放速度控制
+
+#### 功能概述
+- 支持 0.5x - 2x 倍速播放，共 7 个档位（0.5x / 0.75x / 1x / 1.25x / 1.5x / 1.75x / 2x）
+- 播放速度设置持久化存储，重启后自动恢复
+- 切换音频时保持当前播放速度
+- 使用 wavesurfer.js 的 `setPlaybackRate` API 实现，不影响音质
+
+#### 核心状态
+- `settings.playbackRate` — 当前播放速度，默认值 1
+- `playbackRate` 通过 `useAppSettings` Hook 管理
+
+#### 实现方式
+- AudioPlayer 组件接收 `playbackRate` 和 `onPlaybackRateChange` props
+- wavesurfer ready 时设置初始播放速度
+- useEffect 监听 `playbackRate` 变化，实时更新播放速度
+- 通过 `useImperativeHandle` 暴露 `setPlaybackRate` 和 `getPlaybackRate` 方法
+
+#### UI 入口
+- `AudioPlayer.jsx` 播放器右侧区域
+- 位于队列控制按钮和睡眠定时器之间
+- 显示当前速度值（如 "1.25x"）的按钮，点击展开下拉菜单
+- 非 1x 速度时按钮高亮显示（暖橙色激活态）
+- 下拉菜单列出所有可选速度，当前速度高亮
+
+#### 数据持久化
+- 存储在 `settings.playbackRate`
+- 同时保存到 localStorage 和 db.json
+- 启动时从设置中恢复
+
+### 22. 收藏功能
 
 #### 功能概述
 - 用户可以收藏喜欢的作品，支持本地作品和在线作品
 - 收藏数据持久化存储到 db.json，重启后自动恢复
 - 支持一键筛选只显示收藏的作品
 - 作品卡片和详情页均可快速收藏/取消收藏
-
 #### 数据结构
 - 存储位置：`db.json.favorites`（数组）
 - 每个收藏项：`{ workId, title, cover, circle, isOnline, addedAt }`
@@ -872,7 +902,7 @@ function formatSleepTimerRemaining(seconds) {
 - 收藏筛选开启时，空态显示对应提示
 - 切换收藏状态后即时更新列表显示
 
-### 22. 文件夹分组功能
+### 23. 文件夹分组功能
 
 #### 功能概述
 - 用户可以创建自定义文件夹分组，将本地作品按类别组织管理
@@ -922,7 +952,7 @@ function formatSleepTimerRemaining(seconds) {
 - 分组筛选与 CV/社团/标签/收藏筛选叠加生效
 - 删除分组时，组内所有作品的 folderGroupId 自动设为 null（变为未分组）
 
-### 23. 全局搜索
+### 24. 全局搜索
 
 #### 功能概述
 - 全局搜索支持搜索作品、收藏、播放列表，按分类展示结果
