@@ -14,6 +14,7 @@ export default function ImmersiveView({
   hasTranslation = false,
   onToggleTranslate,
   isTranslating = false,
+  subtitleStyleSettings,
 }) {
   const immersiveLyricRef = useRef(null)
 
@@ -42,8 +43,23 @@ export default function ImmersiveView({
     }
   }, [currentCueIndex])
 
-  const lyricFontSize = subtitleFontSize ? subtitleFontSize * 1.2 : 22
-  const activeFontSize = subtitleFontSize ? subtitleFontSize * 1.8 : 34
+  const styleSettings = subtitleStyleSettings || {
+    fontSize: subtitleFontSize ? subtitleFontSize * 1.2 : 22,
+    activeFontSize: subtitleFontSize ? subtitleFontSize * 1.8 : 34,
+    color: '#ffffff',
+    activeColor: '#ffffff',
+    fontWeight: 500,
+    shadow: true,
+    shadowBlur: 4,
+  }
+
+  const normalShadow = styleSettings.shadow
+    ? `0 0 ${styleSettings.shadowBlur}px rgba(0,0,0,0.7), 0 2px ${styleSettings.shadowBlur + 4}px rgba(0,0,0,0.5), 0 -1px ${styleSettings.shadowBlur - 2 > 0 ? styleSettings.shadowBlur - 2 : 2}px rgba(0,0,0,0.3)`
+    : 'none'
+
+  const activeShadow = styleSettings.shadow
+    ? `0 0 ${styleSettings.shadowBlur + 2}px rgba(0,0,0,0.8), 0 2px ${styleSettings.shadowBlur + 6}px rgba(0,0,0,0.6), 0 0 ${styleSettings.shadowBlur * 2}px rgba(201, 100, 66, 0.3)`
+    : 'none'
 
   if (!work) return null
 
@@ -51,8 +67,13 @@ export default function ImmersiveView({
     <div
       className="immersive-overlay"
       style={{
-        '--immersive-lyric-font-size': `${lyricFontSize}px`,
-        '--immersive-lyric-active-font-size': `${activeFontSize}px`,
+        '--immersive-lyric-font-size': `${styleSettings.fontSize}px`,
+        '--immersive-lyric-active-font-size': `${styleSettings.activeFontSize}px`,
+        '--immersive-lyric-color': styleSettings.color,
+        '--immersive-lyric-active-color': styleSettings.activeColor,
+        '--immersive-lyric-font-weight': styleSettings.fontWeight,
+        '--immersive-lyric-shadow': normalShadow,
+        '--immersive-lyric-active-shadow': activeShadow,
       }}
     >
       <div className="immersive-bg" style={{ backgroundImage: `url(${work.cover})` }} />

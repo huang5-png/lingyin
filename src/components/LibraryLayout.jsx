@@ -69,6 +69,7 @@ const LibraryLayout = memo(function LibraryLayout({
   onToggleTranslate,
   hasTranslation,
   subtitleFontSize,
+  subtitleStyleSettings,
   isFavoritesView,
   bookmarks,
   onAddBookmark,
@@ -176,6 +177,7 @@ const LibraryLayout = memo(function LibraryLayout({
                 isTranslating={isAnyTranslating}
                 hasTranslation={hasTranslation}
                 subtitleFontSize={subtitleFontSize}
+                subtitleStyleSettings={subtitleStyleSettings}
                 bookmarks={bookmarks}
                 onAddBookmark={onAddBookmark}
                 onUpdateBookmark={onUpdateBookmark}

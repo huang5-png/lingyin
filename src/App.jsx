@@ -203,6 +203,40 @@ export default function App() {
     return filteredWorks.filter(work => favoriteIds.has(work.id))
   }, [filteredWorks, favoriteIds])
 
+  const lyricSubtitleStyle = useMemo(() => ({
+    fontSize: settings.subtitleLyricFontSize || 14,
+    color: settings.subtitleLyricColor || '#e8e6e3',
+    activeColor: settings.subtitleLyricActiveColor || '#c96442',
+    fontWeight: settings.subtitleLyricFontWeight || 400,
+    shadow: settings.subtitleLyricShadow !== false,
+    shadowBlur: settings.subtitleLyricShadowBlur || 2,
+  }), [
+    settings.subtitleLyricFontSize,
+    settings.subtitleLyricColor,
+    settings.subtitleLyricActiveColor,
+    settings.subtitleLyricFontWeight,
+    settings.subtitleLyricShadow,
+    settings.subtitleLyricShadowBlur,
+  ])
+
+  const immersiveSubtitleStyle = useMemo(() => ({
+    fontSize: settings.subtitleImmersiveFontSize || 22,
+    activeFontSize: settings.subtitleImmersiveActiveFontSize || 34,
+    color: settings.subtitleImmersiveColor || '#ffffff',
+    activeColor: settings.subtitleImmersiveActiveColor || '#ffffff',
+    fontWeight: settings.subtitleImmersiveFontWeight || 500,
+    shadow: settings.subtitleImmersiveShadow !== false,
+    shadowBlur: settings.subtitleImmersiveShadowBlur || 4,
+  }), [
+    settings.subtitleImmersiveFontSize,
+    settings.subtitleImmersiveActiveFontSize,
+    settings.subtitleImmersiveColor,
+    settings.subtitleImmersiveActiveColor,
+    settings.subtitleImmersiveFontWeight,
+    settings.subtitleImmersiveShadow,
+    settings.subtitleImmersiveShadowBlur,
+  ])
+
   return (
     <ErrorBoundary>
       <div className="app-container">
@@ -303,6 +337,7 @@ export default function App() {
           onToggleTranslate={handleToggleTranslate}
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
+          subtitleStyleSettings={lyricSubtitleStyle}
           isFavoritesView={false}
           bookmarks={bookmarks}
           onAddBookmark={addBookmark}
@@ -377,6 +412,7 @@ export default function App() {
           onToggleTranslate={handleToggleTranslate}
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
+          subtitleStyleSettings={lyricSubtitleStyle}
           isFavoritesView={true}
           bookmarks={bookmarks}
           onAddBookmark={addBookmark}
@@ -429,6 +465,7 @@ export default function App() {
           onToggleTranslate={handleToggleTranslate}
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
+          subtitleStyleSettings={lyricSubtitleStyle}
           bookmarks={bookmarks}
           onAddBookmark={addBookmark}
           onUpdateBookmark={updateBookmark}
@@ -543,6 +580,7 @@ export default function App() {
           currentCues={currentCues}
           currentTime={currentTime}
           subtitleFontSize={settings.subtitleFontSize}
+          subtitleStyleSettings={immersiveSubtitleStyle}
           playerRef={playerRef}
           onClose={handleCloseImmersive}
           upscalePreset={settings.upscalePreset}

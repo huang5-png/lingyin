@@ -3,31 +3,54 @@ import { findCurrentCue, formatTime } from '../utils/subtitleParser'
 import SubtitleSelector from './SubtitleSelector'
 import './LyricView.css'
 
-const DEFAULT_SETTINGS = {
-  fontSize: 14,
-  color: '#f472b6',
+const DEFAULT_LOCAL_SETTINGS = {
   timeOffset: 0,
   displayMode: 'single',
 }
 
-function loadSettings() {
+function loadLocalSettings() {
   try {
     const saved = localStorage.getItem('subtitleSettings')
     if (saved) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
+      const parsed = JSON.parse(saved)
+      return { timeOffset: parsed.timeOffset || 0, displayMode: parsed.displayMode || 'single' }
     }
   } catch (e) {}
-  return { ...DEFAULT_SETTINGS }
+  return { ...DEFAULT_LOCAL_SETTINGS }
 }
 
-export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, selectedSubtitleIndex, onSelectSubtitle, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation, subtitleFontSize }) {
+export default function LyricView({
+  cues,
+  currentTime,
+  onSeek,
+  subtitleOptions,
+  selectedSubtitleIndex,
+  onSelectSubtitle,
+  onAddSubtitleFile,
+  onToggleTranslate,
+  isTranslating,
+  hasTranslation,
+  subtitleFontSize,
+  subtitleColor,
+  subtitleActiveColor,
+  subtitleFontWeight,
+  subtitleShadow,
+  subtitleShadowBlur,
+  subtitleStyleSettings,
+}) {
   const containerRef = useRef(null)
-  const [settings, setSettings] = useState(loadSettings)
+  const [localSettings, setLocalSettings] = useState(loadLocalSettings)
 
-  // 实际使用的字体大小：优先使用全局设置，否则使用本地设置
-  const effectiveFontSize = subtitleFontSize || settings.fontSize
+  const styleSettings = subtitleStyleSettings || {
+    fontSize: subtitleFontSize || 14,
+    color: subtitleColor || '#e8e6e3',
+    activeColor: subtitleActiveColor || '#c96442',
+    fontWeight: subtitleFontWeight || 400,
+    shadow: subtitleShadow !== false,
+    shadowBlur: subtitleShadowBlur || 2,
+  }
 
-  const adjustedTime = currentTime + settings.timeOffset
+  const adjustedTime = currentTime + localSettings.timeOffset
   const currentIndex = findCurrentCue(cues, adjustedTime)
 
   useEffect(() => {
@@ -46,12 +69,18 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
     }
   }, [currentIndex])
 
-  const handleSettingsChange = (newSettings) => {
-    setSettings(newSettings)
+  const handleLocalSettingsChange = (newLocalSettings) => {
+    setLocalSettings(newLocalSettings)
     try {
-      localStorage.setItem('subtitleSettings', JSON.stringify(newSettings))
+      const saved = localStorage.getItem('subtitleSettings')
+      const existing = saved ? JSON.parse(saved) : {}
+      localStorage.setItem('subtitleSettings', JSON.stringify({ ...existing, ...newLocalSettings }))
     } catch (e) {}
   }
+
+  const shadowStyle = styleSettings.shadow
+    ? `0 0 ${styleSettings.shadowBlur}px rgba(0, 0, 0, 0.5), 0 1px ${styleSettings.shadowBlur + 1}px rgba(0, 0, 0, 0.3)`
+    : 'none'
 
   if (!cues || cues.length === 0) {
     return (
@@ -60,8 +89,8 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
           subtitles={subtitleOptions || []}
           selectedIndex={selectedSubtitleIndex ?? -1}
           onSelect={onSelectSubtitle}
-          settings={settings}
-          onSettingsChange={handleSettingsChange}
+          settings={localSettings}
+          onSettingsChange={handleLocalSettingsChange}
           onAddSubtitleFile={onAddSubtitleFile}
           onToggleTranslate={onToggleTranslate}
           isTranslating={isTranslating}
@@ -81,16 +110,19 @@ export default function LyricView({ cues, currentTime, onSeek, subtitleOptions, 
       className={`lyric-view ${hasTranslation ? 'dual-mode' : ''}`}
       ref={containerRef}
       style={{
-        '--lyric-font-size': `${effectiveFontSize}px`,
-        '--lyric-active-color': settings.color,
+        '--lyric-font-size': `${styleSettings.fontSize}px`,
+        '--lyric-color': styleSettings.color,
+        '--lyric-active-color': styleSettings.activeColor,
+        '--lyric-font-weight': styleSettings.fontWeight,
+        '--lyric-text-shadow': shadowStyle,
       }}
     >
       <SubtitleSelector
         subtitles={subtitleOptions || []}
         selectedIndex={selectedSubtitleIndex ?? -1}
         onSelect={onSelectSubtitle}
-        settings={settings}
-        onSettingsChange={handleSettingsChange}
+        settings={localSettings}
+        onSettingsChange={handleLocalSettingsChange}
         onAddSubtitleFile={onAddSubtitleFile}
         onToggleTranslate={onToggleTranslate}
         isTranslating={isTranslating}

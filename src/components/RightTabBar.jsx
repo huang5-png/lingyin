@@ -18,6 +18,7 @@ export default function RightTabBar({
   isTranslating,
   hasTranslation,
   subtitleFontSize,
+  subtitleStyleSettings,
   bookmarks,
   onAddBookmark,
   onUpdateBookmark,
@@ -114,6 +115,7 @@ export default function RightTabBar({
                 isTranslating={isTranslating}
                 hasTranslation={hasTranslation}
                 subtitleFontSize={subtitleFontSize}
+                subtitleStyleSettings={subtitleStyleSettings}
               />
             )}
             {!work && (

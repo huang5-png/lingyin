@@ -139,9 +139,15 @@
   border-color: var(--accent-glow);
 }
 
+.lyric-line .lyric-text {
+  color: var(--lyric-color, var(--text-secondary));
+  font-weight: var(--lyric-font-weight, 400);
+  text-shadow: var(--lyric-text-shadow, none);
+}
+
 .lyric-line.active .lyric-text {
-  color: var(--accent-primary);
-  font-weight: 600;
+  color: var(--lyric-active-color, var(--accent-primary));
+  font-weight: calc(var(--lyric-font-weight, 400) + 200);
 }
 
 .lyric-indicator {

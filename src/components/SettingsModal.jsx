@@ -3,6 +3,73 @@ import './SettingsModal.css';
 import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
 import { getPresetList } from '../utils/upscaleShaders';
 
+const SUBTITLE_STYLE_PRESETS = {
+  default: {
+    name: '默认',
+    lyricFontSize: 14,
+    lyricColor: '#e8e6e3',
+    lyricActiveColor: '#c96442',
+    lyricFontWeight: 400,
+    lyricShadow: true,
+    lyricShadowBlur: 2,
+    immersiveFontSize: 22,
+    immersiveActiveFontSize: 34,
+    immersiveColor: '#ffffff',
+    immersiveActiveColor: '#ffffff',
+    immersiveFontWeight: 500,
+    immersiveShadow: true,
+    immersiveShadowBlur: 4,
+  },
+  warm: {
+    name: '暖橙',
+    lyricFontSize: 14,
+    lyricColor: '#e8e6e3',
+    lyricActiveColor: '#c96442',
+    lyricFontWeight: 500,
+    lyricShadow: true,
+    lyricShadowBlur: 2,
+    immersiveFontSize: 22,
+    immersiveActiveFontSize: 34,
+    immersiveColor: '#ffe8d9',
+    immersiveActiveColor: '#ffb380',
+    immersiveFontWeight: 600,
+    immersiveShadow: true,
+    immersiveShadowBlur: 6,
+  },
+  minimal: {
+    name: '简约',
+    lyricFontSize: 14,
+    lyricColor: '#b0ada8',
+    lyricActiveColor: '#ffffff',
+    lyricFontWeight: 400,
+    lyricShadow: false,
+    lyricShadowBlur: 0,
+    immersiveFontSize: 20,
+    immersiveActiveFontSize: 28,
+    immersiveColor: 'rgba(255,255,255,0.7)',
+    immersiveActiveColor: '#ffffff',
+    immersiveFontWeight: 400,
+    immersiveShadow: true,
+    immersiveShadowBlur: 3,
+  },
+  highContrast: {
+    name: '高对比',
+    lyricFontSize: 15,
+    lyricColor: '#ffffff',
+    lyricActiveColor: '#ffd700',
+    lyricFontWeight: 600,
+    lyricShadow: true,
+    lyricShadowBlur: 4,
+    immersiveFontSize: 24,
+    immersiveActiveFontSize: 38,
+    immersiveColor: '#ffffff',
+    immersiveActiveColor: '#ffd700',
+    immersiveFontWeight: 700,
+    immersiveShadow: true,
+    immersiveShadowBlur: 8,
+  },
+};
+
 const DEFAULT_SETTINGS = {
   autoPlayNext: true,
   rememberProgress: true,
@@ -27,6 +94,20 @@ const DEFAULT_SETTINGS = {
   downloadNotify: true,
   upscalePreset: 'anime',
   closeToTray: true,
+  subtitleStylePreset: 'default',
+  subtitleLyricFontSize: 14,
+  subtitleLyricColor: '#e8e6e3',
+  subtitleLyricActiveColor: '#c96442',
+  subtitleLyricFontWeight: 400,
+  subtitleLyricShadow: true,
+  subtitleLyricShadowBlur: 2,
+  subtitleImmersiveFontSize: 22,
+  subtitleImmersiveActiveFontSize: 34,
+  subtitleImmersiveColor: '#ffffff',
+  subtitleImmersiveActiveColor: '#ffffff',
+  subtitleImmersiveFontWeight: 500,
+  subtitleImmersiveShadow: true,
+  subtitleImmersiveShadowBlur: 4,
 };
 
 const TABS = [
@@ -510,23 +591,6 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
         </div>
         <div className="setting-item">
           <div className="setting-info">
-            <div className="setting-label">字幕字体大小</div>
-            <div className="setting-desc">歌词本中字幕的显示字号</div>
-          </div>
-          <div className="setting-control">
-            <div className="slider-control">
-              <div className="slider-value">{settings.subtitleFontSize || 14}px</div>
-              <Slider
-                value={settings.subtitleFontSize || 14}
-                min={12}
-                max={24}
-                onChange={(e) => handleSlider('subtitleFontSize', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="setting-item">
-          <div className="setting-info">
             <div className="setting-label">默认显示翻译</div>
             <div className="setting-desc">加载字幕时自动显示双语（原文+译文）</div>
           </div>
@@ -537,6 +601,276 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
             />
           </div>
         </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">字幕样式</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">样式预设</div>
+            <div className="setting-desc">快速应用预设的字幕样式</div>
+          </div>
+          <div className="setting-control">
+            <div className="subtitle-style-presets">
+              {Object.entries(SUBTITLE_STYLE_PRESETS).map(([key, preset]) => (
+                <button
+                  key={key}
+                  className={`style-preset-btn ${settings.subtitleStylePreset === key ? 'active' : ''}`}
+                  onClick={() => {
+                    setSettings((p) => ({
+                      ...p,
+                      subtitleStylePreset: key,
+                      subtitleLyricFontSize: preset.lyricFontSize,
+                      subtitleLyricColor: preset.lyricColor,
+                      subtitleLyricActiveColor: preset.lyricActiveColor,
+                      subtitleLyricFontWeight: preset.lyricFontWeight,
+                      subtitleLyricShadow: preset.lyricShadow,
+                      subtitleLyricShadowBlur: preset.lyricShadowBlur,
+                      subtitleImmersiveFontSize: preset.immersiveFontSize,
+                      subtitleImmersiveActiveFontSize: preset.immersiveActiveFontSize,
+                      subtitleImmersiveColor: preset.immersiveColor,
+                      subtitleImmersiveActiveColor: preset.immersiveActiveColor,
+                      subtitleImmersiveFontWeight: preset.immersiveFontWeight,
+                      subtitleImmersiveShadow: preset.immersiveShadow,
+                      subtitleImmersiveShadowBlur: preset.immersiveShadowBlur,
+                    }))
+                  }}
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">歌词本字幕</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">字体大小</div>
+            <div className="setting-desc">歌词本中字幕的显示字号</div>
+          </div>
+          <div className="setting-control">
+            <div className="slider-control">
+              <div className="slider-value">{settings.subtitleLyricFontSize || 14}px</div>
+              <Slider
+                value={settings.subtitleLyricFontSize || 14}
+                min={12}
+                max={24}
+                onChange={(e) => handleSlider('subtitleLyricFontSize', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">普通行颜色</div>
+            <div className="setting-desc">非激活状态字幕行的颜色</div>
+          </div>
+          <div className="setting-control">
+            <div className="color-input-wrapper">
+              <input
+                type="color"
+                className="color-input"
+                value={settings.subtitleLyricColor || '#e8e6e3'}
+                onChange={(e) => setSettings((p) => ({ ...p, subtitleLyricColor: e.target.value }))}
+              />
+              <span className="color-hex">{settings.subtitleLyricColor || '#e8e6e3'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">激活行颜色</div>
+            <div className="setting-desc">当前播放字幕行的高亮颜色</div>
+          </div>
+          <div className="setting-control">
+            <div className="color-input-wrapper">
+              <input
+                type="color"
+                className="color-input"
+                value={settings.subtitleLyricActiveColor || '#c96442'}
+                onChange={(e) => setSettings((p) => ({ ...p, subtitleLyricActiveColor: e.target.value }))}
+              />
+              <span className="color-hex">{settings.subtitleLyricActiveColor || '#c96442'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">字体粗细</div>
+            <div className="setting-desc">字幕文字的字重</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.subtitleLyricFontWeight || 400}
+              onChange={(e) => setSettings((p) => ({ ...p, subtitleLyricFontWeight: parseInt(e.target.value) }))}
+            >
+              <option value={300}>细体 (300)</option>
+              <option value={400}>常规 (400)</option>
+              <option value={500}>中等 (500)</option>
+              <option value={600}>半粗 (600)</option>
+              <option value={700}>粗体 (700)</option>
+            </select>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">文字阴影</div>
+            <div className="setting-desc">为字幕添加阴影增强可读性</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.subtitleLyricShadow !== false}
+              onChange={() => handleToggle('subtitleLyricShadow')}
+            />
+          </div>
+        </div>
+        {settings.subtitleLyricShadow !== false && (
+          <div className="setting-item sub-setting">
+            <div className="setting-info">
+              <div className="setting-label">阴影模糊度</div>
+              <div className="setting-desc">阴影的模糊半径</div>
+            </div>
+            <div className="setting-control">
+              <div className="slider-control">
+                <div className="slider-value">{settings.subtitleLyricShadowBlur || 2}px</div>
+                <Slider
+                  value={settings.subtitleLyricShadowBlur || 2}
+                  min={0}
+                  max={8}
+                  step={1}
+                  onChange={(e) => handleSlider('subtitleLyricShadowBlur', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">沉浸式字幕</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">普通行字号</div>
+            <div className="setting-desc">沉浸式模式中非激活字幕的字号</div>
+          </div>
+          <div className="setting-control">
+            <div className="slider-control">
+              <div className="slider-value">{settings.subtitleImmersiveFontSize || 22}px</div>
+              <Slider
+                value={settings.subtitleImmersiveFontSize || 22}
+                min={14}
+                max={40}
+                onChange={(e) => handleSlider('subtitleImmersiveFontSize', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">激活行字号</div>
+            <div className="setting-desc">沉浸式模式中当前字幕的字号</div>
+          </div>
+          <div className="setting-control">
+            <div className="slider-control">
+              <div className="slider-value">{settings.subtitleImmersiveActiveFontSize || 34}px</div>
+              <Slider
+                value={settings.subtitleImmersiveActiveFontSize || 34}
+                min={20}
+                max={60}
+                onChange={(e) => handleSlider('subtitleImmersiveActiveFontSize', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">普通行颜色</div>
+            <div className="setting-desc">非激活状态字幕行的颜色</div>
+          </div>
+          <div className="setting-control">
+            <div className="color-input-wrapper">
+              <input
+                type="color"
+                className="color-input"
+                value={settings.subtitleImmersiveColor || '#ffffff'}
+                onChange={(e) => setSettings((p) => ({ ...p, subtitleImmersiveColor: e.target.value }))}
+              />
+              <span className="color-hex">{settings.subtitleImmersiveColor || '#ffffff'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">激活行颜色</div>
+            <div className="setting-desc">当前播放字幕行的高亮颜色</div>
+          </div>
+          <div className="setting-control">
+            <div className="color-input-wrapper">
+              <input
+                type="color"
+                className="color-input"
+                value={settings.subtitleImmersiveActiveColor || '#ffffff'}
+                onChange={(e) => setSettings((p) => ({ ...p, subtitleImmersiveActiveColor: e.target.value }))}
+              />
+              <span className="color-hex">{settings.subtitleImmersiveActiveColor || '#ffffff'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">字体粗细</div>
+            <div className="setting-desc">字幕文字的字重</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.subtitleImmersiveFontWeight || 500}
+              onChange={(e) => setSettings((p) => ({ ...p, subtitleImmersiveFontWeight: parseInt(e.target.value) }))}
+            >
+              <option value={300}>细体 (300)</option>
+              <option value={400}>常规 (400)</option>
+              <option value={500}>中等 (500)</option>
+              <option value={600}>半粗 (600)</option>
+              <option value={700}>粗体 (700)</option>
+            </select>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">文字阴影</div>
+            <div className="setting-desc">为字幕添加多层阴影增强可读性</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.subtitleImmersiveShadow !== false}
+              onChange={() => handleToggle('subtitleImmersiveShadow')}
+            />
+          </div>
+        </div>
+        {settings.subtitleImmersiveShadow !== false && (
+          <div className="setting-item sub-setting">
+            <div className="setting-info">
+              <div className="setting-label">阴影模糊度</div>
+              <div className="setting-desc">阴影的模糊半径</div>
+            </div>
+            <div className="setting-control">
+              <div className="slider-control">
+                <div className="slider-value">{settings.subtitleImmersiveShadowBlur || 4}px</div>
+                <Slider
+                  value={settings.subtitleImmersiveShadowBlur || 4}
+                  min={0}
+                  max={12}
+                  step={1}
+                  onChange={(e) => handleSlider('subtitleImmersiveShadowBlur', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

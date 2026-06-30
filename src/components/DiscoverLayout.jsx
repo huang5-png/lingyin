@@ -48,6 +48,7 @@ const DiscoverLayout = memo(function DiscoverLayout({
   onToggleTranslate,
   hasTranslation,
   subtitleFontSize,
+  subtitleStyleSettings,
   bookmarks,
   onAddBookmark,
   onUpdateBookmark,
@@ -129,6 +130,7 @@ const DiscoverLayout = memo(function DiscoverLayout({
                 isTranslating={isAnyTranslating}
                 hasTranslation={hasTranslation}
                 subtitleFontSize={subtitleFontSize}
+                subtitleStyleSettings={subtitleStyleSettings}
                 bookmarks={bookmarks}
                 onAddBookmark={onAddBookmark}
                 onUpdateBookmark={onUpdateBookmark}

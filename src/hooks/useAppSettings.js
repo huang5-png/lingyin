@@ -22,6 +22,20 @@ const DEFAULT_SETTINGS = {
   playbackRate: 1,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   closeToTray: true,
+  subtitleStylePreset: 'default',
+  subtitleLyricFontSize: 14,
+  subtitleLyricColor: '#e8e6e3',
+  subtitleLyricActiveColor: '#c96442',
+  subtitleLyricFontWeight: 400,
+  subtitleLyricShadow: true,
+  subtitleLyricShadowBlur: 2,
+  subtitleImmersiveFontSize: 22,
+  subtitleImmersiveActiveFontSize: 34,
+  subtitleImmersiveColor: '#ffffff',
+  subtitleImmersiveActiveColor: '#ffffff',
+  subtitleImmersiveFontWeight: 500,
+  subtitleImmersiveShadow: true,
+  subtitleImmersiveShadowBlur: 4,
 }
 
 function loadSettings() {
