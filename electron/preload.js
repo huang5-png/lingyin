@@ -148,6 +148,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   bookmarksDeleteByWork: (workId) => ipcRenderer.invoke('bookmarks:deleteByWork', workId),
   bookmarksClearAll: () => ipcRenderer.invoke('bookmarks:clearAll'),
 
+  // 播放队列持久化
+  playQueueGet: () => ipcRenderer.invoke('playQueue:get'),
+  playQueueSave: (queue) => ipcRenderer.invoke('playQueue:save', queue),
+  playQueueClear: () => ipcRenderer.invoke('playQueue:clear'),
+
+  // 上次播放状态
+  lastPlayStateGet: () => ipcRenderer.invoke('lastPlayState:get'),
+  lastPlayStateSave: (state) => ipcRenderer.invoke('lastPlayState:save', state),
+
   // 迷你播放器
   miniPlayerOpen: () => ipcRenderer.invoke('miniPlayer:open'),
   miniPlayerClose: () => ipcRenderer.invoke('miniPlayer:close'),

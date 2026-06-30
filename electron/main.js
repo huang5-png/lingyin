@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -811,6 +811,26 @@ ipcMain.handle('bookmarks:deleteByWork', async (_, workId) => {
 
 ipcMain.handle('bookmarks:clearAll', async () => {
   return clearAllBookmarks()
+})
+
+ipcMain.handle('playQueue:get', async () => {
+  return getPlayQueue()
+})
+
+ipcMain.handle('playQueue:save', async (_, queue) => {
+  return savePlayQueue(queue)
+})
+
+ipcMain.handle('playQueue:clear', async () => {
+  return clearPlayQueue()
+})
+
+ipcMain.handle('lastPlayState:get', async () => {
+  return getLastPlayState()
+})
+
+ipcMain.handle('lastPlayState:save', async (_, state) => {
+  return saveLastPlayState(state)
 })
 
 ipcMain.handle('log:info', async (_, message, ...args) => {

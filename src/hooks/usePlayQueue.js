@@ -20,6 +20,42 @@ export function usePlayQueue({
   const [shuffle, setShuffle] = useState(!!settings?.shuffle)
   const [showQueuePanel, setShowQueuePanel] = useState(false)
   const pendingQueuePlayRef = useRef(null)
+  const saveQueueTimeoutRef = useRef(null)
+  const isLoadedRef = useRef(false)
+
+  useEffect(() => {
+    if (isLoadedRef.current) return
+    const load = async () => {
+      try {
+        if (settings?.persistPlayQueue !== false && window.electronAPI?.playQueueGet) {
+          const saved = await window.electronAPI.playQueueGet()
+          if (Array.isArray(saved) && saved.length > 0) {
+            setPlayQueue(saved)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load play queue:', e)
+      }
+      isLoadedRef.current = true
+    }
+    load()
+  }, [settings?.persistPlayQueue])
+
+  const saveQueueDebounced = useCallback((queue) => {
+    if (settings?.persistPlayQueue === false) return
+    if (!window.electronAPI?.playQueueSave) return
+    if (saveQueueTimeoutRef.current) {
+      clearTimeout(saveQueueTimeoutRef.current)
+    }
+    saveQueueTimeoutRef.current = setTimeout(() => {
+      window.electronAPI.playQueueSave(queue).catch(() => {})
+    }, 500)
+  }, [settings?.persistPlayQueue])
+
+  useEffect(() => {
+    if (!isLoadedRef.current) return
+    saveQueueDebounced(playQueue)
+  }, [playQueue, saveQueueDebounced])
 
   const playFromQueue = useCallback((item, index) => {
     if (!item || !item.audio) return

@@ -301,6 +301,59 @@ export function useAppState() {
 
   const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated && cue.translated.trim()), [currentCues])
 
+  // ===== 上次播放状态保存（用于启动恢复） =====
+  const lastPlaySaveTimerRef = useRef(null)
+
+  const saveLastPlayState = useCallback(() => {
+    if (!playingWork || !currentAudio) return
+    const state = {
+      workId: playingWork.id,
+      workTitle: playingWork.title || playingWork.folderName || '',
+      workCover: playingWork.cover || '',
+      audioPath: currentAudio.path || '',
+      audioName: currentAudio.name || '',
+      currentTime: playerRef.current?.getCurrentTime?.() || currentTime || 0,
+      duration: durationRef.current || duration || 0,
+      isOnline: !!playingWork.isOnline,
+    }
+    try {
+      window.electronAPI?.lastPlayStateSave?.(state)
+    } catch (e) {}
+  }, [playingWork, currentAudio, currentTime, duration, playerRef, durationRef])
+
+  useEffect(() => {
+    if (!playingWork || !currentAudio) return
+    if (lastPlaySaveTimerRef.current) {
+      clearInterval(lastPlaySaveTimerRef.current)
+    }
+    saveLastPlayState()
+    lastPlaySaveTimerRef.current = setInterval(saveLastPlayState, 10000)
+    return () => {
+      if (lastPlaySaveTimerRef.current) {
+        clearInterval(lastPlaySaveTimerRef.current)
+      }
+    }
+  }, [playingWork, currentAudio, saveLastPlayState])
+
+  // ===== 作品间连续播放 =====
+  const handleFinishWithContinuousPlay = useCallback(() => {
+    handleFinish()
+    if (!settings?.continuousPlay) return
+    if (queueIndex >= 0 && playQueue.length > 0) return
+    if (!currentAudio || !selectedWork || audioFiles.length === 0) return
+    const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
+    if (currentIndex < 0 || currentIndex < audioFiles.length - 1) return
+    if (!filteredWorks || filteredWorks.length === 0) return
+    const workIndex = filteredWorks.findIndex(w => w.id === selectedWork.id)
+    if (workIndex < 0 || workIndex >= filteredWorks.length - 1) return
+    const nextWork = filteredWorks[workIndex + 1]
+    if (nextWork) {
+      showToast?.(`连续播放：${nextWork.title || nextWork.folderName || '下一个作品'}`, 'info')
+      setSelectedWork(nextWork)
+      pendingAutoPlayRef.current = { startedAt: Date.now() }
+    }
+  }, [settings, queueIndex, playQueue, handleFinish, currentAudio, selectedWork, audioFiles, filteredWorks, showToast, setSelectedWork, pendingAutoPlayRef])
+
   const handleToggleTranslate = useCallback(() => {
     toggleSubtitleTranslate({
       selectedWork,
@@ -416,6 +469,30 @@ export function useAppState() {
   useEffect(() => {
     loadWorks()
   }, [])
+
+  // ===== 启动恢复播放 =====
+  const restorePlayOnStart = useCallback(async () => {
+    if (!settings?.restorePlayOnStart) return
+    try {
+      const lastState = await window.electronAPI?.lastPlayStateGet?.()
+      if (!lastState || !lastState.workId) return
+      const work = works.find(w => w.id === lastState.workId)
+      if (!work) return
+      setSelectedWork(work)
+      pendingAutoPlayRef.current = { startedAt: Date.now(), audioPath: lastState.audioPath }
+    } catch (e) {
+      console.error('Failed to restore play state:', e)
+    }
+  }, [settings?.restorePlayOnStart, works, setSelectedWork, pendingAutoPlayRef])
+
+  useEffect(() => {
+    if (!settings?.restorePlayOnStart) return
+    if (!works || works.length === 0) return
+    const timer = setTimeout(() => {
+      restorePlayOnStart()
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [works, settings?.restorePlayOnStart, restorePlayOnStart])
 
   // ===== 继续听（最近未听完的音频） =====
   const [lastPlayedAudio, setLastPlayedAudio] = useState(null)
@@ -1090,7 +1167,7 @@ export function useAppState() {
     handleSeek,
     handlePrevAudio,
     handleNextAudio,
-    handleFinish,
+    handleFinish: handleFinishWithContinuousPlay,
     durationRef,
 
     // 在线作品

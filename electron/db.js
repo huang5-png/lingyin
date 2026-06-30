@@ -19,6 +19,8 @@ async function initDB() {
     favorites: [],
     folderGroups: [],
     bookmarks: [],
+    playQueue: [],
+    lastPlayState: null,
   }
 
   try {
@@ -1037,6 +1039,43 @@ async function clearAllBookmarks() {
   return count
 }
 
+// ===== 播放队列持久化 =====
+// 队列项结构与前端 usePlayQueue 中的 QueueItem 一致
+
+function ensurePlayQueue() {
+  if (!Array.isArray(dbData.playQueue)) dbData.playQueue = []
+  return dbData.playQueue
+}
+
+async function getPlayQueue() {
+  return ensurePlayQueue()
+}
+
+async function savePlayQueue(queue) {
+  dbData.playQueue = Array.isArray(queue) ? queue : []
+  saveDB()
+  return true
+}
+
+async function clearPlayQueue() {
+  dbData.playQueue = []
+  saveDB()
+  return true
+}
+
+// ===== 上次播放状态 =====
+// 结构：{ workId, audioPath, audioName, currentTime, duration, workTitle, workCover, isOnline, timestamp }
+
+async function getLastPlayState() {
+  return dbData.lastPlayState || null
+}
+
+async function saveLastPlayState(state) {
+  dbData.lastPlayState = state ? { ...state, timestamp: Date.now() } : null
+  saveDB()
+  return true
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -1092,4 +1131,9 @@ module.exports = {
   deleteBookmark,
   deleteBookmarksByWork,
   clearAllBookmarks,
+  getPlayQueue,
+  savePlayQueue,
+  clearPlayQueue,
+  getLastPlayState,
+  saveLastPlayState,
 }

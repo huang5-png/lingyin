@@ -39,6 +39,9 @@ const DEFAULT_SETTINGS = {
   globalMediaKeys: true,
   trackChangeNotification: true,
   enableMediaSession: true,
+  continuousPlay: false,
+  restorePlayOnStart: false,
+  persistPlayQueue: true,
 }
 
 function loadSettings() {

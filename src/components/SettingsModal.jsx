@@ -111,6 +111,9 @@ const DEFAULT_SETTINGS = {
   globalMediaKeys: true,
   trackChangeNotification: true,
   enableMediaSession: true,
+  continuousPlay: false,
+  restorePlayOnStart: false,
+  persistPlayQueue: true,
 };
 
 const TABS = [
@@ -227,6 +230,42 @@ function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab })
             <ToggleSwitch
               checked={settings.autoPlayOnStart}
               onChange={() => handleToggle('autoPlayOnStart')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">作品间连续播放</div>
+            <div className="setting-desc">当前作品播放完毕后自动播放下一个作品</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.continuousPlay}
+              onChange={() => handleToggle('continuousPlay')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">启动恢复上次播放</div>
+            <div className="setting-desc">启动时自动恢复上次播放的作品和位置</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.restorePlayOnStart}
+              onChange={() => handleToggle('restorePlayOnStart')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">持久化播放队列</div>
+            <div className="setting-desc">关闭后重新打开时恢复播放队列</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.persistPlayQueue}
+              onChange={() => handleToggle('persistPlayQueue')}
             />
           </div>
         </div>
