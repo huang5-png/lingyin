@@ -131,6 +131,7 @@
 | `hooks/useSubtitleRefresh.js` | 字幕刷新 Hook：重新扫描文件夹、更新音频和字幕列表、保持当前字幕选择 |
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
 | `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
+| `hooks/useDownloadImport.js` | 下载完成自动导入 Hook：下载任务完成/失败通知、自动添加到媒体库 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、自动居中、点击跳转） |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
