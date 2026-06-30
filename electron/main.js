@@ -24,16 +24,31 @@ async function getParseFile() {
 
 const isDev = process.env.NODE_ENV === 'development'
 
-// 性能优化：禁用 GPU shader 磁盘缓存，减少 IO 和权限错误
+// ========== 白屏防护：GPU / 硬件加速相关开关 ==========
+// 禁用 GPU 着色器磁盘缓存，减少 IO 和权限错误
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
-// 性能优化：禁用后台标签页节流，保证音频播放流畅
+// 禁用后台标签页节流，保证音频播放流畅
 app.commandLine.appendSwitch('disable-background-timer-throttling')
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
-// 性能优化：禁用不必要的 Chromium 功能
+// 禁用不必要的 Chromium 功能
 app.commandLine.appendSwitch('disable-features', 'TranslateUI,Translate,MediaRouter,SpareRendererForSitePerProcess,HardwareMediaKeyHandling')
-// 性能优化：限制缓存大小
+// 限制缓存大小
 app.commandLine.appendSwitch('disk-cache-size', '104857600')
+
+// 白屏防护：Windows 下常见 GPU 驱动问题导致渲染进程崩溃
+// 优先尝试禁用硬件加速（最稳妥的白屏解决方案）
+const shouldDisableHardwareAcceleration = !isDev || process.env.DISABLE_HW_ACCEL === '1'
+if (shouldDisableHardwareAcceleration) {
+  app.disableHardwareAcceleration()
+  app.commandLine.appendSwitch('disable-gpu')
+  app.commandLine.appendSwitch('disable-gpu-compositing')
+  app.commandLine.appendSwitch('disable-software-rasterizer')
+}
+
+// 白屏防护：禁用 sandbox（部分 Windows 环境 sandbox 初始化失败导致崩溃）
+app.commandLine.appendSwitch('no-sandbox')
+app.commandLine.appendSwitch('disable-setuid-sandbox')
 
 let mainWindow
 
@@ -45,7 +60,7 @@ function createWindow() {
     height: 900,
     minWidth: 1000,
     minHeight: 600,
-    backgroundColor: '#0a0a1a',
+    backgroundColor: '#faf9f5',
     frame: false,
     icon: iconPath,
     show: false,
@@ -60,10 +75,20 @@ function createWindow() {
     },
   })
 
-  // 性能优化：窗口就绪后再显示，避免白屏闪烁
+  // 白屏防护：窗口就绪后再显示，避免白屏闪烁
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
   })
+
+  // 白屏防护：超时兜底显示（防止 ready-to-show 因渲染错误永不触发）
+  const showTimeout = setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      logger.warn('ready-to-show 超时，强制显示窗口')
+      mainWindow.show()
+    }
+  }, 5000)
+  mainWindow.once('ready-to-show', () => clearTimeout(showTimeout))
+  mainWindow.once('closed', () => clearTimeout(showTimeout))
   
   mainWindow.setTitle('聆音')
 
@@ -72,8 +97,35 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173')
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    const indexPath = path.join(__dirname, '../dist/index.html')
+    logger.info('加载生产页面:', indexPath)
+    mainWindow.loadFile(indexPath).catch((err) => {
+      logger.error('加载 index.html 失败:', err.message)
+    })
   }
+
+  // 白屏防护：监听渲染进程崩溃
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    logger.error('渲染进程崩溃:', details.reason, details.exitCode)
+    // 尝试重新加载
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      setTimeout(() => {
+        mainWindow.reload()
+      }, 1000)
+    }
+  })
+
+  // 白屏防护：监听加载失败
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    logger.error('页面加载失败:', errorCode, errorDescription)
+  })
+
+  // 白屏防护：监听控制台错误（便于排查 JS 错误导致的白屏）
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    if (level === 3) {
+      logger.error('[渲染控制台错误]', message, 'at', sourceId, ':', line)
+    }
+  })
 
   // 快捷键：F12 或 Ctrl+Shift+I 切换开发者工具
   mainWindow.webContents.on('before-input-event', (event, input) => {
