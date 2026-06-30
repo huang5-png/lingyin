@@ -29,8 +29,8 @@ import { useTheme } from './hooks/useTheme'
 import { useToast } from './hooks/useToast'
 import { useImmersive } from './hooks/useImmersive'
 import { useSplitter } from './hooks/useSplitter'
-import { scanFolder, extractRJCode, getExtension } from './utils/scanner'
-import { parseSubtitle } from './utils/subtitleParser'
+import { usePlayer } from './hooks/usePlayer'
+import { scanFolder, extractRJCode } from './utils/scanner'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
 
@@ -66,12 +66,7 @@ function loadSettings() {
 }
 
 export default function App() {
-  const [selectedWork, setSelectedWork] = useState(null) // 当前浏览的作品
-  const [playingWork, setPlayingWork] = useState(null) // 当前正在播放的作品
-  const [currentAudio, setCurrentAudio] = useState(null)
-  const [currentCues, setCurrentCues] = useState([])
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
+  const [selectedWork, setSelectedWork] = useState(null)
   const [settings, setSettings] = useState(loadSettings)
   const [viewMode, setViewMode] = useState(settings.viewMode || 'grid')
   const [showLyric, setShowLyric] = useState(settings.showLyric)
@@ -101,10 +96,7 @@ export default function App() {
   const playerRef = useRef(null)
   const handleSelectAudioRef = useRef(null)
   const discoverViewRef = useRef(null)
-  const lastSaveTimeRef = useRef(0)
-  const durationRef = useRef(0)
 
-  // 最近播放自动播放：记录待播放的音频路径，audioFiles 加载后自动播放
   const pendingAutoPlayRef = useRef(null)
 
   const handleRecentPlayAutoPlay = useCallback((item) => {
@@ -140,41 +132,10 @@ export default function App() {
     handleFilterChange,
   } = useFilters(works)
 
-  // 包装 handleDeleteWork，注入 selectedWork 和清理回调
-  const handleDeleteWork = useCallback(
-    async (work) => {
-      const onDelete = () => {
-        setSelectedWork(null)
-        setCurrentAudio(null)
-        setCurrentCues([])
-      }
-      await mediaLibraryDeleteWork(work, selectedWork, onDelete)
-    },
-    [mediaLibraryDeleteWork, selectedWork],
-  )
-
-  // ===== 在线作品 Hook =====
-  const {
-    handleSelectOnlineWork,
-    handleReloadOnlineTracks,
-    extractAudiosFromTracks,
-  } = useOnlineWork({
-    showToast,
-    setSelectedWork,
-    setAudioFiles,
-    setCurrentAudio,
-    setCurrentCues,
-    setCurrentTime,
-    setDuration,
-    setAllSubtitleFiles,
-    setSubtitleOptions,
-    setSelectedSubtitleIndex,
-  })
-
   // ===== 播放历史记录 Hook =====
   const { recordHistoryIfNeeded } = usePlaybackHistory()
 
-  // ===== 自定义 Hooks =====
+  // ===== 翻译功能 Hook =====
   const {
     translateCacheRef,
     translateVersion,
@@ -187,17 +148,6 @@ export default function App() {
     isAnyTranslating,
     toggleSubtitleTranslate,
   } = useTranslate(showToast)
-
-  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
-
-  const handleToggleTranslate = useCallback(() => {
-    toggleSubtitleTranslate({
-      selectedWork,
-      currentAudio,
-      currentCues,
-      setCurrentCues,
-    })
-  }, [selectedWork, currentAudio, currentCues, toggleSubtitleTranslate])
 
   const {
     playQueue,
@@ -253,12 +203,93 @@ export default function App() {
     handleAutoTranslate,
   } = useSubtitle({
     selectedWork,
-    currentAudio,
     allSubtitleFiles,
     settings,
     translateCacheRef,
     setTranslateVersion,
     showToast,
+  })
+
+  // ===== 核心播放控制 Hook =====
+  const {
+    playingWork,
+    currentAudio,
+    currentCues,
+    currentTime,
+    duration,
+    handleSelectAudio,
+    handleTimeUpdate,
+    handleReady,
+    handleSeek,
+    handlePrevAudio,
+    handleNextAudio,
+    handleFinish,
+    setCurrentCues,
+    setCurrentTime,
+    setDuration,
+    setPlayingWork,
+    setCurrentAudio,
+    durationRef,
+  } = usePlayer({
+    selectedWork,
+    audioFiles,
+    settings,
+    playerRef,
+    showToast,
+    findMatchedSubtitles,
+    detectSubtitleLanguagesAsync,
+    loadSavedSubtitle,
+    selectSubtitleByPriority,
+    handleAutoTranslate,
+    setSubtitleOptions,
+    setSelectedSubtitleIndex,
+    queueIndex,
+    playQueue,
+    advanceQueue,
+    recordHistoryIfNeeded,
+    handleSelectAudioRef,
+  })
+
+  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
+
+  const handleToggleTranslate = useCallback(() => {
+    toggleSubtitleTranslate({
+      selectedWork,
+      currentAudio,
+      currentCues,
+      setCurrentCues,
+    })
+  }, [selectedWork, currentAudio, currentCues, toggleSubtitleTranslate])
+
+  // 包装 handleDeleteWork，注入 selectedWork 和清理回调
+  const handleDeleteWork = useCallback(
+    async (work) => {
+      const onDelete = () => {
+        setSelectedWork(null)
+        setCurrentAudio(null)
+        setCurrentCues([])
+      }
+      await mediaLibraryDeleteWork(work, selectedWork, onDelete)
+    },
+    [mediaLibraryDeleteWork, selectedWork, setCurrentAudio, setCurrentCues],
+  )
+
+  // ===== 在线作品 Hook =====
+  const {
+    handleSelectOnlineWork,
+    handleReloadOnlineTracks,
+    extractAudiosFromTracks,
+  } = useOnlineWork({
+    showToast,
+    setSelectedWork,
+    setAudioFiles,
+    setCurrentAudio,
+    setCurrentCues,
+    setCurrentTime,
+    setDuration,
+    setAllSubtitleFiles,
+    setSubtitleOptions,
+    setSelectedSubtitleIndex,
   })
 
   // ===== 沉浸式模式 Hook =====
@@ -293,96 +324,21 @@ export default function App() {
     (work) => {
       if (work?.id === selectedWork?.id) return
       setSelectedWork(work)
-      // 注意：切换作品时不重置 currentAudio，实现边听边选
-      // 只有当用户明确点击播放新曲目时才切换音频
     },
     [selectedWork],
   )
-
-  const handleSelectAudio = useCallback(
-    async (audio) => {
-      if (!selectedWork) return
-
-      setPlayingWork(selectedWork) // 记录当前正在播放的作品
-      setCurrentAudio(audio)
-      setCurrentCues([])
-
-      // 使用 useSubtitle 提供的辅助函数查找匹配的字幕
-      let foundSubtitleOptions = []
-      
-      if (!audio.isOnline) {
-        foundSubtitleOptions = findMatchedSubtitles(audio.name, audio.path)
-        detectSubtitleLanguagesAsync(foundSubtitleOptions)
-      }
-      
-      setSubtitleOptions(foundSubtitleOptions)
-
-      // 加载保存的字幕选择
-      const { savedIndex, updatedOptions } = await loadSavedSubtitle(foundSubtitleOptions)
-      if (updatedOptions !== foundSubtitleOptions) {
-        setSubtitleOptions(updatedOptions)
-      }
-
-      // 根据语言优先级选择字幕
-      const selectedIndex = selectSubtitleByPriority(updatedOptions, savedIndex)
-      setSelectedSubtitleIndex(selectedIndex)
-
-      if (selectedIndex >= 0 && updatedOptions[selectedIndex]) {
-        try {
-          const sub = updatedOptions[selectedIndex]
-          const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
-          if (content) {
-            const ext = getExtension(sub.file.name)
-            let cues = parseSubtitle(content, ext)
-            
-            // 自动翻译（由 useSubtitle hook 统一管理）
-            handleAutoTranslate(cues, sub, setCurrentCues)
-            
-            setCurrentCues(cues)
-          }
-        } catch (e) {
-          console.error('Failed to load subtitle:', e)
-          if (window.electronAPI?.logError) {
-            window.electronAPI.logError('Failed to load subtitle:', e.message)
-          }
-        }
-      }
-
-      if (!audio.isOnline) {
-        try {
-          const progress = await window.electronAPI.dbGetProgress(selectedWork.id, audio.path)
-          if (progress && progress.currentTime > 5 && progress.duration > 0) {
-            const targetTime = progress.currentTime
-            const checkAndSeek = setInterval(() => {
-              if (playerRef.current && playerRef.current.getDuration() > 0) {
-                playerRef.current.seekTo(targetTime)
-                clearInterval(checkAndSeek)
-              }
-            }, 200)
-            setTimeout(() => clearInterval(checkAndSeek), 10000)
-          }
-        } catch (e) {
-          console.error('Failed to load progress:', e)
-        }
-      }
-    },
-    [selectedWork, settings.subtitleLangPriority, findMatchedSubtitles, detectSubtitleLanguagesAsync, loadSavedSubtitle, selectSubtitleByPriority, handleAutoTranslate],
-  )
-
-  handleSelectAudioRef.current = handleSelectAudio
 
   // 监听 audioFiles 加载完成后自动播放（最近播放）
   useEffect(() => {
     if (!pendingAutoPlayRef.current || !audioFiles.length) return
 
     const pending = pendingAutoPlayRef.current
-    const timeout = Date.now() - pending.startedAt > 10000 // 10秒超时
+    const timeout = Date.now() - pending.startedAt > 10000
     if (timeout) {
       pendingAutoPlayRef.current = null
       return
     }
 
-    // 尝试找到匹配的音频
     let targetAudio = null
     if (pending.audioPath) {
       targetAudio = audioFiles.find(a => a.path === pending.audioPath)
@@ -397,94 +353,23 @@ export default function App() {
     }
   }, [audioFiles, handleSelectAudio])
 
-  const handleTimeUpdate = useCallback(
-    (time) => {
-      setCurrentTime(time)
-
-      if (selectedWork && currentAudio && time > 0) {
-        const now = Date.now()
-        if (!currentAudio.isOnline && now - lastSaveTimeRef.current > 5000) {
-          lastSaveTimeRef.current = now
-          window.electronAPI.dbSaveProgress(selectedWork.id, currentAudio.path, {
-            currentTime: time,
-            duration: durationRef.current,
-          })
-        }
-        // 记录播放历史（每 60 秒，由 usePlaybackHistory 管理）
-        recordHistoryIfNeeded(selectedWork, currentAudio, now)
-      }
-    },
-    [selectedWork, currentAudio, recordHistoryIfNeeded],
-  )
-
-  const handleReady = useCallback((dur) => {
-    setDuration(dur)
-    durationRef.current = dur
-  }, [])
-
-  const handleSeek = useCallback((time) => {
-    if (playerRef.current) {
-      playerRef.current.seekTo(time)
-    }
-  }, [])
-
   // 点击播放栏封面：跳转到正在播放的作品，或切换沉浸式
   const handlePlayerCoverClick = useCallback(() => {
     if (!playingWork) return
 
-    // 如果当前浏览的作品不是正在播放的作品，先切换过去
     if (selectedWork?.id !== playingWork.id) {
-      // 判断是本地还是在线作品
       if (playingWork.isOnline) {
         setCurrentView('discover')
-        // 在线作品需要重新加载详情，先设置 selectedWork
         setSelectedWork(playingWork)
       } else {
-        // 本地作品：先切到 library 视图，再选中作品
         setCurrentView('library')
         setSelectedWork(playingWork)
       }
       return
     }
 
-    // 已经在播放的作品，切换沉浸式
     handleToggleImmersive()
   }, [playingWork, selectedWork, handleToggleImmersive])
-
-  const handlePrevAudio = useCallback(() => {
-    // 队列模式优先
-    if (queueIndex >= 0 && playQueue.length > 0) {
-      if (advanceQueue(-1, false)) return
-    }
-    // 回退到当前作品 audioFiles 逻辑
-    if (!currentAudio || audioFiles.length === 0) return
-    const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
-    if (currentIndex <= 0) return
-    handleSelectAudio(audioFiles[currentIndex - 1])
-  }, [queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
-
-  const handleNextAudio = useCallback(() => {
-    if (queueIndex >= 0 && playQueue.length > 0) {
-      if (advanceQueue(1, false)) return
-    }
-    if (!currentAudio || audioFiles.length === 0) return
-    const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
-    if (currentIndex < 0 || currentIndex >= audioFiles.length - 1) return
-    handleSelectAudio(audioFiles[currentIndex + 1])
-  }, [queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
-
-  const handleFinish = useCallback(() => {
-    if (!settings.autoPlayNext) return
-    // 队列模式
-    if (queueIndex >= 0 && playQueue.length > 0) {
-      if (advanceQueue(1, true)) return
-    }
-    // 回退到 audioFiles 逻辑
-    if (!currentAudio || audioFiles.length === 0) return
-    const currentIndex = audioFiles.findIndex((f) => f.path === currentAudio.path)
-    if (currentIndex < 0 || currentIndex >= audioFiles.length - 1) return
-    handleSelectAudio(audioFiles[currentIndex + 1])
-  }, [settings.autoPlayNext, queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
 
   useKeyboardShortcuts({
     settings,
