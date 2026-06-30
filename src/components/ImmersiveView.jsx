@@ -1,9 +1,21 @@
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useCallback, memo } from 'react'
 import { findCurrentCue } from '../utils/subtitleParser'
 import UpscaledImage from './UpscaledImage'
 import './ImmersiveView.css'
 
-export default function ImmersiveView({
+// 节流函数
+function throttle(fn, delay) {
+  let lastTime = 0
+  return function (...args) {
+    const now = performance.now()
+    if (now - lastTime >= delay) {
+      lastTime = now
+      fn.apply(this, args)
+    }
+  }
+}
+
+const ImmersiveView = memo(function ImmersiveView({
   work,
   currentCues,
   currentTime,
@@ -17,6 +29,14 @@ export default function ImmersiveView({
   subtitleStyleSettings,
 }) {
   const immersiveLyricRef = useRef(null)
+  const seekThrottleRef = useRef(null)
+
+  // 初始化节流函数
+  if (!seekThrottleRef.current) {
+    seekThrottleRef.current = throttle((time) => {
+      playerRef.current?.seekTo(time)
+    }, 150)
+  }
 
   const currentCueIndex = useMemo(() => {
     return findCurrentCue(currentCues, currentTime)
@@ -30,7 +50,8 @@ export default function ImmersiveView({
     }))
   }, [currentCues, currentCueIndex])
 
-  useEffect(() => {
+  // 节流滚动以避免频繁 DOM 操作
+  const scrollToActiveCue = useCallback(() => {
     const activeEl = immersiveLyricRef.current?.querySelector(`.immersive-lyric-line.active`)
     if (activeEl && immersiveLyricRef.current) {
       const container = immersiveLyricRef.current
@@ -41,7 +62,21 @@ export default function ImmersiveView({
         behavior: 'smooth',
       })
     }
+  }, [])
+
+  const throttledScrollRef = useRef(null)
+  if (!throttledScrollRef.current) {
+    throttledScrollRef.current = throttle(scrollToActiveCue, 100)
+  }
+
+  useEffect(() => {
+    throttledScrollRef.current()
   }, [currentCueIndex])
+
+  // 节流的点击跳转函数
+  const handleCueClick = useCallback((time) => {
+    seekThrottleRef.current(time)
+  }, [])
 
   const styleSettings = subtitleStyleSettings || {
     fontSize: subtitleFontSize ? subtitleFontSize * 1.2 : 22,
@@ -113,7 +148,7 @@ export default function ImmersiveView({
               <div
                 key={cue.realIndex}
                 className={`immersive-lyric-line ${cue.isActive ? 'active' : ''}`}
-                onClick={() => playerRef.current?.seekTo(cue.time)}
+                onClick={() => handleCueClick(cue.time)}
               >
                 {cue.text.split('\n').map((line, lineIdx) => (
                   <div key={lineIdx}>{line}</div>
@@ -132,4 +167,6 @@ export default function ImmersiveView({
       </div>
     </div>
   )
-}
+})
+
+export default ImmersiveView

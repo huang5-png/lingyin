@@ -1,7 +1,19 @@
-import { useEffect, useRef, useState, memo } from 'react'
+import { useEffect, useRef, useState, memo, useCallback } from 'react'
 import { findCurrentCue, formatTime } from '../utils/subtitleParser'
 import SubtitleSelector from './SubtitleSelector'
 import './LyricView.css'
+
+// 节流函数
+function throttle(fn, delay) {
+  let lastTime = 0
+  return function (...args) {
+    const now = performance.now()
+    if (now - lastTime >= delay) {
+      lastTime = now
+      fn.apply(this, args)
+    }
+  }
+}
 
 const DEFAULT_LOCAL_SETTINGS = {
   timeOffset: 0,
@@ -53,13 +65,12 @@ const LyricView = memo(function LyricView({
   const adjustedTime = currentTime + localSettings.timeOffset
   const currentIndex = findCurrentCue(cues, adjustedTime)
 
-  useEffect(() => {
+  // 节流滚动函数
+  const scrollToActiveLine = useCallback(() => {
     if (currentIndex < 0 || !containerRef.current) return
     const activeEl = containerRef.current.querySelector(`[data-idx="${currentIndex}"]`)
     if (activeEl) {
       const container = containerRef.current
-      const activeRect = activeEl.getBoundingClientRect()
-      const containerRect = container.getBoundingClientRect()
       const offsetTop = activeEl.offsetTop - container.offsetTop
       const targetScroll = offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2
       container.scrollTo({
@@ -67,6 +78,15 @@ const LyricView = memo(function LyricView({
         behavior: 'smooth',
       })
     }
+  }, [currentIndex])
+
+  const throttledScrollRef = useRef(null)
+  if (!throttledScrollRef.current) {
+    throttledScrollRef.current = throttle(scrollToActiveLine, 100)
+  }
+
+  useEffect(() => {
+    throttledScrollRef.current()
   }, [currentIndex])
 
   const handleLocalSettingsChange = (newLocalSettings) => {

@@ -240,8 +240,13 @@ const AudioPlayer = forwardRef(function AudioPlayer(
           if (onTimeUpdate) onTimeUpdate(time)
         })
 
+        // 节流 seek 事件，避免频繁重渲染
+        let lastSeekTime = 0
         ws.on('seek', (time) => {
           if (cancelled) return
+          const now = performance.now()
+          if (now - lastSeekTime < 66) return
+          lastSeekTime = now
           setCurrentTime(time)
           if (onTimeUpdate) onTimeUpdate(time)
         })
