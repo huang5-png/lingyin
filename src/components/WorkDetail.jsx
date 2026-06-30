@@ -1,7 +1,19 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useMemo, useEffect, memo } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
 import StateView from './StateView'
+
+// 曲目骨架屏组件
+const TrackSkeletonItem = memo(function TrackSkeletonItem({ hasDuration = true }) {
+  return (
+    <div className="audio-item wd-skeleton-item">
+      <div className="audio-indicator" />
+      <div className="audio-index wd-skeleton-index" />
+      <div className="audio-name wd-skeleton-name" />
+      {hasDuration && <div className="audio-duration wd-skeleton-duration" />}
+    </div>
+  )
+})
 
 export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup }) {
   const [showEditor, setShowEditor] = useState(false)
@@ -356,7 +368,11 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
         </div>
         <div className="audio-list">
           {isLoadingTracks ? (
-            <StateView type="loading" title="正在加载曲目列表..." />
+            <div className="audio-list wd-skeleton-list">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <TrackSkeletonItem key={i} hasDuration={i % 3 !== 2} />
+              ))}
+            </div>
           ) : hasTracksError ? (
             <StateView
               type="error"

@@ -1185,3 +1185,106 @@
   color: #374151;
   font-weight: 500;
 }
+
+/* ===== 曲目骨架屏样式 ===== */
+.wd-skeleton-list {
+  gap: 2px;
+}
+
+.wd-skeleton-item {
+  pointer-events: none !important;
+  animation: none !important;
+  cursor: default !important;
+}
+
+.wd-skeleton-index {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: wd-skeleton-shimmer 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.wd-skeleton-name {
+  flex: 1;
+  height: 13px;
+  border-radius: var(--radius-xs);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: wd-skeleton-shimmer 1.5s ease-in-out infinite;
+  min-width: 120px;
+  max-width: 320px;
+}
+
+.wd-skeleton-duration {
+  width: 40px;
+  height: 12px;
+  border-radius: var(--radius-xs);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: wd-skeleton-shimmer 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes wd-skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 高 DPI 适配 */
+@media (min-resolution: 1.5dppx) {
+  .wd-skeleton-index {
+    width: 24px;
+    height: 24px;
+  }
+
+  .wd-skeleton-name {
+    height: 11px;
+    min-width: 100px;
+    max-width: 280px;
+  }
+
+  .wd-skeleton-duration {
+    width: 36px;
+    height: 10px;
+  }
+}
+
+@media (min-resolution: 2dppx) {
+  .wd-skeleton-index {
+    width: 22px;
+    height: 22px;
+  }
+
+  .wd-skeleton-name {
+    height: 10px;
+    min-width: 80px;
+    max-width: 240px;
+  }
+
+  .wd-skeleton-duration {
+    width: 32px;
+    height: 9px;
+  }
+}
