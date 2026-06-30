@@ -1,12 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import Sidebar from './components/Sidebar'
-import WorkDetail from './components/WorkDetail'
 import AudioPlayer from './components/AudioPlayer'
 import LyricView from './components/LyricView'
 import SettingsModal from './components/SettingsModal'
 import ErrorBoundary from './components/ErrorBoundary'
-import RightTabBar from './components/RightTabBar'
-import DiscoverView from './components/DiscoverView'
 import UsageReport from './components/UsageReport'
 import DownloadView from './components/DownloadView'
 import DownloadModal from './components/DownloadModal'
@@ -17,6 +13,8 @@ import Toast from './components/Toast'
 import AddToPlaylistModal from './components/AddToPlaylistModal'
 import LeftNavBar from './components/LeftNavBar'
 import ImmersiveView from './components/ImmersiveView'
+import LibraryLayout from './components/LibraryLayout'
+import DiscoverLayout from './components/DiscoverLayout'
 import { useTranslate } from './hooks/useTranslate'
 import { usePlayQueue } from './hooks/usePlayQueue'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -491,198 +489,132 @@ export default function App() {
 
         <div className="right-content-area">
       {currentView === 'library' && (
-        <div className={`library-layout ${selectedWork ? 'has-detail' : ''} ${settings.autoHideSidebar && selectedWork ? 'hide-sidebar' : ''}`}>
-          <div className="library-main">
-            <Sidebar
-              works={filteredWorks}
-              selectedWorkId={selectedWork?.id}
-              onSelectWork={handleSelectWork}
-              onAddFolder={handleAddFolder}
-              onAddMediaLibrary={handleAddMediaLibrary}
-              cvFilter={cvFilter}
-              circleFilter={circleFilter}
-              onFilterChange={handleFilterChange}
-              allCVs={allCVs}
-              allCircles={allCircles}
-              onOpenSettings={handleOpenSettings}
-              onDeleteWork={handleDeleteWork}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              onTranslate={handleTranslate}
-              onTranslateBatch={handleTranslateBatch}
-              getTranslatedText={getTranslatedText}
-              isTranslated={isTranslated}
-              isTranslating={isTranslating}
-              isAnyTranslating={isAnyTranslating}
-              showOnlyFavorites={showOnlyFavorites}
-              onToggleFavoritesFilter={handleToggleFavoritesFilter}
-              favoriteIds={favoriteIds}
-              onToggleFavorite={handleToggleFavorite}
-              folderGroups={folderGroups}
-              activeGroupId={activeGroupId}
-              onGroupChange={setActiveGroupId}
-              onCreateGroup={createGroup}
-              onRenameGroup={renameGroup}
-              onDeleteGroup={deleteGroup}
-              onSetWorkGroup={setWorkGroup}
-              groupWorkCounts={groupWorkCounts}
-            />
-          </div>
-          {selectedWork && (
-            <div className="main-content">
-              <div className="content-area" ref={contentAreaRef}>
-                <div className="work-detail-wrapper library-work-detail">
-                  <button
-                    className="detail-close-btn"
-                    onClick={() => setSelectedWork(null)}
-                    title="关闭详情"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                  <WorkDetail
-                    work={selectedWork}
-                    audioFiles={audioFiles}
-                    currentAudio={currentAudio}
-                    onSelectAudio={handleSelectAudio}
-                    onEditMetadata={handleEditMetadata}
-                    onRefreshMetadata={handleRefreshMetadata}
-                    onRefreshSubtitles={handleRefreshSubtitles}
-                    onFilterCV={(cv) => handleFilterChange('cv', cv)}
-                    onFilterTag={(tag) => handleFilterChange('tag', tag)}
-                    onCircleClick={(circle) => handleFilterChange('circle', circle)}
-                    activeCV={cvFilter}
-                    activeTag={tagFilter}
-                    onTranslate={handleTranslate}
-                    onTranslateBatch={handleTranslateBatch}
-                    getTranslatedText={getTranslatedText}
-                    isTranslated={isTranslated}
-                    isTranslating={isTranslating}
-                    onAddToPlaylist={handleOpenAddToPlaylistForAudio}
-                    onAddToQueue={handleAddToQueue}
-                    onPlayNext={handlePlayNext}
-                    isFavorite={isFavorite(selectedWork?.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                    folderGroups={folderGroups}
-                    onSetWorkGroup={setWorkGroup}
-                  />
-                </div>
-                <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />
-                <div className="right-tab-wrapper" style={{ width: rightPanelWidth }}>
-                  <RightTabBar
-                    activeTab={rightTab}
-                    onTabChange={setRightTab}
-                    work={selectedWork}
-                    cues={currentCues}
-                    currentTime={currentTime}
-                    onSeek={handleSeek}
-                    subtitleOptions={subtitleOptions}
-                    selectedSubtitleIndex={selectedSubtitleIndex}
-                    onSelectSubtitle={handleSelectSubtitle}
-                    onAddSubtitleFile={handleAddSubtitleFile}
-                    onToggleTranslate={handleToggleTranslate}
-                    isTranslating={isAnyTranslating}
-                    hasTranslation={hasTranslation}
-                    subtitleFontSize={settings.subtitleFontSize}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <LibraryLayout
+          selectedWork={selectedWork}
+          settings={settings}
+          filteredWorks={filteredWorks}
+          onSelectWork={handleSelectWork}
+          onAddFolder={handleAddFolder}
+          onAddMediaLibrary={handleAddMediaLibrary}
+          cvFilter={cvFilter}
+          circleFilter={circleFilter}
+          onFilterChange={handleFilterChange}
+          allCVs={allCVs}
+          allCircles={allCircles}
+          onOpenSettings={handleOpenSettings}
+          onDeleteWork={handleDeleteWork}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          onTranslate={handleTranslate}
+          onTranslateBatch={handleTranslateBatch}
+          getTranslatedText={getTranslatedText}
+          isTranslated={isTranslated}
+          isTranslating={isTranslating}
+          isAnyTranslating={isAnyTranslating}
+          showOnlyFavorites={showOnlyFavorites}
+          onToggleFavoritesFilter={handleToggleFavoritesFilter}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={handleToggleFavorite}
+          folderGroups={folderGroups}
+          activeGroupId={activeGroupId}
+          onGroupChange={setActiveGroupId}
+          onCreateGroup={createGroup}
+          onRenameGroup={renameGroup}
+          onDeleteGroup={deleteGroup}
+          onSetWorkGroup={setWorkGroup}
+          groupWorkCounts={groupWorkCounts}
+          audioFiles={audioFiles}
+          currentAudio={currentAudio}
+          onSelectAudio={handleSelectAudio}
+          onEditMetadata={handleEditMetadata}
+          onRefreshMetadata={handleRefreshMetadata}
+          onRefreshSubtitles={handleRefreshSubtitles}
+          onFilterCV={(cv) => handleFilterChange('cv', cv)}
+          onFilterTag={(tag) => handleFilterChange('tag', tag)}
+          onCircleClick={(circle) => handleFilterChange('circle', circle)}
+          activeCV={cvFilter}
+          activeTag={tagFilter}
+          onAddToPlaylist={handleOpenAddToPlaylistForAudio}
+          onAddToQueue={handleAddToQueue}
+          onPlayNext={handlePlayNext}
+          isFavorite={isFavorite(selectedWork?.id)}
+          onCloseDetail={() => setSelectedWork(null)}
+          contentAreaRef={contentAreaRef}
+          rightPanelWidth={rightPanelWidth}
+          onSplitterMouseDown={handleSplitterMouseDown}
+          rightTab={rightTab}
+          onTabChange={setRightTab}
+          cues={currentCues}
+          currentTime={currentTime}
+          onSeek={handleSeek}
+          subtitleOptions={subtitleOptions}
+          selectedSubtitleIndex={selectedSubtitleIndex}
+          onSelectSubtitle={handleSelectSubtitle}
+          onAddSubtitleFile={handleAddSubtitleFile}
+          onToggleTranslate={handleToggleTranslate}
+          hasTranslation={hasTranslation}
+          subtitleFontSize={settings.subtitleFontSize}
+        />
       )}
-      <div className={`discover-layout ${selectedWork && selectedWork.isOnline ? 'has-detail' : ''} ${settings.autoHideSidebar && selectedWork && selectedWork.isOnline ? 'hide-sidebar' : ''}`} style={{ display: currentView === 'discover' ? '' : 'none' }}>
-          <div className="discover-main">
-            <DiscoverView 
-              ref={discoverViewRef}
-              onSelectWork={handleSelectOnlineWork} 
-              selectedWorkId={selectedWork?.id} 
-              onTranslate={handleTranslate}
-              onTranslateBatch={handleTranslateBatch}
-              getTranslatedText={getTranslatedText}
-              isTranslated={isTranslated}
-              isTranslating={isTranslating}
-              isAnyTranslating={isAnyTranslating}
-            />
-          </div>
-          {selectedWork && selectedWork.isOnline && (
-            <div className="main-content discover-detail-content">
-              <div className="content-area" ref={contentAreaRef}>
-                <div className="work-detail-wrapper discover-work-detail">
-                  <button
-                    className="detail-close-btn"
-                    onClick={() => setSelectedWork(null)}
-                    title="关闭详情"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                  <WorkDetail
-                    work={selectedWork}
-                    audioFiles={audioFiles}
-                    currentAudio={currentAudio}
-                    onSelectAudio={handleSelectAudio}
-                    onEditMetadata={handleEditMetadata}
-                    onRefreshMetadata={handleRefreshMetadata}
-                    onRefreshSubtitles={handleRefreshSubtitles}
-                    onFilterCV={(cv) => {
-                      if (cv && discoverViewRef.current) {
-                        discoverViewRef.current.toggleVa(cv)
-                      }
-                    }}
-                    onFilterTag={(tag) => {
-                      if (tag && discoverViewRef.current) {
-                        discoverViewRef.current.toggleTag(tag)
-                      }
-                    }}
-                    onCircleClick={(circle) => {
-                      if (circle && discoverViewRef.current) {
-                        discoverViewRef.current.toggleCircle(circle)
-                      }
-                    }}
-                    activeCV={''}
-                    activeTag={''}
-                    onDownload={() => setShowDownloadModal(true)}
-                    onReloadTracks={handleReloadOnlineTracks}
-                    onTranslate={handleTranslate}
-                    onTranslateBatch={handleTranslateBatch}
-                    getTranslatedText={getTranslatedText}
-                    isTranslated={isTranslated}
-                    isTranslating={isTranslating}
-                    onAddToPlaylist={handleOpenAddToPlaylistForAudio}
-                    onAddToQueue={handleAddToQueue}
-                    onPlayNext={handlePlayNext}
-                    isFavorite={isFavorite(selectedWork?.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                </div>
-                <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />
-                <div className="right-tab-wrapper discover-right-tab" style={{ width: rightPanelWidth }}>
-                  <RightTabBar
-                    activeTab={rightTab}
-                    onTabChange={setRightTab}
-                    work={selectedWork}
-                    cues={currentCues}
-                    currentTime={currentTime}
-                    onSeek={handleSeek}
-                    subtitleOptions={subtitleOptions}
-                    selectedSubtitleIndex={selectedSubtitleIndex}
-                    onSelectSubtitle={handleSelectSubtitle}
-                    onAddSubtitleFile={handleAddSubtitleFile}
-                    onToggleTranslate={handleToggleTranslate}
-                    isTranslating={isAnyTranslating}
-                    hasTranslation={hasTranslation}
-                    subtitleFontSize={settings.subtitleFontSize}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      <div style={{ display: currentView === 'discover' ? '' : 'none' }}>
+        <DiscoverLayout
+          selectedWork={selectedWork}
+          settings={settings}
+          discoverViewRef={discoverViewRef}
+          onSelectWork={handleSelectOnlineWork}
+          onTranslate={handleTranslate}
+          onTranslateBatch={handleTranslateBatch}
+          getTranslatedText={getTranslatedText}
+          isTranslated={isTranslated}
+          isTranslating={isTranslating}
+          isAnyTranslating={isAnyTranslating}
+          audioFiles={audioFiles}
+          currentAudio={currentAudio}
+          onSelectAudio={handleSelectAudio}
+          onEditMetadata={handleEditMetadata}
+          onRefreshMetadata={handleRefreshMetadata}
+          onRefreshSubtitles={handleRefreshSubtitles}
+          onFilterCV={(cv) => {
+            if (cv && discoverViewRef.current) {
+              discoverViewRef.current.toggleVa(cv)
+            }
+          }}
+          onFilterTag={(tag) => {
+            if (tag && discoverViewRef.current) {
+              discoverViewRef.current.toggleTag(tag)
+            }
+          }}
+          onCircleClick={(circle) => {
+            if (circle && discoverViewRef.current) {
+              discoverViewRef.current.toggleCircle(circle)
+            }
+          }}
+          activeCV={''}
+          activeTag={''}
+          onDownload={() => setShowDownloadModal(true)}
+          onReloadTracks={handleReloadOnlineTracks}
+          onAddToPlaylist={handleOpenAddToPlaylistForAudio}
+          onAddToQueue={handleAddToQueue}
+          onPlayNext={handlePlayNext}
+          isFavorite={isFavorite(selectedWork?.id)}
+          onCloseDetail={() => setSelectedWork(null)}
+          contentAreaRef={contentAreaRef}
+          rightPanelWidth={rightPanelWidth}
+          onSplitterMouseDown={handleSplitterMouseDown}
+          rightTab={rightTab}
+          onTabChange={setRightTab}
+          cues={currentCues}
+          currentTime={currentTime}
+          onSeek={handleSeek}
+          subtitleOptions={subtitleOptions}
+          selectedSubtitleIndex={selectedSubtitleIndex}
+          onSelectSubtitle={handleSelectSubtitle}
+          onAddSubtitleFile={handleAddSubtitleFile}
+          onToggleTranslate={handleToggleTranslate}
+          hasTranslation={hasTranslation}
+          subtitleFontSize={settings.subtitleFontSize}
+        />
+      </div>
 
       {currentView === 'annual-report' && (
         <div className="report-view">
