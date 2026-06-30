@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { formatTime } from '../utils/subtitleParser'
 import { useTranslate } from './useTranslate'
 import { usePlayQueue } from './usePlayQueue'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
@@ -21,6 +22,7 @@ import { useSubtitleRefresh } from './useSubtitleRefresh'
 import { useFavorites } from './useFavorites'
 import { useFolderGroups } from './useFolderGroups'
 import { useDownloadImport } from './useDownloadImport'
+import { useBookmarks } from './useBookmarks'
 
 export function useAppState() {
   const playerRef = useRef(null)
@@ -120,6 +122,17 @@ export function useAppState() {
     isFavorite,
     filterFavorites,
   } = useFavorites({ showToast })
+
+  // ===== 书签 Hook =====
+  const {
+    bookmarks,
+    loadingBookmarks,
+    addBookmark,
+    updateBookmark,
+    deleteBookmark,
+    hasBookmarkAtTime,
+    loadBookmarks,
+  } = useBookmarks({ showToast })
 
   // ===== 文件夹分组 Hook =====
   const {
@@ -317,6 +330,38 @@ export function useAppState() {
   const handleToggleFavoritesFilter = useCallback(() => {
     setShowOnlyFavorites(prev => !prev)
   }, [setShowOnlyFavorites])
+
+  // 书签相关处理
+  const handleAddBookmark = useCallback(
+    async (time) => {
+      if (!playingWork || !currentAudio) return null
+      const bookmark = {
+        workId: playingWork.id,
+        workTitle: playingWork.title || playingWork.folderName || '',
+        audioPath: currentAudio.path,
+        audioName: currentAudio.name || '',
+        time,
+        name: `书签 ${formatTime(time)}`,
+        color: '#c96442',
+      }
+      return await addBookmark(bookmark)
+    },
+    [playingWork, currentAudio, addBookmark],
+  )
+
+  const handleUpdateBookmark = useCallback(
+    async (id, data) => {
+      return await updateBookmark(id, data)
+    },
+    [updateBookmark],
+  )
+
+  const handleDeleteBookmark = useCallback(
+    async (id) => {
+      return await deleteBookmark(id)
+    },
+    [deleteBookmark],
+  )
 
   // ===== 在线作品 Hook =====
   const {
@@ -734,6 +779,14 @@ export function useAppState() {
     handleToggleFavorite,
     isFavorite,
     handleToggleFavoritesFilter,
+
+    // 书签
+    bookmarks,
+    loadingBookmarks,
+    addBookmark: handleAddBookmark,
+    updateBookmark: handleUpdateBookmark,
+    deleteBookmark: handleDeleteBookmark,
+    hasBookmarkAtTime,
 
     // 文件夹分组
     folderGroups,

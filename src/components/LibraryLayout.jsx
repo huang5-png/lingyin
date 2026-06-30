@@ -70,6 +70,10 @@ const LibraryLayout = memo(function LibraryLayout({
   hasTranslation,
   subtitleFontSize,
   isFavoritesView,
+  bookmarks,
+  onAddBookmark,
+  onUpdateBookmark,
+  onDeleteBookmark,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -172,6 +176,11 @@ const LibraryLayout = memo(function LibraryLayout({
                 isTranslating={isAnyTranslating}
                 hasTranslation={hasTranslation}
                 subtitleFontSize={subtitleFontSize}
+                bookmarks={bookmarks}
+                onAddBookmark={onAddBookmark}
+                onUpdateBookmark={onUpdateBookmark}
+                onDeleteBookmark={onDeleteBookmark}
+                currentAudio={currentAudio}
               />
             </div>
           </div>

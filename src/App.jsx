@@ -76,6 +76,13 @@ export default function App() {
     isFavorite,
     handleToggleFavoritesFilter,
 
+    // 书签
+    bookmarks,
+    addBookmark,
+    updateBookmark,
+    deleteBookmark,
+    hasBookmarkAtTime,
+
     // 文件夹分组
     folderGroups,
     activeGroupId,
@@ -284,6 +291,10 @@ export default function App() {
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
           isFavoritesView={false}
+          bookmarks={bookmarks}
+          onAddBookmark={addBookmark}
+          onUpdateBookmark={updateBookmark}
+          onDeleteBookmark={deleteBookmark}
         />
       )}
       {currentView === 'favorites' && (
@@ -354,6 +365,10 @@ export default function App() {
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
           isFavoritesView={true}
+          bookmarks={bookmarks}
+          onAddBookmark={addBookmark}
+          onUpdateBookmark={updateBookmark}
+          onDeleteBookmark={deleteBookmark}
         />
       )}
       {currentView === 'discover' && (
@@ -401,9 +416,12 @@ export default function App() {
           onToggleTranslate={handleToggleTranslate}
           hasTranslation={hasTranslation}
           subtitleFontSize={settings.subtitleFontSize}
+          bookmarks={bookmarks}
+          onAddBookmark={addBookmark}
+          onUpdateBookmark={updateBookmark}
+          onDeleteBookmark={deleteBookmark}
         />
       )}
-
       {currentView === 'annual-report' && (
         <div className="report-view">
           <UsageReport />
@@ -483,6 +501,9 @@ export default function App() {
             onSetSleepTimer={handleSetSleepTimer}
             playbackRate={settings.playbackRate}
             onPlaybackRateChange={handlePlaybackRateChange}
+            onAddBookmark={addBookmark}
+            hasCurrentBookmark={playingWork && currentAudio ? hasBookmarkAtTime(playingWork.id, currentAudio.path, currentTime) : false}
+            bookmarkCount={playingWork && currentAudio ? (bookmarks.filter(b => b.workId === playingWork.id && b.audioPath === currentAudio.path)).length : 0}
           />
         </div>
       )}

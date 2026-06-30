@@ -48,6 +48,10 @@ const DiscoverLayout = memo(function DiscoverLayout({
   onToggleTranslate,
   hasTranslation,
   subtitleFontSize,
+  bookmarks,
+  onAddBookmark,
+  onUpdateBookmark,
+  onDeleteBookmark,
 }) {
   const hasDetail = !!selectedWork && !!selectedWork.isOnline
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -125,6 +129,11 @@ const DiscoverLayout = memo(function DiscoverLayout({
                 isTranslating={isAnyTranslating}
                 hasTranslation={hasTranslation}
                 subtitleFontSize={subtitleFontSize}
+                bookmarks={bookmarks}
+                onAddBookmark={onAddBookmark}
+                onUpdateBookmark={onUpdateBookmark}
+                onDeleteBookmark={onDeleteBookmark}
+                currentAudio={currentAudio}
               />
             </div>
           </div>

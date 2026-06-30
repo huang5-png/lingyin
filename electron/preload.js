@@ -136,6 +136,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   folderGroupsSetWorkGroup: (workId, groupId) => ipcRenderer.invoke('folderGroups:setWorkGroup', workId, groupId),
   folderGroupsGetWorks: (groupId) => ipcRenderer.invoke('folderGroups:getWorks', groupId),
 
+  // 书签
+  bookmarksGetAll: () => ipcRenderer.invoke('bookmarks:getAll'),
+  bookmarksGetByWork: (workId) => ipcRenderer.invoke('bookmarks:getByWork', workId),
+  bookmarksGetByAudio: (workId, audioPath) => ipcRenderer.invoke('bookmarks:getByAudio', workId, audioPath),
+  bookmarksAdd: (bookmark) => ipcRenderer.invoke('bookmarks:add', bookmark),
+  bookmarksUpdate: (id, data) => ipcRenderer.invoke('bookmarks:update', id, data),
+  bookmarksDelete: (id) => ipcRenderer.invoke('bookmarks:delete', id),
+  bookmarksDeleteByWork: (workId) => ipcRenderer.invoke('bookmarks:deleteByWork', workId),
+  bookmarksClearAll: () => ipcRenderer.invoke('bookmarks:clearAll'),
+
   // 迷你播放器
   miniPlayerOpen: () => ipcRenderer.invoke('miniPlayer:open'),
   miniPlayerClose: () => ipcRenderer.invoke('miniPlayer:close'),

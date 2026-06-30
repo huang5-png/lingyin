@@ -48,6 +48,8 @@ const AudioPlayer = forwardRef(function AudioPlayer(
     sleepTimerMinutes = 0, sleepTimerRemaining = 0, onSetSleepTimer,
     // 播放速度相关
     playbackRate = 1, onPlaybackRateChange,
+    // 书签相关
+    onAddBookmark, hasCurrentBookmark = false, bookmarkCount = 0, onToggleBookmarksTab,
   },
   ref,
 ) {
@@ -439,6 +441,18 @@ const AudioPlayer = forwardRef(function AudioPlayer(
               <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
             {queue.length > 0 && <span className="queue-badge">{queue.length}</span>}
+          </button>
+        </div>
+        <div className="bookmark-control">
+          <button
+            className={`ctrl-btn bookmark-btn ${hasCurrentBookmark ? 'active' : ''}`}
+            onClick={() => onAddBookmark && onAddBookmark(currentTime)}
+            title={hasCurrentBookmark ? '当前位置已有书签' : '在当前位置添加书签'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill={hasCurrentBookmark ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+            {bookmarkCount > 0 && <span className="bookmark-badge">{bookmarkCount}</span>}
           </button>
         </div>
         <div className="playback-rate-control">

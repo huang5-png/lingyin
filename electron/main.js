@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -682,6 +682,39 @@ ipcMain.handle('folderGroups:setWorkGroup', async (_, workId, groupId) => {
 
 ipcMain.handle('folderGroups:getWorks', async (_, groupId) => {
   return getWorksByFolderGroup(groupId)
+})
+
+// ===== 书签 IPC =====
+ipcMain.handle('bookmarks:getAll', async () => {
+  return getAllBookmarks()
+})
+
+ipcMain.handle('bookmarks:getByWork', async (_, workId) => {
+  return getBookmarksByWork(workId)
+})
+
+ipcMain.handle('bookmarks:getByAudio', async (_, workId, audioPath) => {
+  return getBookmarksByAudio(workId, audioPath)
+})
+
+ipcMain.handle('bookmarks:add', async (_, bookmark) => {
+  return addBookmark(bookmark)
+})
+
+ipcMain.handle('bookmarks:update', async (_, id, data) => {
+  return updateBookmark(id, data)
+})
+
+ipcMain.handle('bookmarks:delete', async (_, id) => {
+  return deleteBookmark(id)
+})
+
+ipcMain.handle('bookmarks:deleteByWork', async (_, workId) => {
+  return deleteBookmarksByWork(workId)
+})
+
+ipcMain.handle('bookmarks:clearAll', async () => {
+  return clearAllBookmarks()
 })
 
 ipcMain.handle('log:info', async (_, message, ...args) => {

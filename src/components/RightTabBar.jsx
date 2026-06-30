@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import LyricView from './LyricView'
+import BookmarksPanel from './BookmarksPanel'
 import './RightTabBar.css'
 
 export default function RightTabBar({
@@ -17,10 +18,16 @@ export default function RightTabBar({
   isTranslating,
   hasTranslation,
   subtitleFontSize,
+  bookmarks,
+  onAddBookmark,
+  onUpdateBookmark,
+  onDeleteBookmark,
+  currentAudio,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
     { id: 'subtitles', label: 'Subtitles' },
+    { id: 'bookmarks', label: 'Bookmarks' },
     { id: 'related', label: 'Related' },
     { id: 'playlists', label: 'Playlists' },
   ]
@@ -114,6 +121,20 @@ export default function RightTabBar({
                 <p>选择一个作品查看字幕</p>
               </div>
             )}
+          </div>
+        )}
+        {activeTab === 'bookmarks' && (
+          <div className="bookmarks-tab-panel">
+            <BookmarksPanel
+              bookmarks={bookmarks || []}
+              currentTime={currentTime}
+              onSeek={onSeek}
+              onAddBookmark={onAddBookmark}
+              onUpdateBookmark={onUpdateBookmark}
+              onDeleteBookmark={onDeleteBookmark}
+              work={work}
+              currentAudio={currentAudio}
+            />
           </div>
         )}
         {activeTab === 'related' && (

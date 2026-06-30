@@ -18,6 +18,7 @@ async function initDB() {
     translateCache: {},
     favorites: [],
     folderGroups: [],
+    bookmarks: [],
   }
 
   try {
@@ -775,6 +776,95 @@ async function getWorksByFolderGroup(groupId) {
   return dbData.works.filter(w => w.folderGroupId === groupId)
 }
 
+// ===== 书签 =====
+// Bookmark 结构：{ id, workId, audioPath, audioName, time, name, color, createdAt, updatedAt }
+// 支持本地作品和在线作品，workId 为本地 id 或在线 id
+
+function genBookmarkId() {
+  return `bm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function ensureBookmarks() {
+  if (!Array.isArray(dbData.bookmarks)) dbData.bookmarks = []
+  return dbData.bookmarks
+}
+
+async function getAllBookmarks() {
+  const bookmarks = ensureBookmarks()
+  return [...bookmarks].sort((a, b) => a.time - b.time)
+}
+
+async function getBookmarksByWork(workId) {
+  const bookmarks = ensureBookmarks()
+  return bookmarks
+    .filter(b => b.workId === workId)
+    .sort((a, b) => a.time - b.time)
+}
+
+async function getBookmarksByAudio(workId, audioPath) {
+  const bookmarks = ensureBookmarks()
+  return bookmarks
+    .filter(b => b.workId === workId && b.audioPath === audioPath)
+    .sort((a, b) => a.time - b.time)
+}
+
+async function addBookmark(bookmark) {
+  const bookmarks = ensureBookmarks()
+  const now = Date.now()
+  const newBookmark = {
+    id: genBookmarkId(),
+    workId: bookmark.workId || '',
+    audioPath: bookmark.audioPath || '',
+    audioName: bookmark.audioName || '',
+    time: Math.max(0, Number(bookmark.time) || 0),
+    name: (bookmark.name && String(bookmark.name).trim()) || `书签 ${bookmarks.length + 1}`,
+    color: bookmark.color || '',
+    createdAt: now,
+    updatedAt: now,
+  }
+  bookmarks.push(newBookmark)
+  saveDB()
+  return newBookmark
+}
+
+async function updateBookmark(id, data) {
+  const bookmarks = ensureBookmarks()
+  const bm = bookmarks.find(b => b.id === id)
+  if (!bm) return null
+  if (data.name !== undefined) bm.name = String(data.name).trim() || bm.name
+  if (data.time !== undefined) bm.time = Math.max(0, Number(data.time) || 0)
+  if (data.color !== undefined) bm.color = data.color || ''
+  bm.updatedAt = Date.now()
+  saveDB()
+  return bm
+}
+
+async function deleteBookmark(id) {
+  const bookmarks = ensureBookmarks()
+  const idx = bookmarks.findIndex(b => b.id === id)
+  if (idx < 0) return false
+  bookmarks.splice(idx, 1)
+  saveDB()
+  return true
+}
+
+async function deleteBookmarksByWork(workId) {
+  const bookmarks = ensureBookmarks()
+  const initialLen = bookmarks.length
+  dbData.bookmarks = bookmarks.filter(b => b.workId !== workId)
+  const deleted = initialLen - dbData.bookmarks.length
+  if (deleted > 0) saveDB()
+  return deleted
+}
+
+async function clearAllBookmarks() {
+  if (!dbData.bookmarks) return 0
+  const count = dbData.bookmarks.length
+  dbData.bookmarks = []
+  saveDB()
+  return count
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -820,4 +910,12 @@ module.exports = {
   reorderFolderGroups,
   setWorkFolderGroup,
   getWorksByFolderGroup,
+  getAllBookmarks,
+  getBookmarksByWork,
+  getBookmarksByAudio,
+  addBookmark,
+  updateBookmark,
+  deleteBookmark,
+  deleteBookmarksByWork,
+  clearAllBookmarks,
 }

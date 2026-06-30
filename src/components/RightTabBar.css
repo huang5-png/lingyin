@@ -160,6 +160,10 @@
   height: 100%;
 }
 
+.bookmarks-tab-panel {
+  height: 100%;
+}
+
 .empty-panel {
   display: flex;
   flex-direction: column;
