@@ -131,6 +131,30 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
 })
 WorkCard.displayName = 'WorkCard'
 
+// 骨架屏卡片组件
+const SkeletonCard = memo(() => {
+  return (
+    <div className="discover-work-card skeleton-card">
+      <div className="discover-card-cover">
+        <div className="skeleton-cover" />
+      </div>
+      <div className="discover-card-info">
+        <div className="skeleton-line skeleton-title" />
+        <div className="skeleton-line skeleton-circle" />
+        <div className="skeleton-tags">
+          <div className="skeleton-line skeleton-tag" />
+          <div className="skeleton-line skeleton-tag" />
+        </div>
+        <div className="skeleton-stats">
+          <div className="skeleton-line skeleton-stat" />
+          <div className="skeleton-line skeleton-stat" />
+        </div>
+      </div>
+    </div>
+  )
+})
+SkeletonCard.displayName = 'SkeletonCard'
+
 const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }, ref) => {
   const [works, setWorks] = useState([])
   const [allTags, setAllTags] = useState([])
@@ -1142,7 +1166,11 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
 
       <div className="discover-view-content" ref={contentRef} onScroll={handleContentScroll}>
       {loading && (
-        <StateView type="loading" title="加载中..." />
+        <div className="discover-grid">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
       )}
 
       {!loading && error && works.length === 0 && (
