@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import './LeftNavBar.css'
 
 const navItems = [
@@ -71,7 +72,7 @@ const navItems = [
   },
 ]
 
-export default function LeftNavBar({ currentView, onViewChange, onOpenSettings }) {
+const LeftNavBar = memo(function LeftNavBar({ currentView, onViewChange, onOpenSettings }) {
   return (
     <div className="left-nav-bar">
       <div className="nav-items">
@@ -96,4 +97,6 @@ export default function LeftNavBar({ currentView, onViewChange, onOpenSettings }
       </div>
     </div>
   )
-}
+})
+
+export default LeftNavBar
