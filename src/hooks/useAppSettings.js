@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   autoScrollLyric: true,
   skipSeconds: 5,
   theme: 'light',
+  accentPreset: 'warm-orange',
+  customAccentColor: '#c96442',
   viewMode: 'grid',
   loopMode: 'none',
   shuffle: false,

@@ -1,19 +1,30 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { applyThemeColors, getAccentColorForTheme } from '../utils/themePresets'
 
-/**
- * 管理主题切换与窗口缩放逻辑
- * 抽取自 App.jsx，简化主组件逻辑
- *
- * 职责：
- * 1. 窗口缩放：响应式缩放 0.6x - 1.2x，基于 1400x900 基准
- * 2. 主题切换：浅色/深色模式，支持过渡动画
- * 3. CSS 变量同步：将 sidebarWidth/lyricWidth/playerHeight 同步到根元素
- * 4. 设置加载：从数据库加载用户设置
- */
 export function useTheme({ settings, setSettings, setShowLyric, showToast }) {
   const prevThemeRef = useRef(settings.theme)
+  const [systemTheme, setSystemTheme] = useState('light')
 
-  // 窗口缩放逻辑
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e) => {
+      setSystemTheme(e.matches ? 'dark' : 'light')
+    }
+    setSystemTheme(mq.matches ? 'dark' : 'light')
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  const isDarkMode = settings.theme === 'auto'
+    ? systemTheme === 'dark'
+    : settings.theme === 'dark'
+
+  const currentAccentColor = getAccentColorForTheme(
+    settings.accentPreset || 'warm-orange',
+    settings.customAccentColor,
+    isDarkMode,
+  )
+
   useEffect(() => {
     const BASE_WIDTH = 1400
     const BASE_HEIGHT = 900
@@ -35,33 +46,32 @@ export function useTheme({ settings, setSettings, setShowLyric, showToast }) {
     return () => window.removeEventListener('resize', updateZoom)
   }, [])
 
-  // 主题切换与 CSS 变量同步
   useEffect(() => {
     const root = document.documentElement
     const appRoot = document.getElementById('root')
 
-    // 同步 CSS 变量
     root.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`)
     root.style.setProperty('--lyric-width', `${settings.lyricWidth}px`)
     root.style.setProperty('--player-height', `${settings.playerHeight}px`)
 
-    // 主题切换
-    if (settings.theme) {
-      // 主题切换时添加过渡动画
-      if (prevThemeRef.current && prevThemeRef.current !== settings.theme && appRoot) {
+    const targetTheme = isDarkMode ? 'dark' : 'light'
+
+    if (targetTheme) {
+      if (prevThemeRef.current && prevThemeRef.current !== targetTheme && appRoot) {
         appRoot.classList.add('theme-transitioning')
-        root.setAttribute('data-theme', settings.theme)
+        root.setAttribute('data-theme', targetTheme)
+        applyThemeColors(currentAccentColor, isDarkMode)
         const timer = setTimeout(() => {
           appRoot.classList.remove('theme-transitioning')
         }, 550)
         return () => clearTimeout(timer)
       }
-      root.setAttribute('data-theme', settings.theme)
-      prevThemeRef.current = settings.theme
+      root.setAttribute('data-theme', targetTheme)
+      applyThemeColors(currentAccentColor, isDarkMode)
+      prevThemeRef.current = targetTheme
     }
-  }, [settings])
+  }, [settings, isDarkMode, currentAccentColor])
 
-  // 从数据库加载设置
   useEffect(() => {
     async function loadDbSettings() {
       try {
@@ -78,7 +88,11 @@ export function useTheme({ settings, setSettings, setShowLyric, showToast }) {
       }
     }
     loadDbSettings()
-  }, []) // 仅在挂载时执行一次
+  }, [])
 
-  return {}
+  return {
+    isDarkMode,
+    systemTheme,
+    currentAccentColor,
+  }
 }
