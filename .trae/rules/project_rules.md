@@ -128,6 +128,7 @@
 | `hooks/useViewNavigation.js` | 视图导航 Hook：视图切换、作品选择、模态框状态管理、最近播放自动播放 |
 | `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：播放列表曲目播放、跳转到作品、加入播放列表弹窗 |
 | `hooks/useSubtitleRefresh.js` | 字幕刷新 Hook：重新扫描文件夹、更新音频和字幕列表、保持当前字幕选择 |
+| `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、自动居中、点击跳转） |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
@@ -295,7 +296,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   "subtitles": {},       // 字幕选择 { workId::audioPath: subtitleData }
   "settings": {},        // 用户设置
   "playlists": [],       // 播放列表
-  "translateCache": {}   // 翻译缓存 { workId::audioPath: { text, timestamp } }
+  "translateCache": {},  // 翻译缓存 { workId::audioPath: { text, timestamp } }
+  "favorites": []        // 收藏列表 [{ workId, title, cover, circle, isOnline, addedAt }]
 }
 ```
 
@@ -776,6 +778,44 @@ function formatSleepTimerRemaining(seconds) {
   // 大于等于60分钟：H:MM:SS 格式
 }
 ```
+
+### 21. 收藏功能
+
+#### 功能概述
+- 用户可以收藏喜欢的作品，支持本地作品和在线作品
+- 收藏数据持久化存储到 db.json，重启后自动恢复
+- 支持一键筛选只显示收藏的作品
+- 作品卡片和详情页均可快速收藏/取消收藏
+
+#### 数据结构
+- 存储位置：`db.json.favorites`（数组）
+- 每个收藏项：`{ workId, title, cover, circle, isOnline, addedAt }`
+- `workId`：本地作品 id 或在线作品 id
+- `isOnline`：是否为在线作品
+
+#### IPC API
+| 接口 | 说明 |
+|------|------|
+| `favorites:getAll` | 获取全部收藏列表 |
+| `favorites:isFavorite` | 检查指定作品是否已收藏 |
+| `favorites:add` | 添加收藏 |
+| `favorites:remove` | 移除收藏 |
+| `favorites:toggle` | 切换收藏状态，返回当前状态 |
+
+#### 前端 Hook
+- `useFavorites` Hook 管理收藏状态与操作
+- 状态：`favorites`（收藏列表）、`favoriteIds`（收藏 id 集合 Set）、`showOnlyFavorites`（是否只显示收藏）
+- 操作：`toggleFavorite`、`addFavorite`、`removeFavorite`、`isFavorite`、`filterFavorites`
+
+#### UI 入口
+- **Sidebar 筛选区**：收藏筛选按钮，点击切换只显示收藏作品
+- **作品卡片**：hover 显示爱心图标，点击切换收藏，已收藏时常亮显示
+- **作品详情页**：操作按钮区第一个按钮为收藏按钮，已收藏时显示渐变填充样式
+
+#### 收藏筛选逻辑
+- 收藏筛选与 CV/社团/标签筛选叠加生效
+- 收藏筛选开启时，空态显示对应提示
+- 切换收藏状态后即时更新列表显示
 
 ## 已知约定
 

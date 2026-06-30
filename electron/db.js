@@ -16,6 +16,7 @@ async function initDB() {
     history: [],
     playlists: [],
     translateCache: {},
+    favorites: [],
   }
 
   try {
@@ -494,6 +495,72 @@ async function clearTranslateCache() {
   return true
 }
 
+// ===== 收藏 =====
+// 收藏结构：{ workId, addedAt }
+// 同时支持本地作品和在线作品，workId 为本地 id 或在线 id
+
+function ensureFavorites() {
+  if (!Array.isArray(dbData.favorites)) dbData.favorites = []
+  return dbData.favorites
+}
+
+async function getAllFavorites() {
+  return ensureFavorites()
+}
+
+async function isFavorite(workId) {
+  const favorites = ensureFavorites()
+  return favorites.some(f => f.workId === workId)
+}
+
+async function addFavorite(workId, workInfo = {}) {
+  const favorites = ensureFavorites()
+  const exists = favorites.find(f => f.workId === workId)
+  if (exists) return exists
+  const fav = {
+    workId,
+    title: workInfo.title || '',
+    cover: workInfo.cover || '',
+    circle: workInfo.circle || '',
+    isOnline: !!workInfo.isOnline,
+    addedAt: Date.now(),
+  }
+  favorites.push(fav)
+  saveDB()
+  return fav
+}
+
+async function removeFavorite(workId) {
+  const favorites = ensureFavorites()
+  const idx = favorites.findIndex(f => f.workId === workId)
+  if (idx < 0) return false
+  favorites.splice(idx, 1)
+  saveDB()
+  return true
+}
+
+async function toggleFavorite(workId, workInfo = {}) {
+  const favorites = ensureFavorites()
+  const idx = favorites.findIndex(f => f.workId === workId)
+  if (idx >= 0) {
+    favorites.splice(idx, 1)
+    saveDB()
+    return { isFavorite: false }
+  } else {
+    const fav = {
+      workId,
+      title: workInfo.title || '',
+      cover: workInfo.cover || '',
+      circle: workInfo.circle || '',
+      isOnline: !!workInfo.isOnline,
+      addedAt: Date.now(),
+    }
+    favorites.push(fav)
+    saveDB()
+    return { isFavorite: true, favorite: fav }
+  }
+}
+
 module.exports = {
   initDB,
   getDB,
@@ -524,4 +591,9 @@ module.exports = {
   getTranslateCache,
   saveTranslateCache,
   clearTranslateCache,
+  getAllFavorites,
+  isFavorite,
+  addFavorite,
+  removeFavorite,
+  toggleFavorite,
 }

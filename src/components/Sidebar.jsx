@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import './Sidebar.css'
 import StateView from './StateView'
 
-export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }) {
+export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredWorks = useMemo(() => {
@@ -150,6 +150,18 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
               </select>
             </div>
           </div>
+          <div className="filter-row">
+            <button
+              className={`favorites-filter-btn ${showOnlyFavorites ? 'active' : ''}`}
+              onClick={onToggleFavoritesFilter}
+              title={showOnlyFavorites ? '显示全部作品' : '只显示收藏作品'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill={showOnlyFavorites ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              <span>{showOnlyFavorites ? '收藏中' : '收藏筛选'}</span>
+            </button>
+          </div>
         </div>
         </div>
 
@@ -203,6 +215,18 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                     )}
                   </div>
                   <button
+                    className={`work-favorite-btn card-favorite ${favoriteIds?.has(work.id) ? 'favorited' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleFavorite?.(work)
+                    }}
+                    title={favoriteIds?.has(work.id) ? '取消收藏' : '添加收藏'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={favoriteIds?.has(work.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
+                  <button
                     className="work-delete-btn card-delete"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -241,6 +265,18 @@ export default function Sidebar({ works, selectedWorkId, onSelectWork, onAddFold
                       </div>
                     )}
                   </div>
+                  <button
+                    className={`work-favorite-btn list-favorite ${favoriteIds?.has(work.id) ? 'favorited' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleFavorite?.(work)
+                    }}
+                    title={favoriteIds?.has(work.id) ? '取消收藏' : '添加收藏'}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={favoriteIds?.has(work.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
                   <button
                     className="work-delete-btn"
                     onClick={(e) => {

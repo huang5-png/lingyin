@@ -82,4 +82,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   translateGetCache: (workId, audioPath) => ipcRenderer.invoke('translate:getCache', workId, audioPath),
   translateSaveCache: (workId, audioPath, cues) => ipcRenderer.invoke('translate:saveCache', workId, audioPath, cues),
   translateClearCache: () => ipcRenderer.invoke('translate:clearCache'),
+
+  // 收藏
+  favoritesGetAll: () => ipcRenderer.invoke('favorites:getAll'),
+  favoritesIsFavorite: (workId) => ipcRenderer.invoke('favorites:isFavorite', workId),
+  favoritesAdd: (workId, workInfo) => ipcRenderer.invoke('favorites:add', workId, workInfo),
+  favoritesRemove: (workId) => ipcRenderer.invoke('favorites:remove', workId),
+  favoritesToggle: (workId, workInfo) => ipcRenderer.invoke('favorites:toggle', workId, workInfo),
 })

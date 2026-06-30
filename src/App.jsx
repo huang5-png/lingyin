@@ -36,6 +36,7 @@ import { useAppSettings } from './hooks/useAppSettings'
 import { useViewNavigation } from './hooks/useViewNavigation'
 import { usePlaylistPlayback } from './hooks/usePlaylistPlayback'
 import { useSubtitleRefresh } from './hooks/useSubtitleRefresh'
+import { useFavorites } from './hooks/useFavorites'
 import './App.css'
 
 export default function App() {
@@ -122,9 +123,23 @@ export default function App() {
     tagFilter,
     allCVs,
     allCircles,
-    filteredWorks,
+    filteredWorks: filterByTagWorks,
     handleFilterChange,
   } = useFilters(works)
+
+  // ===== 收藏功能 Hook =====
+  const {
+    favoriteIds,
+    showOnlyFavorites,
+    setShowOnlyFavorites,
+    toggleFavorite,
+    isFavorite,
+    filterFavorites,
+  } = useFavorites({ showToast })
+
+  const filteredWorks = useMemo(() => {
+    return filterFavorites(filterByTagWorks)
+  }, [filterByTagWorks, filterFavorites])
 
   // ===== 播放历史记录 Hook =====
   const { recordHistoryIfNeeded } = usePlaybackHistory()
@@ -267,6 +282,25 @@ export default function App() {
     },
     [mediaLibraryDeleteWork, selectedWork, setCurrentAudio, setCurrentCues],
   )
+
+  // 收藏相关处理
+  const handleToggleFavorite = useCallback(
+    async (work) => {
+      if (!work) return
+      const workInfo = {
+        title: work.title || work.folderName || '',
+        cover: work.cover || '',
+        circle: work.circle || '',
+        isOnline: !!work.isOnline,
+      }
+      await toggleFavorite(work.id, workInfo)
+    },
+    [toggleFavorite],
+  )
+
+  const handleToggleFavoritesFilter = useCallback(() => {
+    setShowOnlyFavorites(prev => !prev)
+  }, [setShowOnlyFavorites])
 
   // ===== 在线作品 Hook =====
   const {
@@ -461,6 +495,10 @@ export default function App() {
               isTranslated={isTranslated}
               isTranslating={isTranslating}
               isAnyTranslating={isAnyTranslating}
+              showOnlyFavorites={showOnlyFavorites}
+              onToggleFavoritesFilter={handleToggleFavoritesFilter}
+              favoriteIds={favoriteIds}
+              onToggleFavorite={handleToggleFavorite}
             />
           </div>
           {selectedWork && (
@@ -498,6 +536,8 @@ export default function App() {
                     onAddToPlaylist={handleOpenAddToPlaylistForAudio}
                     onAddToQueue={handleAddToQueue}
                     onPlayNext={handlePlayNext}
+                    isFavorite={isFavorite(selectedWork?.id)}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 </div>
                 <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />
@@ -587,6 +627,8 @@ export default function App() {
                     onAddToPlaylist={handleOpenAddToPlaylistForAudio}
                     onAddToQueue={handleAddToQueue}
                     onPlayNext={handlePlayNext}
+                    isFavorite={isFavorite(selectedWork?.id)}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 </div>
                 <div className="content-splitter" onMouseDown={handleSplitterMouseDown} />

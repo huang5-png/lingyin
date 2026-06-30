@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -326,6 +326,27 @@ ipcMain.handle('playlist:reorderItems', async (_, id, itemIds) => {
 
 ipcMain.handle('playlist:clear', async (_, id) => {
   return clearPlaylist(id)
+})
+
+// ===== 收藏 IPC =====
+ipcMain.handle('favorites:getAll', async () => {
+  return getAllFavorites()
+})
+
+ipcMain.handle('favorites:isFavorite', async (_, workId) => {
+  return isFavorite(workId)
+})
+
+ipcMain.handle('favorites:add', async (_, workId, workInfo) => {
+  return addFavorite(workId, workInfo)
+})
+
+ipcMain.handle('favorites:remove', async (_, workId) => {
+  return removeFavorite(workId)
+})
+
+ipcMain.handle('favorites:toggle', async (_, workId, workInfo) => {
+  return toggleFavorite(workId, workInfo)
 })
 
 ipcMain.handle('log:info', async (_, message, ...args) => {

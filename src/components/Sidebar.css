@@ -1257,3 +1257,87 @@
   transform: translateY(0);
   box-shadow: 0 0 0 rgba(201, 100, 66, 0);
 }
+
+.favorites-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-heading);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.favorites-filter-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.favorites-filter-btn.active {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.work-favorite-btn {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.work-item:hover .work-favorite-btn {
+  display: flex;
+}
+
+.work-favorite-btn:hover {
+  transform: scale(1.1);
+}
+
+.work-favorite-btn.favorited {
+  display: flex;
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+}
+
+.card-favorite {
+  top: 6px;
+  right: 32px;
+}
+
+.card-favorite:hover {
+  background: rgba(201, 100, 66, 0.8);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.list-favorite {
+  top: 6px;
+  right: 32px;
+  width: 20px;
+  height: 20px;
+}
+
+.list-favorite:hover {
+  background: rgba(201, 100, 66, 0.15);
+  border-color: rgba(201, 100, 66, 0.3);
+  color: var(--accent-primary);
+}
