@@ -21,7 +21,9 @@ import { usePlayQueue } from './hooks/usePlayQueue'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useSleepTimer, SLEEP_TIMER_OPTIONS } from './hooks/useSleepTimer'
 import { useSubtitle } from './hooks/useSubtitle'
-import { scanFolder, scanMediaLibrary, extractRJCode, getExtension } from './utils/scanner'
+import { useMediaLibrary } from './hooks/useMediaLibrary'
+import { useOnlineWork } from './hooks/useOnlineWork'
+import { scanFolder, extractRJCode, getExtension } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
 import './App.css'
@@ -58,7 +60,6 @@ function loadSettings() {
 }
 
 export default function App() {
-  const [works, setWorks] = useState([])
   const [selectedWork, setSelectedWork] = useState(null) // 当前浏览的作品
   const [playingWork, setPlayingWork] = useState(null) // 当前正在播放的作品
   const [currentAudio, setCurrentAudio] = useState(null)
@@ -71,8 +72,6 @@ export default function App() {
   const [settings, setSettings] = useState(loadSettings)
   const [viewMode, setViewMode] = useState(settings.viewMode || 'grid')
   const [showLyric, setShowLyric] = useState(settings.showLyric)
-  const [audioFiles, setAudioFiles] = useState([])
-  const [allSubtitleFiles, setAllSubtitleFiles] = useState([])
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
@@ -121,14 +120,7 @@ export default function App() {
     }
   }, [isDraggingSplitter, handleSplitterMouseMove, handleSplitterMouseUp])
 
-  // 最近播放自动播放：记录待播放的音频路径，audioFiles 加载后自动播放
-  const pendingAutoPlayRef = useRef(null)
-
-  // 最近播放自动播放处理
-  const handleRecentPlayAutoPlay = useCallback((item) => {
-    pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
-  }, [])
-
+  // Toast 通知
   const showToast = useCallback((message, type = 'info') => {
     const id = Date.now() + Math.random()
     setToasts(prev => [...prev, { id, message, type }])
@@ -144,7 +136,62 @@ export default function App() {
   const lastSaveTimeRef = useRef(0)
   const lastHistoryTimeRef = useRef(0)
   const durationRef = useRef(0)
-  const loadingWorkIdRef = useRef(null)
+
+  // 最近播放自动播放：记录待播放的音频路径，audioFiles 加载后自动播放
+  const pendingAutoPlayRef = useRef(null)
+
+  const handleRecentPlayAutoPlay = useCallback((item) => {
+    pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
+  }, [])
+
+  // ===== 媒体库管理 Hook =====
+  const {
+    works,
+    setWorks,
+    loadWorks,
+    handleAddFolder,
+    handleAddMediaLibrary,
+    handleDeleteWork: mediaLibraryDeleteWork,
+    audioFiles,
+    setAudioFiles,
+    allSubtitleFiles,
+    setAllSubtitleFiles,
+    latestAudioFilesRef,
+  } = useMediaLibrary({
+    showToast,
+    setSelectedWork,
+  })
+
+  // 包装 handleDeleteWork，注入 selectedWork 和清理回调
+  const handleDeleteWork = useCallback(
+    async (work) => {
+      const onDelete = () => {
+        setSelectedWork(null)
+        setCurrentAudio(null)
+        setCurrentCues([])
+      }
+      await mediaLibraryDeleteWork(work, selectedWork, onDelete)
+    },
+    [mediaLibraryDeleteWork, selectedWork],
+  )
+
+  // ===== 在线作品 Hook =====
+  const {
+    handleSelectOnlineWork,
+    handleReloadOnlineTracks,
+    extractAudiosFromTracks,
+  } = useOnlineWork({
+    showToast,
+    setSelectedWork,
+    setAudioFiles,
+    setCurrentAudio,
+    setCurrentCues,
+    setCurrentTime,
+    setDuration,
+    setAllSubtitleFiles,
+    setSubtitleOptions,
+    setSelectedSubtitleIndex,
+  })
 
   // ===== 自定义 Hooks =====
   const {
@@ -332,15 +379,6 @@ export default function App() {
     }
   }, [settings])
 
-  const loadWorks = async () => {
-    try {
-      const data = await window.electronAPI.dbGetAllWorks()
-      setWorks(data || [])
-    } catch (e) {
-      console.error('Failed to load works:', e)
-    }
-  }
-
   // useMemo 缓存计算结果，减少重渲染
   const allCVs = useMemo(() => [...new Set(works.flatMap((w) => w.cvs || []))].sort(), [works])
   const allCircles = useMemo(() => [...new Set(works.map((w) => w.circle).filter(Boolean))].sort(), [works])
@@ -352,357 +390,15 @@ export default function App() {
     return true
   }), [works, cvFilter, circleFilter, tagFilter])
 
-  const fetchDlsiteMetadataAsync = useCallback(async (workId, folderName, rjCode) => {
-    try {
-      let detail = null
-      let searchResults = []
-
-      if (rjCode) {
-        try {
-          detail = await window.electronAPI.dlsiteGetDetail(rjCode)
-        } catch (e) {
-          console.warn('DLsite 详情获取失败，尝试搜索:', e.message)
-        }
-      }
-
-      if (!detail) {
-        try {
-          searchResults = await window.electronAPI.dlsiteSearch(folderName)
-        } catch (e) {
-          console.warn('DLsite 搜索失败:', e.message)
-        }
-      }
-
-      const updates = {}
-      if (detail) {
-        Object.assign(updates, detail)
-      } else if (searchResults.length > 0) {
-        const first = searchResults[0]
-        updates.cover = first.cover
-        updates.title = first.title || folderName
-        if (!rjCode && first.rjCode) {
-          updates.rjCode = first.rjCode
-        }
-      }
-
-      if (Object.keys(updates).length > 0) {
-        const updated = await window.electronAPI.dbUpdateWork(workId, updates)
-        if (updated) {
-          setWorks((prev) => prev.map((w) => (w.id === updated.id ? updated : w)))
-          setSelectedWork((prev) => (prev && prev.id === updated.id ? updated : prev))
-        }
-      }
-    } catch (e) {
-      console.error('异步获取 DLsite 元数据失败:', e)
-    }
-  }, [])
-
-  const handleAddFolder = async () => {
-    try {
-      const folderPath = await window.electronAPI.openDirectory()
-      if (!folderPath) return
-
-      const scanResult = await scanFolder(folderPath)
-      if (scanResult.audioFiles.length === 0) {
-        showToast('该文件夹中没有找到音频文件', 'warning')
-        return
-      }
-
-      const folderName = scanResult.folderName
-      const rjCode = extractRJCode(folderName)
-
-      const metadata = {
-        id: folderPath,
-        folderPath,
-        folderName,
-        rjCode,
-        title: folderName,
-        audioCount: scanResult.audioFiles.length,
-        cover: '',
-        rating: 0,
-        tags: [],
-        cvs: [],
-        circle: '',
-        description: '',
-      }
-
-      const savedWork = await window.electronAPI.dbAddWork(metadata)
-      setWorks((prev) => [...prev, savedWork])
-      setSelectedWork(savedWork)
-
-      fetchDlsiteMetadataAsync(savedWork.id, folderName, rjCode)
-    } catch (e) {
-      console.error('Failed to add folder:', e)
-      showToast('添加文件夹失败：' + e.message, 'error')
-    }
-  }
-
-  const handleAddMediaLibrary = async () => {
-    try {
-      const rootPath = await window.electronAPI.openDirectory()
-      if (!rootPath) return
-
-      const existingWorks = await window.electronAPI.dbGetAllWorks()
-      const existingPaths = new Set(existingWorks.map((w) => w.folderPath))
-
-      const scanResults = await scanMediaLibrary(rootPath)
-      if (scanResults.length === 0) {
-        showToast('在该目录下没有找到包含音频文件的文件夹', 'warning')
-        return
-      }
-
-      let addedCount = 0
-      const newWorks = []
-
-      for (const result of scanResults) {
-        if (existingPaths.has(result.folderPath)) {
-          continue
-        }
-
-        const folderName = result.folderName
-        const rjCode = extractRJCode(folderName)
-
-        const metadata = {
-          id: result.folderPath,
-          folderPath: result.folderPath,
-          folderName,
-          rjCode,
-          title: folderName,
-          audioCount: result.audioFiles.length,
-          cover: '',
-          rating: 0,
-          tags: [],
-          cvs: [],
-          circle: '',
-          description: '',
-        }
-
-        const savedWork = await window.electronAPI.dbAddWork(metadata)
-        newWorks.push(savedWork)
-        addedCount++
-
-        fetchDlsiteMetadataAsync(savedWork.id, folderName, rjCode)
-      }
-
-      if (newWorks.length > 0) {
-        setWorks((prev) => [...prev, ...newWorks])
-      }
-
-      showToast('媒体库扫描完成！共找到 ' + scanResults.length + ' 个作品，成功添加 ' + addedCount + ' 个新作品', 'success')
-    } catch (e) {
-      console.error('Failed to add media library:', e)
-      showToast('添加媒体库失败：' + e.message, 'error')
-    }
-  }
-
   const handleSelectWork = useCallback(
     (work) => {
       if (work?.id === selectedWork?.id) return
-
-      loadingWorkIdRef.current = null
-
       setSelectedWork(work)
       // 注意：切换作品时不重置 currentAudio，实现边听边选
       // 只有当用户明确点击播放新曲目时才切换音频
     },
     [selectedWork],
   )
-
-  const extractAudiosFromTracks = useCallback((tracks, folderPath = '') => {
-    const audios = []
-    if (!tracks) return audios
-    
-    let trackList = tracks
-    if (!Array.isArray(tracks)) {
-      if (tracks.tracks && Array.isArray(tracks.tracks)) {
-        trackList = tracks.tracks
-      } else if (tracks.data && Array.isArray(tracks.data)) {
-        trackList = tracks.data
-      } else if (tracks.list && Array.isArray(tracks.list)) {
-        trackList = tracks.list
-      } else {
-        return audios
-      }
-    }
-    
-    for (const track of trackList) {
-      if (!track) continue
-      
-      if (track.type === 'folder' && track.children) {
-        const childAudios = extractAudiosFromTracks(track.children, folderPath ? `${folderPath}/${track.title}` : track.title)
-        audios.push(...childAudios)
-      } else if (track.type === 'audio') {
-        const relPath = folderPath ? `${folderPath}/${track.title}` : track.title
-        audios.push({
-          name: track.title,
-          path: track.mediaStreamUrl,
-          isOnline: true,
-          duration: track.duration,
-          size: track.size,
-          folder: folderPath,
-          relativePath: relPath,
-          displayName: relPath.replace(/\//g, ' / '),
-        })
-      }
-    }
-    return audios
-  }, [])
-
-  const handleSelectOnlineWork = useCallback(
-    async (workSummary) => {
-      try {
-        loadingWorkIdRef.current = workSummary.id
-
-        const clickedWorkId = workSummary.id
-
-        // Show the full work from search result data immediately (no API wait)
-        const searchWork = {
-          id: `online_${clickedWorkId}`,
-          rjCode: workSummary.source_id || '',
-          title: workSummary.title || '',
-          folderName: workSummary.title || '',
-          circle: workSummary.name || '',
-          cover: workSummary.mainCoverUrl || workSummary.thumbnailCoverUrl || '',
-          thumbnailCover: workSummary.thumbnailCoverUrl || '',
-          samCover: workSummary.samCoverUrl || '',
-          cvs: workSummary.vas?.map((v) => v.name) || [],
-          tags: workSummary.tags?.map((t) => t.name) || [],
-          price: workSummary.price || 0,
-          rate: workSummary.rate_average_2dp || 0,
-          dlCount: workSummary.dl_count || 0,
-          releaseDate: workSummary.release || '',
-          nsfw: workSummary.nsfw || false,
-          sourceUrl: workSummary.source_url || '',
-          isOnline: true,
-          onlineId: workSummary.id,
-          _loadingTracks: true,
-        }
-        setSelectedWork(searchWork)
-        setAudioFiles([])
-        setCurrentAudio(null)
-        setCurrentCues([])
-        setCurrentTime(0)
-        setDuration(0)
-        setAllSubtitleFiles([])
-        setSubtitleOptions([])
-        setSelectedSubtitleIndex(-1)
-
-        // Fetch tracks in background (essential for playback)
-        // Also fetch workInfo in background for additional metadata (RJ code etc.)
-        const [workInfo, tracks] = await Promise.all([
-          window.electronAPI.asmrOneGetWorkInfo(clickedWorkId).catch(() => null),
-          window.electronAPI.asmrOneGetTracks(clickedWorkId),
-        ])
-
-        // Guard: if user clicked another work while API was loading, discard stale result
-        if (String(clickedWorkId) !== String(loadingWorkIdRef.current)) return
-
-        const audioFiles = extractAudiosFromTracks(tracks)
-        const rjCode = workInfo?.source_id || searchWork.rjCode
-
-        // Build the enriched work object
-        const fullWork = {
-          id: `online_${(workInfo || workSummary).id}`,
-          rjCode,
-          title: workInfo?.title || searchWork.title,
-          folderName: workInfo?.title || searchWork.folderName,
-          circle: workInfo?.name || searchWork.circle,
-          cover: workInfo?.mainCoverUrl || searchWork.cover,
-          thumbnailCover: workInfo?.thumbnailCoverUrl || searchWork.thumbnailCover,
-          samCover: workInfo?.samCoverUrl || searchWork.samCover,
-          cvs: workInfo?.vas?.map((v) => v.name) || searchWork.cvs,
-          tags: workInfo?.tags?.map((t) => t.name) || searchWork.tags,
-          price: workInfo?.price ?? searchWork.price,
-          rate: workInfo?.rate_average_2dp ?? searchWork.rate,
-          dlCount: workInfo?.dl_count ?? searchWork.dlCount,
-          releaseDate: workInfo?.release || searchWork.releaseDate,
-          nsfw: workInfo?.nsfw ?? searchWork.nsfw,
-          sourceUrl: workInfo?.source_url || searchWork.sourceUrl,
-          isOnline: true,
-          onlineId: (workInfo || workSummary).id,
-          _loadingTracks: false,
-        }
-
-        setSelectedWork(fullWork)
-        setAudioFiles(audioFiles)
-      } catch (e) {
-        console.error('Failed to load online work tracks:', e)
-        setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: true } : prev)
-      }
-    },
-    [extractAudiosFromTracks],
-  )
-
-  const handleReloadOnlineTracks = useCallback(async () => {
-    if (!selectedWork?.isOnline || !selectedWork?.onlineId) return
-    const workId = selectedWork.onlineId
-    loadingWorkIdRef.current = workId
-    setSelectedWork(prev => prev ? { ...prev, _loadingTracks: true, _tracksError: false } : prev)
-    try {
-      const tracks = await window.electronAPI.asmrOneGetTracks(workId)
-      if (String(workId) !== String(loadingWorkIdRef.current)) return
-      const audioFiles = extractAudiosFromTracks(tracks)
-      setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: false } : prev)
-      setAudioFiles(audioFiles)
-    } catch (e) {
-      console.error('Failed to reload online work tracks:', e)
-      if (String(workId) !== String(loadingWorkIdRef.current)) return
-      setSelectedWork(prev => prev ? { ...prev, _loadingTracks: false, _tracksError: true } : prev)
-    }
-  }, [selectedWork, extractAudiosFromTracks])
-
-  const handleDeleteWork = useCallback(async (work) => {
-    const confirmed = window.confirm(`确定要删除「${work.title || work.folderName}」吗？\n\n（只会删除记录，不会删除本地文件）`)
-    if (!confirmed) return
-
-    try {
-      await window.electronAPI.dbDeleteWork(work.id)
-      setWorks((prev) => prev.filter((w) => w.id !== work.id))
-      if (selectedWork && selectedWork.id === work.id) {
-        setSelectedWork(null)
-        setCurrentAudio(null)
-        setCurrentCues([])
-        setAudioFiles([])
-        setAllSubtitleFiles([])
-      }
-    } catch (e) {
-      console.error('Failed to delete work:', e)
-      showToast('删除失败：' + e.message, 'error')
-    }
-  }, [selectedWork])
-
-  useEffect(() => {
-    let cancelled = false
-    if (selectedWork) {
-      // 在线作品不需要扫描本地文件夹
-      if (selectedWork.isOnline) {
-        return
-      }
-      scanFolder(selectedWork.folderPath).then(async (r) => {
-        if (cancelled) return
-        const filesWithDuration = await Promise.all(
-          r.audioFiles.map(async (f) => {
-            try {
-              const dur = await window.electronAPI.getAudioDuration(f.path)
-              return { ...f, duration: dur ? Math.round(dur) : null }
-            } catch {
-              return f
-            }
-          })
-        )
-        if (!cancelled) {
-          setAudioFiles(filesWithDuration)
-          setAllSubtitleFiles(r.subtitleFiles)
-        }
-      })
-    } else {
-      setAudioFiles([])
-      setAllSubtitleFiles([])
-    }
-    return () => {
-      cancelled = true
-    }
-  }, [selectedWork])
 
   const handleSelectAudio = useCallback(
     async (audio) => {
@@ -1191,12 +887,6 @@ export default function App() {
     setCurrentView('library')
     setSelectedWork(target)
   }, [works, showToast])
-
-  // 保存最新的 audioFiles 到 ref，供上面轮询使用
-  const latestAudioFilesRef = useRef([])
-  useEffect(() => {
-    latestAudioFilesRef.current = audioFiles
-  }, [audioFiles])
 
   const handleSaveSettings = (newSettings) => {
     setSettings(newSettings)
