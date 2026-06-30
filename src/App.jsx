@@ -16,6 +16,10 @@ import GlobalSearchModal from './components/GlobalSearchModal'
 import Toast from './components/Toast'
 import AddToPlaylistModal from './components/AddToPlaylistModal'
 import LeftNavBar from './components/LeftNavBar'
+import { useTranslate } from './hooks/useTranslate'
+import { usePlayQueue } from './hooks/usePlayQueue'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useSleepTimer, SLEEP_TIMER_OPTIONS } from './hooks/useSleepTimer'
 import { scanFolder, scanMediaLibrary, findAllSubtitlesForAudio, extractRJCode, getExtension, detectLanguageFromContent } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
@@ -40,23 +44,6 @@ const DEFAULT_SETTINGS = {
   shuffle: false,
   autoHideSidebar: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
-}
-
-// 睡眠定时器预设选项（分钟）
-export const SLEEP_TIMER_OPTIONS = [
-  { label: '关闭', value: 0 },
-  { label: '5 分钟', value: 5 },
-  { label: '10 分钟', value: 10 },
-  { label: '15 分钟', value: 15 },
-  { label: '30 分钟', value: 30 },
-  { label: '45 分钟', value: 45 },
-  { label: '60 分钟', value: 60 },
-  { label: '90 分钟', value: 90 },
-]
-
-// 生成队列项 ID
-function genQueueItemId() {
-  return 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
 
 function loadSettings() {
@@ -92,16 +79,6 @@ export default function App() {
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [isImmersive, setIsImmersive] = useState(false)
   const [addToPlaylistTarget, setAddToPlaylistTarget] = useState(null) // { audio, work } 待加入曲目
-  // ===== 播放队列 =====
-  const [playQueue, setPlayQueue] = useState([]) // 队列项数组：{ id, audio, work, source, audioName, workTitle, workCover, addedAt }
-  const [queueIndex, setQueueIndex] = useState(-1) // 当前播放到队列的位置，-1 表示未在队列中播放
-  const [loopMode, setLoopMode] = useState(settings.loopMode || 'none') // none / one / list
-  const [shuffle, setShuffle] = useState(!!settings.shuffle) // 随机播放
-  const [showQueuePanel, setShowQueuePanel] = useState(false) // 队列浮层开关
-  const pendingQueuePlayRef = useRef(null) // 跨作品播放时的待播放项 { item, startedAt }
-  // ===== 睡眠定时器 =====
-  const [sleepTimerMinutes, setSleepTimerMinutes] = useState(0) // 设置的分钟数，0 表示关闭
-  const [sleepTimerRemaining, setSleepTimerRemaining] = useState(0) // 剩余秒数
   const [rightTab, setRightTab] = useState('details')
   const [currentView, setCurrentView] = useState('library')
   const [toasts, setToasts] = useState([])
@@ -153,13 +130,6 @@ export default function App() {
     pendingAutoPlayRef.current = { audioPath: item.audioPath, startedAt: Date.now() }
   }, [])
 
-  // 翻译缓存：内存中存储，关闭软件后清空。key = 原文, value = 译文
-  const translateCacheRef = useRef(new Map())
-  // 翻译状态触发器：每次翻译完成后递增，触发组件重渲染
-  const [translateVersion, setTranslateVersion] = useState(0)
-  // 正在翻译中的 key 集合
-  const [translating, setTranslating] = useState(new Set())
-
   const showToast = useCallback((message, type = 'info') => {
     const id = Date.now() + Math.random()
     setToasts(prev => [...prev, { id, message, type }])
@@ -169,211 +139,77 @@ export default function App() {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  // 翻译：点击翻译按钮时调用，翻译结果覆盖原文显示
-  // 再次点击同一文本则取消翻译（从缓存删除）
-  const handleTranslate = useCallback(async (text) => {
-    if (!text || !text.trim()) return text
-
-    const cache = translateCacheRef.current
-
-    // 如果已有翻译，则取消翻译（删除缓存，恢复原文）
-    if (cache.has(text)) {
-      cache.delete(text)
-      setTranslateVersion(v => v + 1)
-      return text
-    }
-
-    // 标记正在翻译
-    setTranslating(prev => new Set([...prev, text]))
-
-    try {
-      const translated = await window.electronAPI.translateText(text, 'zh-CN')
-      if (translated && translated !== text) {
-        cache.set(text, translated)
-        setTranslateVersion(v => v + 1)
-        return translated
-      } else {
-        showToast('翻译失败，可能已是中文或网络错误', 'warning')
-      }
-    } catch (e) {
-      showToast('翻译失败: ' + (e.message || '未知错误'), 'error')
-    } finally {
-      setTranslating(prev => {
-        const next = new Set(prev)
-        next.delete(text)
-        return next
-      })
-    }
-    return text
-  }, [showToast])
-
-  // 批量翻译：翻译一组文本（如标题+CV+标签+社团）
-  const handleTranslateBatch = useCallback(async (texts) => {
-    const validTexts = texts.filter(t => t && t.trim())
-    if (validTexts.length === 0) return
-
-    const cache = translateCacheRef.current
-    // 过滤出未翻译的
-    const needTranslate = validTexts.filter(t => !cache.has(t))
-    if (needTranslate.length === 0) {
-      // 全部已翻译，则取消翻译（恢复原文）
-      validTexts.forEach(t => cache.delete(t))
-      setTranslateVersion(v => v + 1)
-      return
-    }
-
-    setTranslating(prev => new Set([...prev, ...needTranslate]))
-    try {
-      const results = await window.electronAPI.translateBatch(needTranslate, 'zh-CN')
-      needTranslate.forEach((text, i) => {
-        if (results[i] && results[i] !== text) {
-          cache.set(text, results[i])
-        }
-      })
-      setTranslateVersion(v => v + 1)
-    } catch (e) {
-      showToast('批量翻译失败', 'error')
-    } finally {
-      setTranslating(prev => {
-        const next = new Set(prev)
-        needTranslate.forEach(t => next.delete(t))
-        return next
-      })
-    }
-  }, [showToast])
-
-  // 获取翻译后的文本：如果缓存中有则返回译文，否则返回原文
-  const getTranslatedText = useCallback((text) => {
-    if (!text) return text
-    return translateCacheRef.current.get(text) || text
-  }, [])
-
-  // 检查文本是否已翻译
-  const isTranslated = useCallback((text) => {
-    if (!text) return false
-    return translateCacheRef.current.has(text)
-  }, [])
-
-  // 检查文本是否正在翻译中
-  const isTranslating = useCallback((text) => {
-    if (!text) return false
-    return translating.has(text)
-  }, [translating])
-
-  // 是否有任何文本正在翻译中（用于全局翻译按钮的转圈状态）
-  const isAnyTranslating = useMemo(() => translating.size > 0, [translating])
-
-  // 是否有翻译内容（用于双语显示模式）
-  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
-
-  // 切换字幕翻译：批量翻译当前所有字幕文本
-  const handleToggleTranslate = useCallback(async () => {
-    if (!selectedWork || !currentAudio || currentCues.length === 0) {
-      showToast('请先选择字幕', 'warning')
-      return
-    }
-
-    // 如果已有翻译，清除翻译并恢复原文
-    if (hasTranslation) {
-      setCurrentCues(prev => prev.map(cue => ({ ...cue, translated: undefined })))
-      // 清除内存缓存中的对应翻译
-      currentCues.forEach(cue => {
-        translateCacheRef.current.delete(cue.text)
-      })
-      setTranslateVersion(v => v + 1)
-      // 清除数据库缓存
-      try {
-        await window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, [])
-      } catch (e) {
-        console.error('Failed to clear translate cache:', e)
-      }
-      showToast('已关闭双语显示', 'info')
-      return
-    }
-
-    // 开始翻译：先从数据库读取缓存
-    try {
-      const cachedCues = await window.electronAPI.translateGetCache(selectedWork.id, currentAudio.path)
-      if (cachedCues && cachedCues.length > 0) {
-        // 使用缓存的翻译结果
-        setCurrentCues(prev => {
-          const cacheMap = new Map(cachedCues.map(c => [c.time, c.translated]))
-          return prev.map(cue => ({
-            ...cue,
-            translated: cacheMap.get(cue.time) || undefined
-          }))
-        })
-        // 同步到内存缓存
-        cachedCues.forEach(c => {
-          if (c.translated) {
-            const original = currentCues.find(cue => cue.time === c.time)
-            if (original) {
-              translateCacheRef.current.set(original.text, c.translated)
-            }
-          }
-        })
-        setTranslateVersion(v => v + 1)
-        showToast('已加载缓存翻译', 'success')
-        return
-      }
-    } catch (e) {
-      console.error('Failed to load translate cache:', e)
-    }
-
-    // 没有缓存，开始在线翻译
-    const texts = currentCues.map(cue => cue.text).filter(t => t && t.trim())
-    if (texts.length === 0) {
-      showToast('没有可翻译的文本', 'info')
-      return
-    }
-
-    setTranslating(new Set(texts))
-    showToast(`开始翻译 ${texts.length} 条字幕...`, 'info')
-
-    try {
-      const results = await window.electronAPI.translateBatch(texts, 'zh-CN')
-      const resultMap = new Map(texts.map((text, i) => [text, results[i]]))
-
-      const updatedCues = currentCues.map(cue => {
-        if (!cue.text || !cue.text.trim()) return cue
-        const translated = resultMap.get(cue.text)
-        if (translated && translated !== cue.text) {
-          translateCacheRef.current.set(cue.text, translated)
-          return { ...cue, translated }
-        }
-        return cue
-      })
-
-      setCurrentCues(updatedCues)
-      setTranslateVersion(v => v + 1)
-
-      // 保存到数据库缓存
-      try {
-        const cacheData = updatedCues.map(cue => ({
-          time: cue.time,
-          text: cue.text,
-          translated: cue.translated
-        }))
-        await window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, cacheData)
-      } catch (e) {
-        console.error('Failed to save translate cache:', e)
-      }
-
-      const translatedCount = updatedCues.filter(c => c.translated).length
-      showToast(`翻译完成！成功翻译 ${translatedCount} 条字幕`, 'success')
-    } catch (e) {
-      showToast('翻译失败: ' + (e.message || '未知错误'), 'error')
-    } finally {
-      setTranslating(new Set())
-    }
-  }, [selectedWork, currentAudio, currentCues, hasTranslation, showToast])
-
   const playerRef = useRef(null)
+  const handleSelectAudioRef = useRef(null)
   const discoverViewRef = useRef(null)
   const lastSaveTimeRef = useRef(0)
   const lastHistoryTimeRef = useRef(0)
   const durationRef = useRef(0)
   const loadingWorkIdRef = useRef(null)
+
+  // ===== 自定义 Hooks =====
+  const {
+    translateCacheRef,
+    translateVersion,
+    translate: handleTranslate,
+    translateBatch: handleTranslateBatch,
+    getTranslatedText,
+    isTranslated,
+    isTranslating,
+    isAnyTranslating,
+    toggleSubtitleTranslate,
+  } = useTranslate(showToast)
+
+  const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated), [currentCues])
+
+  const handleToggleTranslate = useCallback(() => {
+    toggleSubtitleTranslate({
+      selectedWork,
+      currentAudio,
+      currentCues,
+      setCurrentCues,
+    })
+  }, [selectedWork, currentAudio, currentCues, toggleSubtitleTranslate])
+
+  const {
+    playQueue,
+    setPlayQueue,
+    queueIndex,
+    setQueueIndex,
+    loopMode,
+    setLoopMode,
+    shuffle,
+    setShuffle,
+    showQueuePanel,
+    setShowQueuePanel,
+    pendingQueuePlayRef,
+    playFromQueue: handlePlayFromQueue,
+    advanceQueue,
+    buildQueueItem,
+    addToQueue: handleAddToQueue,
+    playNext: handlePlayNext,
+    removeFromQueue: handleRemoveFromQueue,
+    clearQueue: handleClearQueue,
+    reorderQueue: handleReorderQueue,
+    toggleLoopMode: handleToggleLoopMode,
+    toggleShuffle: handleToggleShuffle,
+    toggleQueuePanel: handleToggleQueuePanel,
+  } = usePlayQueue({
+    selectedWork,
+    audioFiles,
+    settings,
+    showToast,
+    playerRef,
+    handleSelectAudioRef,
+    setCurrentView,
+    setSelectedWork,
+  })
+
+  const {
+    sleepTimerMinutes,
+    sleepTimerRemaining,
+    setSleepTimer: handleSetSleepTimer,
+  } = useSleepTimer({ playerRef, showToast })
 
   const currentCueIndex = useMemo(() => {
     return findCurrentCue(currentCues, currentTime)
@@ -1046,6 +882,8 @@ export default function App() {
     [selectedWork, allSubtitleFiles, settings.subtitleLangPriority, settings.autoTranslateSubtitle],
   )
 
+  handleSelectAudioRef.current = handleSelectAudio
+
   // 监听 audioFiles 加载完成后自动播放（最近播放）
   useEffect(() => {
     if (!pendingAutoPlayRef.current || !audioFiles.length) return
@@ -1116,235 +954,6 @@ export default function App() {
     }
   }, [])
 
-  // ===== 播放队列：从队列播放某项（支持跨作品）=====
-  const handlePlayFromQueue = useCallback((item, index) => {
-    if (!item || !item.audio) return
-    setQueueIndex(index)
-
-    const targetWork = item.work
-    const isSameWork = selectedWork && (
-      selectedWork.id === targetWork.id ||
-      (targetWork.folderPath && selectedWork.folderPath === targetWork.folderPath)
-    )
-
-    if (isSameWork) {
-      handleSelectAudio(item.audio)
-      return
-    }
-
-    // 跨作品：切换视图和作品，等待加载后由 useEffect 播放
-    setCurrentView(item.source === 'discover' ? 'discover' : 'library')
-    setSelectedWork(targetWork)
-    pendingQueuePlayRef.current = { item, startedAt: Date.now() }
-  }, [selectedWork, handleSelectAudio])
-
-  // 监听 audioFiles / selectedWork 变化，播放跨作品的待播放队列项
-  useEffect(() => {
-    if (!pendingQueuePlayRef.current) return
-    const { item, startedAt } = pendingQueuePlayRef.current
-    if (Date.now() - startedAt > 8000) {
-      pendingQueuePlayRef.current = null
-      showToast('队列播放超时，请重试', 'warning')
-      return
-    }
-    const matched = selectedWork && (
-      selectedWork.id === item.work.id ||
-      (item.work.folderPath && selectedWork.folderPath === item.work.folderPath)
-    )
-    if (!matched) return
-    // 在线作品不依赖 audioFiles
-    if (item.audio.isOnline) {
-      handleSelectAudio(item.audio)
-      pendingQueuePlayRef.current = null
-      return
-    }
-    // 本地作品等 audioFiles 加载完成
-    if (audioFiles.length > 0) {
-      handleSelectAudio(item.audio)
-      pendingQueuePlayRef.current = null
-    }
-  }, [audioFiles, selectedWork, handleSelectAudio, showToast])
-
-  // 推进到队列下一首/上一首，返回是否已处理
-  const advanceQueue = useCallback((direction = 1, isAutoFinish = false) => {
-    if (queueIndex < 0 || playQueue.length === 0) return false
-    // 单曲循环（仅自动播完时）
-    if (isAutoFinish && loopMode === 'one') {
-      if (playerRef.current) playerRef.current.seekTo(0)
-      return true
-    }
-    // 随机
-    if (shuffle && playQueue.length > 1) {
-      let next
-      do {
-        next = Math.floor(Math.random() * playQueue.length)
-      } while (next === queueIndex)
-      handlePlayFromQueue(playQueue[next], next)
-      return true
-    }
-    let nextIdx = queueIndex + direction
-    if (nextIdx < 0) {
-      if (loopMode === 'list') nextIdx = playQueue.length - 1
-      else return false
-    } else if (nextIdx >= playQueue.length) {
-      if (loopMode === 'list') nextIdx = 0
-      else {
-        // 队列结束，退出队列模式
-        setQueueIndex(-1)
-        return false
-      }
-    }
-    handlePlayFromQueue(playQueue[nextIdx], nextIdx)
-    return true
-  }, [queueIndex, playQueue, loopMode, shuffle, handlePlayFromQueue])
-
-  // ===== 播放队列操作 =====
-  // 构造队列项（轻量 work 快照，避免持有完整对象）
-  const buildQueueItem = useCallback((audio, work) => {
-    const w = work || selectedWork
-    if (!audio || !w) return null
-    return {
-      id: genQueueItemId(),
-      audio: {
-        path: audio.path,
-        name: audio.name,
-        isOnline: !!audio.isOnline,
-        duration: audio.duration,
-      },
-      work: {
-        id: w.id,
-        title: w.title || w.folderName || '',
-        cover: w.cover || '',
-        folderPath: w.folderPath || '',
-        isOnline: !!w.isOnline,
-      },
-      source: w.isOnline ? 'discover' : 'library',
-      audioName: audio.name || '',
-      workTitle: w.title || w.folderName || '',
-      workCover: w.cover || '',
-      addedAt: Date.now(),
-    }
-  }, [selectedWork])
-
-  // 加入队列末尾
-  const handleAddToQueue = useCallback((audio, work) => {
-    const item = buildQueueItem(audio, work)
-    if (!item) return
-    setPlayQueue((prev) => {
-      if (item.audio.path && prev.some((it) => it.audio.path === item.audio.path)) {
-        showToast('该曲目已在队列中', 'info')
-        return prev
-      }
-      showToast(`已加入队列：${item.audioName}`, 'success')
-      return [...prev, item]
-    })
-  }, [buildQueueItem, showToast])
-
-  // 下一首播放：插入到当前 queueIndex 之后
-  const handlePlayNext = useCallback((audio, work) => {
-    const item = buildQueueItem(audio, work)
-    if (!item) return
-    setPlayQueue((prev) => {
-      if (item.audio.path && prev.some((it) => it.audio.path === item.audio.path)) {
-        showToast('该曲目已在队列中', 'info')
-        return prev
-      }
-      const insertAt = queueIndex >= 0 ? queueIndex + 1 : prev.length
-      const next = [...prev]
-      next.splice(insertAt, 0, item)
-      showToast(`下一首播放：${item.audioName}`, 'success')
-      return next
-    })
-  }, [buildQueueItem, queueIndex, showToast])
-
-  // 移除队列项
-  const handleRemoveFromQueue = useCallback((itemId) => {
-    const idx = playQueue.findIndex((it) => it.id === itemId)
-    if (idx < 0) return
-    setPlayQueue((prev) => prev.filter((it) => it.id !== itemId))
-    setQueueIndex((qi) => {
-      if (qi < 0) return -1
-      if (idx < qi) return qi - 1
-      if (idx === qi) return idx >= playQueue.length - 1 ? -1 : idx
-      return qi
-    })
-  }, [playQueue])
-
-  // 清空队列
-  const handleClearQueue = useCallback(() => {
-    setPlayQueue([])
-    setQueueIndex(-1)
-    showToast('队列已清空', 'info')
-  }, [showToast])
-
-  // 重排序：按 itemIds 顺序重排，未列入的追加到末尾
-  const handleReorderQueue = useCallback((itemIds) => {
-    setPlayQueue((prev) => {
-      const map = new Map(prev.map((it) => [it.id, it]))
-      const next = []
-      for (const id of itemIds) {
-        const it = map.get(id)
-        if (it) {
-          next.push(it)
-          map.delete(id)
-        }
-      }
-      for (const it of map.values()) next.push(it)
-      // 同步 queueIndex 指向当前播放项的新位置
-      setQueueIndex((qi) => {
-        if (qi < 0) return -1
-        const current = prev[qi]
-        if (!current) return -1
-        const newIdx = next.findIndex((it) => it.id === current.id)
-        return newIdx < 0 ? -1 : newIdx
-      })
-      return next
-    })
-  }, [])
-
-  // 切换循环模式：none -> one -> list -> none
-  const handleToggleLoopMode = useCallback(() => {
-    setLoopMode((prev) => {
-      const next = prev === 'none' ? 'one' : prev === 'one' ? 'list' : 'none'
-      try {
-        const s = { ...settings, loopMode: next }
-        localStorage.setItem('appSettings', JSON.stringify(s))
-        window.electronAPI?.dbSaveSettings?.(s)
-      } catch (e) {}
-      return next
-    })
-  }, [settings])
-
-  // 切换随机
-  const handleToggleShuffle = useCallback(() => {
-    setShuffle((prev) => {
-      const next = !prev
-      try {
-        const s = { ...settings, shuffle: next }
-        localStorage.setItem('appSettings', JSON.stringify(s))
-        window.electronAPI?.dbSaveSettings?.(s)
-      } catch (e) {}
-      return next
-    })
-  }, [settings])
-
-  // 切换队列面板显示
-  const handleToggleQueuePanel = useCallback(() => {
-    setShowQueuePanel((prev) => !prev)
-  }, [])
-
-  // ===== 睡眠定时器 =====
-  const handleSetSleepTimer = useCallback((minutes) => {
-    setSleepTimerMinutes(minutes)
-    if (minutes > 0) {
-      setSleepTimerRemaining(minutes * 60)
-      showToast(`睡眠定时器已设置：${minutes} 分钟后停止播放`, 'info')
-    } else {
-      setSleepTimerRemaining(0)
-      showToast('睡眠定时器已取消', 'info')
-    }
-  }, [showToast])
-
   // 点击播放栏封面：跳转到正在播放的作品，或切换沉浸式
   const handlePlayerCoverClick = useCallback(() => {
     if (!playingWork) return
@@ -1367,26 +976,6 @@ export default function App() {
     // 已经在播放的作品，切换沉浸式
     setIsImmersive(!isImmersive)
   }, [playingWork, selectedWork, isImmersive])
-
-  // 睡眠定时器倒计时逻辑
-  useEffect(() => {
-    if (sleepTimerMinutes <= 0) return
-    const timer = setInterval(() => {
-      setSleepTimerRemaining((prev) => {
-        if (prev <= 1) {
-          // 时间到，暂停播放
-          if (playerRef.current) {
-            playerRef.current.playPause()
-          }
-          setSleepTimerMinutes(0)
-          showToast('睡眠定时器到时，播放已停止', 'info')
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [sleepTimerMinutes, showToast])
 
   const handlePrevAudio = useCallback(() => {
     // 队列模式优先
@@ -1423,167 +1012,23 @@ export default function App() {
     handleSelectAudio(audioFiles[currentIndex + 1])
   }, [settings.autoPlayNext, queueIndex, playQueue, advanceQueue, currentAudio, audioFiles, handleSelectAudio])
 
-  // 解析快捷键字符串为可比较的格式
-  const parseShortcut = (shortcutStr) => {
-    if (!shortcutStr) return null
-    const parts = shortcutStr.split('+')
-    return {
-      ctrl: parts.includes('Ctrl'),
-      shift: parts.includes('Shift'),
-      alt: parts.includes('Alt'),
-      key: parts[parts.length - 1],
-    }
-  }
-
-  // 检查按键事件是否匹配快捷键
-  const matchShortcut = (e, shortcutStr) => {
-    if (!shortcutStr) return false
-    const expected = parseShortcut(shortcutStr)
-    if (!expected) return false
-    const key = e.key === ' ' ? 'Space' : e.key
-    return e.ctrlKey === expected.ctrl &&
-           e.shiftKey === expected.shift &&
-           e.altKey === expected.alt &&
-           key === expected.key
-  }
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-        if (e.key === 'Escape') {
-          if (showGlobalSearch) {
-            e.preventDefault()
-            setShowGlobalSearch(false)
-          } else if (showSettingsModal) {
-            e.preventDefault()
-            setShowSettingsModal(false)
-          } else if (showDownloadModal) {
-            e.preventDefault()
-            setShowDownloadModal(false)
-          } else if (showQueuePanel) {
-            e.preventDefault()
-            setShowQueuePanel(false)
-          }
-        }
-        return
-      }
-
-      const shortcuts = settings.shortcuts || DEFAULT_SHORTCUTS
-
-      if (matchShortcut(e, shortcuts.exitImmersive)) {
-        if (showGlobalSearch) {
-          e.preventDefault()
-          setShowGlobalSearch(false)
-          return
-        }
-        if (showSettingsModal) {
-          e.preventDefault()
-          setShowSettingsModal(false)
-          return
-        }
-        if (showDownloadModal) {
-          e.preventDefault()
-          setShowDownloadModal(false)
-          return
-        }
-        if (showQueuePanel) {
-          e.preventDefault()
-          setShowQueuePanel(false)
-          return
-        }
-        if (isImmersive) {
-          e.preventDefault()
-          setIsImmersive(false)
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.playPause)) {
-        e.preventDefault()
-        if (playerRef.current) {
-          playerRef.current.playPause()
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.prevTrack)) {
-        e.preventDefault()
-        handlePrevAudio()
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.nextTrack)) {
-        e.preventDefault()
-        handleNextAudio()
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.volumeUp)) {
-        e.preventDefault()
-        if (playerRef.current) {
-          const currentVol = playerRef.current.getVolume?.() ?? (settings.defaultVolume / 100)
-          const newVol = Math.min(1, currentVol + 0.05)
-          playerRef.current.setVolume(newVol)
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.volumeDown)) {
-        e.preventDefault()
-        if (playerRef.current) {
-          const currentVol = playerRef.current.getVolume?.() ?? (settings.defaultVolume / 100)
-          const newVol = Math.max(0, currentVol - 0.05)
-          playerRef.current.setVolume(newVol)
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.seekBackward)) {
-        e.preventDefault()
-        if (playerRef.current) {
-          playerRef.current.skipBackward?.(settings.skipSeconds || 5)
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.seekForward)) {
-        e.preventDefault()
-        if (playerRef.current) {
-          playerRef.current.skipForward?.(settings.skipSeconds || 5)
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.toggleImmersive)) {
-        e.preventDefault()
-        if (currentAudio) {
-          setIsImmersive((prev) => !prev)
-        }
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.toggleQueue)) {
-        e.preventDefault()
-        setShowQueuePanel((prev) => !prev)
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.openSettings)) {
-        e.preventDefault()
-        setShowSettingsModal(true)
-        return
-      }
-
-      if (matchShortcut(e, shortcuts.globalSearch)) {
-        e.preventDefault()
-        setShowGlobalSearch((prev) => !prev)
-        return
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handlePrevAudio, handleNextAudio, settings.shortcuts, settings.defaultVolume, settings.skipSeconds, isImmersive, showGlobalSearch, showSettingsModal, showDownloadModal, showQueuePanel, currentAudio])
+  useKeyboardShortcuts({
+    settings,
+    playerRef,
+    isImmersive,
+    setIsImmersive,
+    showGlobalSearch,
+    setShowGlobalSearch,
+    showSettingsModal,
+    setShowSettingsModal,
+    showDownloadModal,
+    setShowDownloadModal,
+    showQueuePanel,
+    setShowQueuePanel,
+    currentAudio,
+    handlePrevAudio,
+    handleNextAudio,
+  })
 
   const handleSelectSubtitle = useCallback(async (index) => {
     setSelectedSubtitleIndex(index)
