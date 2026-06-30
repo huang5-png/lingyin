@@ -374,6 +374,16 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 音频扩展名：`mp3/wav/flac/ogg/m4a/aac/wma/opus`
 - 字幕扩展名：`lrc/srt/vtt/ass/ssa`
 
+### 5.1 拖拽添加文件夹
+
+- 支持将文件夹从资源管理器拖拽到应用窗口，自动添加到媒体库
+- 拖拽时显示全屏遮罩提示，带虚线边框脉冲动画
+- 支持同时拖拽多个文件夹，自动跳过已存在的文件夹
+- 每个文件夹独立扫描，有音频文件才添加
+- 添加后自动触发 DLsite 元数据刮削（与手动添加一致）
+- 实现位置：`App.jsx` 中的 `handleDrop` / `handleDragEnter` / `handleDragLeave`
+- 核心逻辑：`useMediaLibrary.js` 中的 `handleAddFoldersByPath`
+
 ### 6. 字幕匹配算法
 
 - 文件名完全匹配（100分）

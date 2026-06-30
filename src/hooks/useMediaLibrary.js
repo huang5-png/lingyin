@@ -206,6 +206,71 @@ export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
     }
   }, [showToast, fetchDlsiteMetadataAsync])
 
+  // 通过路径添加文件夹（拖拽等场景）
+  const handleAddFoldersByPath = useCallback(async (folderPaths) => {
+    if (!folderPaths || folderPaths.length === 0) return
+
+    try {
+      const existingWorks = await window.electronAPI.dbGetAllWorks()
+      const existingPaths = new Set(existingWorks.map((w) => w.folderPath))
+
+      let addedCount = 0
+      const newWorks = []
+
+      for (const folderPath of folderPaths) {
+        if (existingPaths.has(folderPath)) {
+          continue
+        }
+
+        try {
+          const scanResult = await scanFolder(folderPath)
+          if (scanResult.audioFiles.length === 0) {
+            continue
+          }
+
+          const folderName = scanResult.folderName
+          const rjCode = extractRJCode(folderName)
+
+          const metadata = {
+            id: folderPath,
+            folderPath,
+            folderName,
+            rjCode,
+            title: folderName,
+            audioCount: scanResult.audioFiles.length,
+            cover: '',
+            rating: 0,
+            tags: [],
+            cvs: [],
+            circle: '',
+            description: '',
+          }
+
+          const savedWork = await window.electronAPI.dbAddWork(metadata)
+          newWorks.push(savedWork)
+          addedCount++
+
+          fetchDlsiteMetadataAsync(savedWork.id, folderName, rjCode)
+        } catch (e) {
+          console.warn('跳过无效的文件夹:', folderPath, e.message)
+        }
+      }
+
+      if (newWorks.length > 0) {
+        setWorks((prev) => [...prev, ...newWorks])
+      }
+
+      if (addedCount > 0) {
+        showToast('成功添加 ' + addedCount + ' 个作品到媒体库', 'success')
+      } else {
+        showToast('没有找到新的作品（可能已存在或无音频文件）', 'warning')
+      }
+    } catch (e) {
+      console.error('Failed to add folders by path:', e)
+      showToast('添加文件夹失败：' + e.message, 'error')
+    }
+  }, [showToast, fetchDlsiteMetadataAsync])
+
   // 删除作品（回调给 App.jsx 清理相关状态）
   const handleDeleteWork = useCallback(async (work, selectedWork, onDelete) => {
     const confirmed = window.confirm(`确定要删除「${work.title || work.folderName}」吗？\n\n（只会删除记录，不会删除本地文件）`)
@@ -231,6 +296,7 @@ export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
     loadWorks,
     handleAddFolder,
     handleAddMediaLibrary,
+    handleAddFoldersByPath,
     handleDeleteWork,
     fetchDlsiteMetadataAsync,
     audioFiles,

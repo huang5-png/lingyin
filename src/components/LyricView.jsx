@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { findCurrentCue, formatTime } from '../utils/subtitleParser'
 import SubtitleSelector from './SubtitleSelector'
 import './LyricView.css'
@@ -19,7 +19,7 @@ function loadLocalSettings() {
   return { ...DEFAULT_LOCAL_SETTINGS }
 }
 
-export default function LyricView({
+const LyricView = memo(function LyricView({
   cues,
   currentTime,
   onSeek,
@@ -151,4 +151,6 @@ export default function LyricView({
       </div>
     </div>
   )
-}
+})
+
+export default LyricView

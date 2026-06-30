@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LeftNavBar from './components/LeftNavBar'
 import ImmersiveView from './components/ImmersiveView'
@@ -67,6 +67,7 @@ export default function App() {
     audioFiles,
     handleAddFolder,
     handleAddMediaLibrary,
+    handleAddFoldersByPath,
     handleDeleteWork,
 
     // 收藏
@@ -199,6 +200,55 @@ export default function App() {
     handleGlobalSearchSelectPlaylist,
   } = useAppState()
 
+  const [isDragOver, setIsDragOver] = useState(false)
+  const dragCounter = useRef(0)
+
+  const handleDragEnter = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragOver(true)
+    }
+  }, [])
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current <= 0) {
+      setIsDragOver(false)
+      dragCounter.current = 0
+    }
+  }, [])
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    dragCounter.current = 0
+
+    const files = e.dataTransfer.files
+    if (!files || files.length === 0) return
+
+    const folderPaths = []
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file.path) {
+        folderPaths.push(file.path)
+      }
+    }
+
+    if (folderPaths.length > 0) {
+      handleAddFoldersByPath(folderPaths)
+    }
+  }, [handleAddFoldersByPath])
+
   const favoriteFilteredWorks = useMemo(() => {
     return filteredWorks.filter(work => favoriteIds.has(work.id))
   }, [filteredWorks, favoriteIds])
@@ -308,7 +358,13 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="app-container">
+      <div
+        className={`app-container${isDragOver ? ' drag-over' : ''}`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <div className="title-bar">
           <span className="title-bar-text">聆音 · 沉浸式 ASMR 音声播放器</span>
           <div className="window-controls">
@@ -571,6 +627,21 @@ export default function App() {
           onClose={handleCloseAddToPlaylist}
           onToast={showToast}
         />
+      )}
+
+      {isDragOver && (
+        <div className="drag-drop-overlay">
+          <div className="drag-drop-content">
+            <div className="drag-drop-icon">
+              <svg viewBox="0 0 48 48" width="64" height="64" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M24 4v24m0 0l-8-8m8 8l8-8" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M8 36v4a4 4 0 004 4h24a4 4 0 004-4v-4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="drag-drop-title">释放以添加到媒体库</div>
+            <div className="drag-drop-desc">拖拽文件夹到此处，自动扫描并添加音声作品</div>
+          </div>
+        </div>
       )}
       </div>
     </ErrorBoundary>

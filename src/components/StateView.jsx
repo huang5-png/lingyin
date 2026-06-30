@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import './StateView.css'
 
 // 预置图标 SVG 组件
@@ -127,7 +128,7 @@ const icons = {
  * @param {boolean} [props.inline] - 行内模式（横向排列）
  * @param {string} [props.className] - 额外类名
  */
-export default function StateView({
+const StateView = memo(function StateView({
   type = 'empty',
   icon,
   iconType,
@@ -185,4 +186,6 @@ export default function StateView({
       )}
     </div>
   )
-}
+})
+
+export default StateView

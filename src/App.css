@@ -450,3 +450,82 @@
   color: var(--text-primary);
   transform: scale(1.1);
 }
+
+/* ===== 拖拽添加文件夹 ===== */
+.app-container.drag-over {
+  position: relative;
+}
+
+.app-container.drag-over::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-gradient-soft);
+  border: 2px dashed var(--accent-primary);
+  border-radius: 0;
+  z-index: 9998;
+  pointer-events: none;
+  animation: dragPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dragPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.drag-drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(250, 249, 245, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.drag-drop-content {
+  text-align: center;
+  color: var(--accent-primary);
+  animation: dragBounce 0.6s ease-out;
+}
+
+@keyframes dragBounce {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.drag-drop-icon {
+  margin-bottom: 16px;
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 12px var(--accent-glow));
+}
+
+.drag-drop-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.drag-drop-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+}

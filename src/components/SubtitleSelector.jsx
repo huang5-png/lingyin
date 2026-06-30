@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import './SubtitleSelector.css'
 
 const formatLabels = {
@@ -24,7 +24,7 @@ const PRESET_COLORS = [
   '#ffffff',
 ]
 
-export default function SubtitleSelector({ subtitles, selectedIndex, onSelect, settings, onSettingsChange, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation }) {
+const SubtitleSelector = memo(function SubtitleSelector({ subtitles, selectedIndex, onSelect, settings, onSettingsChange, onAddSubtitleFile, onToggleTranslate, isTranslating, hasTranslation }) {
   const [isOpen, setIsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
@@ -223,4 +223,6 @@ export default function SubtitleSelector({ subtitles, selectedIndex, onSelect, s
       )}
     </div>
   )
-}
+})
+
+export default SubtitleSelector

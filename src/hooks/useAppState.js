@@ -101,6 +101,7 @@ export function useAppState() {
     loadWorks,
     handleAddFolder,
     handleAddMediaLibrary,
+    handleAddFoldersByPath,
     handleDeleteWork: mediaLibraryDeleteWork,
     audioFiles,
     setAudioFiles,
@@ -986,6 +987,7 @@ export function useAppState() {
     setAllSubtitleFiles,
     handleAddFolder,
     handleAddMediaLibrary,
+    handleAddFoldersByPath,
     handleDeleteWork,
 
     // 收藏

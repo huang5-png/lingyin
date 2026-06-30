@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import StateView from './StateView'
 import './BookmarksPanel.css'
 
@@ -13,7 +13,7 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export default function BookmarksPanel({
+const BookmarksPanel = memo(function BookmarksPanel({
   bookmarks,
   currentTime,
   onSeek,
@@ -247,4 +247,6 @@ export default function BookmarksPanel({
       )}
     </div>
   )
-}
+})
+
+export default BookmarksPanel

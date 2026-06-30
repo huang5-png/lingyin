@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import LyricView from './LyricView'
 import BookmarksPanel from './BookmarksPanel'
 import './RightTabBar.css'
 
-export default function RightTabBar({
+const RightTabBar = memo(function RightTabBar({
   activeTab,
   onTabChange,
   work,
@@ -154,4 +154,6 @@ export default function RightTabBar({
       </div>
     </div>
   )
-}
+})
+
+export default RightTabBar
