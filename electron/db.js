@@ -180,6 +180,11 @@ function startOfRange(range, refDate) {
   const start = new Date(d)
   if (range === 'day') {
     start.setHours(0, 0, 0, 0)
+  } else if (range === 'week') {
+    const day = start.getDay()
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1)
+    start.setDate(diff)
+    start.setHours(0, 0, 0, 0)
   } else if (range === 'month') {
     start.setDate(1)
     start.setHours(0, 0, 0, 0)
@@ -196,6 +201,11 @@ function endOfRange(range, refDate) {
   const d = refDate ? new Date(refDate) : new Date()
   const end = new Date(d)
   if (range === 'day') {
+    end.setHours(23, 59, 59, 999)
+  } else if (range === 'week') {
+    const day = end.getDay()
+    const diff = end.getDate() - day + (day === 0 ? 0 : 7)
+    end.setDate(diff)
     end.setHours(23, 59, 59, 999)
   } else if (range === 'month') {
     end.setMonth(end.getMonth() + 1, 0)
@@ -226,8 +236,51 @@ async function getUsageStats(opts = {}) {
   const circleMap = new Map()
   const cvMap = new Map()
 
+  // 时段分布统计
+  const timePeriods = {
+    morning: { label: '早晨', seconds: 0, count: 0 },   // 6:00 - 9:00
+    forenoon: { label: '上午', seconds: 0, count: 0 },  // 9:00 - 12:00
+    afternoon: { label: '下午', seconds: 0, count: 0 }, // 12:00 - 18:00
+    evening: { label: '晚上', seconds: 0, count: 0 },   // 18:00 - 23:00
+    lateNight: { label: '深夜', seconds: 0, count: 0 }, // 23:00 - 6:00
+  }
+
+  // 按日期分组（用于计算活跃天数和连续天数）
+  const dailySet = new Set()
+  const weekdayMap = new Map() // 周几的统计
+
   for (const h of history) {
     const secs = h.seconds || 0
+    const hour = new Date(h.ts).getHours()
+    const dateStr = new Date(h.ts).toDateString()
+    const weekday = new Date(h.ts).getDay()
+
+    dailySet.add(dateStr)
+
+    // 周几统计
+    const wd = weekdayMap.get(weekday) || { seconds: 0, count: 0 }
+    wd.seconds += secs
+    wd.count += 1
+    weekdayMap.set(weekday, wd)
+
+    // 时段统计
+    if (hour >= 6 && hour < 9) {
+      timePeriods.morning.seconds += secs
+      timePeriods.morning.count += 1
+    } else if (hour >= 9 && hour < 12) {
+      timePeriods.forenoon.seconds += secs
+      timePeriods.forenoon.count += 1
+    } else if (hour >= 12 && hour < 18) {
+      timePeriods.afternoon.seconds += secs
+      timePeriods.afternoon.count += 1
+    } else if (hour >= 18 && hour < 23) {
+      timePeriods.evening.seconds += secs
+      timePeriods.evening.count += 1
+    } else {
+      timePeriods.lateNight.seconds += secs
+      timePeriods.lateNight.count += 1
+    }
+
     if (h.workId) {
       const w = workMap.get(h.workId) || { id: h.workId, title: h.title, cover: h.cover, seconds: 0, count: 0 }
       w.seconds += secs
@@ -260,10 +313,54 @@ async function getUsageStats(opts = {}) {
   const circleRanking = [...circleMap.values()].sort(sortBySeconds).slice(0, 10)
   const cvRanking = [...cvMap.values()].sort(sortBySeconds).slice(0, 10)
 
+  // 找出最活跃时段
+  let mostActivePeriod = 'evening'
+  let maxPeriodSeconds = 0
+  for (const [key, val] of Object.entries(timePeriods)) {
+    if (val.seconds > maxPeriodSeconds) {
+      maxPeriodSeconds = val.seconds
+      mostActivePeriod = key
+    }
+  }
+
+  // 计算最长连续聆听天数
+  const sortedDays = [...dailySet].sort((a, b) => new Date(a) - new Date(b))
+  let maxStreak = 0
+  let currentStreak = 0
+  let prevDate = null
+  for (const d of sortedDays) {
+    const cur = new Date(d)
+    if (prevDate) {
+      const diff = (cur - prevDate) / (1000 * 60 * 60 * 24)
+      if (diff === 1) {
+        currentStreak += 1
+      } else {
+        maxStreak = Math.max(maxStreak, currentStreak)
+        currentStreak = 1
+      }
+    } else {
+      currentStreak = 1
+    }
+    prevDate = cur
+  }
+  maxStreak = Math.max(maxStreak, currentStreak)
+
+  // 计算平均每日时长
+  const activeDays = dailySet.size
+  const avgDailySeconds = activeDays > 0 ? Math.round(totalSeconds / activeDays) : 0
+
+  // 找出最活跃的周几
+  let mostActiveWeekday = 0
+  let maxWeekdaySeconds = 0
+  for (const [day, val] of weekdayMap.entries()) {
+    if (val.seconds > maxWeekdaySeconds) {
+      maxWeekdaySeconds = val.seconds
+      mostActiveWeekday = Number(day)
+    }
+  }
+  const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
   // Build timeline buckets
-  // day -> 24 hourly buckets
-  // month -> days of month
-  // year -> 12 monthly buckets
   let timeline = []
   if (range === 'day') {
     for (let i = 0; i < 24; i++) {
@@ -272,6 +369,20 @@ async function getUsageStats(opts = {}) {
     for (const h of history) {
       const hr = new Date(h.ts).getHours()
       timeline[hr].seconds += h.seconds || 0
+    }
+  } else if (range === 'week') {
+    const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    for (let i = 0; i < 7; i++) {
+      timeline.push({ label: dayNames[i], seconds: 0 })
+    }
+    const weekStart = new Date(startTs)
+    for (const h of history) {
+      const d = new Date(h.ts)
+      let dayOfWeek = d.getDay() - 1
+      if (dayOfWeek < 0) dayOfWeek = 6
+      if (dayOfWeek >= 0 && dayOfWeek < 7) {
+        timeline[dayOfWeek].seconds += h.seconds || 0
+      }
     }
   } else if (range === 'month') {
     const ref = refDate ? new Date(refDate) : new Date()
@@ -295,6 +406,32 @@ async function getUsageStats(opts = {}) {
     }
   }
 
+  // 洞察数据
+  const insights = {
+    activeDays,
+    avgDailySeconds,
+    maxStreak,
+    mostActivePeriod,
+    mostActivePeriodLabel: timePeriods[mostActivePeriod]?.label || '晚上',
+    mostActiveWeekday,
+    mostActiveWeekdayLabel: weekdayNames[mostActiveWeekday],
+    timePeriods: Object.entries(timePeriods).map(([key, val]) => ({
+      key,
+      label: val.label,
+      seconds: val.seconds,
+      count: val.count,
+    })),
+    weekdayStats: Array.from({ length: 7 }, (_, i) => {
+      const wd = weekdayMap.get(i) || { seconds: 0, count: 0 }
+      return {
+        weekday: i,
+        label: weekdayNames[i],
+        seconds: wd.seconds,
+        count: wd.count,
+      }
+    }),
+  }
+
   return {
     range,
     startTs,
@@ -310,7 +447,42 @@ async function getUsageStats(opts = {}) {
     circleRanking,
     cvRanking,
     timeline,
+    insights,
   }
+}
+
+// 导出播放历史为 CSV 格式
+async function exportHistoryCSV(opts = {}) {
+  const allHistory = dbData.history || []
+  if (allHistory.length === 0) return ''
+
+  const headers = ['时间', '作品ID', '作品标题', '音频文件', '时长(秒)', '社团', '声优', '标签']
+  const rows = [headers.join(',')]
+
+  for (const h of allHistory) {
+    const date = new Date(h.ts).toLocaleString('zh-CN')
+    const cvs = (h.cvs || []).join(';')
+    const tags = (h.tags || []).join(';')
+    const row = [
+      `"${date}"`,
+      `"${h.workId || ''}"`,
+      `"${(h.title || '').replace(/"/g, '""')}"`,
+      `"${(h.audioFile || '').replace(/"/g, '""')}"`,
+      h.seconds || 0,
+      `"${(h.circle || '').replace(/"/g, '""')}"`,
+      `"${cvs.replace(/"/g, '""')}"`,
+      `"${tags.replace(/"/g, '""')}"`,
+    ]
+    rows.push(row.join(','))
+  }
+
+  return '\uFEFF' + rows.join('\n')
+}
+
+// 导出播放历史为 JSON 格式
+async function exportHistoryJSON(opts = {}) {
+  const allHistory = dbData.history || []
+  return JSON.stringify(allHistory, null, 2)
 }
 
 async function getAllHistory() {
@@ -882,6 +1054,8 @@ module.exports = {
   appendHistory,
   getUsageStats,
   getAllHistory,
+  exportHistoryCSV,
+  exportHistoryJSON,
   deleteHistoryByWorkId,
   clearAllHistory,
   getRecentWorks,

@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbAppendHistory: (entry) => ipcRenderer.invoke('db:appendHistory', entry),
   dbGetUsageStats: (opts) => ipcRenderer.invoke('db:getUsageStats', opts),
   dbGetAllHistory: () => ipcRenderer.invoke('db:getAllHistory'),
+  dbExportHistoryCSV: (opts) => ipcRenderer.invoke('db:exportHistoryCSV', opts),
+  dbExportHistoryJSON: (opts) => ipcRenderer.invoke('db:exportHistoryJSON', opts),
   dbGetRecentWorks: (limit) => ipcRenderer.invoke('db:getRecentWorks', limit),
   dbGetLastPlayedAudio: () => ipcRenderer.invoke('db:getLastPlayedAudio'),
   dbDeleteHistoryByWorkId: (workId) => ipcRenderer.invoke('db:deleteHistoryByWorkId', workId),
