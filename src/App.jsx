@@ -24,6 +24,7 @@ import { useSubtitle } from './hooks/useSubtitle'
 import { useMediaLibrary } from './hooks/useMediaLibrary'
 import { useOnlineWork } from './hooks/useOnlineWork'
 import { usePlaybackHistory } from './hooks/usePlaybackHistory'
+import { useFilters } from './hooks/useFilters'
 import { scanFolder, extractRJCode, getExtension } from './utils/scanner'
 import { parseSubtitle, findCurrentCue } from './utils/subtitleParser'
 import { DEFAULT_SHORTCUTS } from './components/KeyboardShortcutsPanel'
@@ -67,9 +68,6 @@ export default function App() {
   const [currentCues, setCurrentCues] = useState([])
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [cvFilter, setCvFilter] = useState('')
-  const [circleFilter, setCircleFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
   const [settings, setSettings] = useState(loadSettings)
   const [viewMode, setViewMode] = useState(settings.viewMode || 'grid')
   const [showLyric, setShowLyric] = useState(settings.showLyric)
@@ -161,6 +159,17 @@ export default function App() {
     showToast,
     setSelectedWork,
   })
+
+  // ===== 筛选状态 Hook =====
+  const {
+    cvFilter,
+    circleFilter,
+    tagFilter,
+    allCVs,
+    allCircles,
+    filteredWorks,
+    handleFilterChange,
+  } = useFilters(works)
 
   // 包装 handleDeleteWork，注入 selectedWork 和清理回调
   const handleDeleteWork = useCallback(
@@ -383,17 +392,6 @@ export default function App() {
     }
   }, [settings])
 
-  // useMemo 缓存计算结果，减少重渲染
-  const allCVs = useMemo(() => [...new Set(works.flatMap((w) => w.cvs || []))].sort(), [works])
-  const allCircles = useMemo(() => [...new Set(works.map((w) => w.circle).filter(Boolean))].sort(), [works])
-
-  const filteredWorks = useMemo(() => works.filter((w) => {
-    if (cvFilter && !(w.cvs || []).includes(cvFilter)) return false
-    if (circleFilter && w.circle !== circleFilter) return false
-    if (tagFilter && !(w.tags || []).includes(tagFilter)) return false
-    return true
-  }), [works, cvFilter, circleFilter, tagFilter])
-
   const handleSelectWork = useCallback(
     (work) => {
       if (work?.id === selectedWork?.id) return
@@ -440,73 +438,8 @@ export default function App() {
             const ext = getExtension(sub.file.name)
             let cues = parseSubtitle(content, ext)
             
-            // 如果设置了自动翻译，且字幕语言不是中文，则自动翻译
-            if (settings.autoTranslateSubtitle && sub.language !== 'zh' && sub.language !== 'dual') {
-              const texts = cues.map(cue => cue.text).filter(t => t && t.trim())
-              if (texts.length > 0) {
-                try {
-                  // 先从数据库读取缓存
-                  const cachedCues = await window.electronAPI.translateGetCache(selectedWork.id, audio.path)
-                  if (cachedCues && cachedCues.length > 0) {
-                    const cacheMap = new Map(cachedCues.map(c => [c.time, c.translated]))
-                    cues = cues.map(cue => ({
-                      ...cue,
-                      translated: cacheMap.get(cue.time) || undefined
-                    }))
-                    // 同步到内存缓存
-                    cachedCues.forEach(c => {
-                      if (c.translated) {
-                        const original = cues.find(cue => cue.time === c.time)
-                        if (original) {
-                          translateCacheRef.current.set(original.text, c.translated)
-                        }
-                      }
-                    })
-                  } else {
-                    // 没有缓存，异步翻译（不阻塞播放，先显示原文，翻译完成后更新）
-                    ;(async () => {
-                      try {
-                        const results = await window.electronAPI.translateBatch(texts, 'zh-CN')
-                        const resultMap = new Map()
-                        texts.forEach((text, i) => {
-                          if (results[i] && results[i] !== text) {
-                            resultMap.set(text, results[i])
-                            translateCacheRef.current.set(text, results[i])
-                          }
-                        })
-                        setCurrentCues(prevCues => {
-                          const updated = prevCues.map(cue => {
-                            if (!cue.text || !cue.text.trim()) return cue
-                            const translated = resultMap.get(cue.text)
-                            if (translated) {
-                              return { ...cue, translated }
-                            }
-                            return cue
-                          })
-                          // 保存到数据库缓存
-                          try {
-                            const cacheData = updated.map(cue => ({
-                              time: cue.time,
-                              text: cue.text,
-                              translated: cue.translated
-                            }))
-                            window.electronAPI.translateSaveCache(selectedWork.id, audio.path, cacheData).catch(() => {})
-                          } catch (e) {
-                            console.error('Failed to save translate cache:', e)
-                          }
-                          return updated
-                        })
-                        setTranslateVersion(v => v + 1)
-                      } catch (e) {
-                        console.error('Auto translate failed:', e)
-                      }
-                    })()
-                  }
-                } catch (e) {
-                  console.error('Auto translate init failed:', e)
-                }
-              }
-            }
+            // 自动翻译（由 useSubtitle hook 统一管理）
+            handleAutoTranslate(cues, sub, setCurrentCues)
             
             setCurrentCues(cues)
           }
@@ -536,7 +469,7 @@ export default function App() {
         }
       }
     },
-    [selectedWork, settings.subtitleLangPriority, settings.autoTranslateSubtitle, findMatchedSubtitles, detectSubtitleLanguagesAsync, loadSavedSubtitle, selectSubtitleByPriority],
+    [selectedWork, settings.subtitleLangPriority, findMatchedSubtitles, detectSubtitleLanguagesAsync, loadSavedSubtitle, selectSubtitleByPriority, handleAutoTranslate],
   )
 
   handleSelectAudioRef.current = handleSelectAudio
@@ -781,26 +714,6 @@ export default function App() {
       showToast('刷新字幕失败：' + e.message, 'error')
     }
   }, [selectedWork, currentAudio, subtitleOptions, selectedSubtitleIndex, findMatchedSubtitles, detectSubtitleLanguagesAsync])
-
-  const handleFilterChange = (type, value) => {
-    if (type === 'cv') {
-      setCvFilter(value)
-    } else if (type === 'tag') {
-      setTagFilter(value)
-    } else {
-      setCircleFilter(value)
-    }
-  }
-
-  const handleClearFilter = (type) => {
-    if (type === 'cv') {
-      setCvFilter('')
-    } else if (type === 'tag') {
-      setTagFilter('')
-    } else if (type === 'circle') {
-      setCircleFilter('')
-    }
-  }
 
   const handleViewModeChange = useCallback((mode) => {
     setViewMode(mode)
