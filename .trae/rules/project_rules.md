@@ -133,6 +133,7 @@
 | `hooks/useBookmarks.js` | 书签功能 Hook：书签状态管理、按作品/音频筛选、增删改查、本地持久化 |
 | `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
 | `hooks/useDownloadImport.js` | 下载完成自动导入 Hook：下载任务完成/失败通知、自动添加到媒体库 |
+| `hooks/useSystemIntegration.js` | 系统集成 Hook：系统托盘、迷你播放器、媒体会话（MediaSession）、全局媒体快捷键、曲目切换系统通知 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、鼠标闲置自动隐藏） |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
@@ -159,6 +160,7 @@
 | `components/LibraryLayout.jsx` | 我的库布局组件（左侧 Sidebar + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
 | `components/DiscoverLayout.jsx` | 发现布局组件（左侧 DiscoverView + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
 | `components/UpscaledImage.jsx` | 图片超分组件（WebGL 多 Pass 渲染，Lanczos + Anime4K + USM 管线，自适应输出分辨率） |
+| `components/SpectrumVisualizer.jsx` | 音频频谱可视化组件（Canvas 绘制，柱状图/波形/圆形三种模式，Web Audio API AnalyserNode） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `utils/upscaleShaders.js` | 图片超分 WebGL 着色器（Lanczos2/3、Bicubic、Anime4K 线条增强、双边滤波、USM 锐化、色彩调整）+ 9 档预设 |
@@ -775,6 +777,48 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 实现：从点击的封面位置过渡到详情封面位置
 - 相关 ref：`flipRafRef`、`flipTimeoutRef`、`flipWorkIdRef`
 - 动画时长：400ms
+
+### 13.5 音频频谱可视化
+
+#### 功能概述
+基于 Web Audio API 的实时音频频谱可视化，支持多种显示模式，增强播放体验。
+
+#### 可视化模式
+- **柱状图（bars）**：经典频谱柱状图，左右对称分布
+- **波形图（wave）**：实时音频波形曲线
+- **圆形频谱（circle）**：环形频谱，中心对称
+
+#### 技术实现
+- 使用 `AudioContext.createMediaElementSource()` 从 audio 元素获取音频源
+- `AnalyserNode` 进行频率分析，`fftSize: 256`，`smoothingTimeConstant: 0.8`
+- Canvas 2D 绘制，支持高 DPI 自动适配
+- `requestAnimationFrame` 驱动动画循环
+- ResizeObserver 监听容器尺寸变化
+
+#### 集成位置
+- **播放器波形区域**：底部叠加 40px 高的频谱条，渐隐遮罩过渡
+- **沉浸式模式**：底部 120px 高的频谱背景，增强沉浸氛围
+
+#### 设置项
+| 设置项 | 说明 | 默认值 |
+|--------|------|--------|
+| `showSpectrum` | 显示频谱开关 | `true` |
+| `spectrumMode` | 可视化模式（bars/wave/circle） | `bars` |
+| `spectrumSensitivity` | 灵敏度（0.5x - 3x） | `1.5` |
+
+#### 组件 API
+```jsx
+<SpectrumVisualizer
+  audioElement={audioElement}   // HTMLAudioElement
+  mode="bars"                    // 可视化模式
+  barCount={64}                  // 柱状条数
+  sensitivity={1.5}              // 灵敏度
+  colorStart="#c96442"           // 渐变起始色
+  colorEnd="#ec4899"             // 渐变结束色
+  height={60}                    // 高度
+  showBg={true}                  // 是否显示背景
+/>
+```
 
 ### 14. 设置面板
 
