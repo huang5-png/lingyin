@@ -15,12 +15,16 @@ const TrackSkeletonItem = memo(function TrackSkeletonItem({ hasDuration = true }
   )
 })
 
-const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup }) {
+const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onToggleTagFilter, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup, onAddTag, onRemoveTag, allTags, getTagColor }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
   const [showGroupMenu, setShowGroupMenu] = useState(false)
+  const [showTagInput, setShowTagInput] = useState(false)
+  const [newTagValue, setNewTagValue] = useState('')
+  const [tagInputFocused, setTagInputFocused] = useState(false)
   const coverImgRef = useRef(null)
+  const tagInputRef = useRef(null)
 
   useEffect(() => {
     setCurrentDirPath(null)
@@ -234,15 +238,105 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
             )}
             {work.tags && work.tags.length > 0 && (
               <div className="work-tags">
-                {work.tags.slice(0, 10).map((tag, i) => (
-                  <span
-                    key={i}
-                    className={`tag ${activeTag === tag ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); onFilterTag?.(activeTag === tag ? '' : tag) }}
+                {work.tags.map((tag, i) => {
+                  const tagColor = getTagColor?.(tag) || ''
+                  const isActive = Array.isArray(activeTag) ? activeTag.includes(tag) : activeTag === tag
+                  return (
+                    <span
+                      key={i}
+                      className={`tag ${isActive ? 'active' : ''}`}
+                      style={tagColor ? { '--tag-color': tagColor } : {}}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onToggleTagFilter) {
+                          onToggleTagFilter(tag)
+                        } else if (onFilterTag) {
+                          onFilterTag(isActive ? '' : tag)
+                        }
+                      }}
+                    >
+                      {getTranslatedText?.(tag) || tag}
+                      {onRemoveTag && (
+                        <button
+                          className="tag-remove-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onRemoveTag(work.id, tag)
+                          }}
+                          title="移除标签"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  )
+                })}
+                {onAddTag && (
+                  <button
+                    className="add-tag-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowTagInput(true)
+                      setTimeout(() => tagInputRef.current?.focus(), 0)
+                    }}
+                    title="添加标签"
                   >
-                    {getTranslatedText?.(tag) || tag}
-                  </span>
-                ))}
+                    + 添加
+                  </button>
+                )}
+              </div>
+            )}
+            {showTagInput && onAddTag && (
+              <div className="tag-input-wrapper">
+                <input
+                  ref={tagInputRef}
+                  type="text"
+                  className="tag-input"
+                  placeholder="输入标签名，回车添加"
+                  value={newTagValue}
+                  onChange={(e) => setNewTagValue(e.target.value)}
+                  onFocus={() => setTagInputFocused(true)}
+                  onBlur={() => {
+                    setTagInputFocused(false)
+                    setTimeout(() => {
+                      setShowTagInput(false)
+                      setNewTagValue('')
+                    }, 150)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newTagValue.trim()) {
+                      onAddTag(work.id, newTagValue.trim())
+                      setNewTagValue('')
+                    } else if (e.key === 'Escape') {
+                      setShowTagInput(false)
+                      setNewTagValue('')
+                    }
+                  }}
+                />
+                {tagInputFocused && allTags && allTags.length > 0 && newTagValue && (
+                  <div className="tag-suggestions">
+                    {allTags
+                      .filter(t => t.name.toLowerCase().includes(newTagValue.toLowerCase()) && !(work.tags || []).includes(t.name))
+                      .slice(0, 6)
+                      .map(t => (
+                        <div
+                          key={t.name}
+                          className="tag-suggestion-item"
+                          onClick={() => {
+                            onAddTag(work.id, t.name)
+                            setNewTagValue('')
+                          }}
+                        >
+                          <span
+                            className="tag-suggestion-dot"
+                            style={{ backgroundColor: t.color || '#888' }}
+                          />
+                          {t.name}
+                          <span className="tag-suggestion-count">{t.count}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="work-actions">
