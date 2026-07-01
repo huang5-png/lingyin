@@ -14,6 +14,9 @@ const SkeletonItem = memo(() => {
       <div className="rp-info">
         <div className="skeleton-line skeleton-title rp-skeleton-title" />
         <div className="skeleton-line skeleton-meta rp-skeleton-meta" />
+        <div className="rp-skeleton-progress">
+          <div className="skeleton-line rp-skeleton-progress-bar" />
+        </div>
         <div className="skeleton-bottom">
           <div className="skeleton-line skeleton-stat rp-skeleton-stat" />
           <div className="skeleton-line skeleton-time rp-skeleton-time" />

@@ -603,11 +603,25 @@
   height: 11px;
 }
 
+.rp-skeleton-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.rp-skeleton-progress-bar {
+  width: 60%;
+  height: 100%;
+  border-radius: 2px;
+}
+
 .skeleton-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .rp-skeleton-stat {
