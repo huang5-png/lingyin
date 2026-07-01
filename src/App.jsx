@@ -518,6 +518,7 @@ export default function App() {
         <LibraryLayout
           {...commonLayoutProps}
           filteredWorks={filteredWorks}
+          allWorks={works}
           isLoadingWorks={isLoadingWorks}
           onSelectWork={handleSelectWork}
           onAddFolder={handleAddFolder}
@@ -563,6 +564,7 @@ export default function App() {
         <LibraryLayout
           {...commonLayoutProps}
           filteredWorks={favoriteFilteredWorks}
+          allWorks={works}
           isLoadingWorks={isLoadingWorks}
           onSelectWork={handleSelectWork}
           onAddFolder={handleAddFolder}
@@ -607,6 +609,7 @@ export default function App() {
       {currentView === 'discover' && (
         <DiscoverLayout
           {...commonLayoutProps}
+          allWorks={works}
           discoverViewRef={discoverViewRef}
           onSelectWork={handleSelectOnlineWork}
           onFilterCV={handleFilterCVInDiscover}

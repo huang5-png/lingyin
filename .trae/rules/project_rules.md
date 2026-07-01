@@ -119,7 +119,7 @@
 | `hooks/useOnlineWork.js` | 在线作品 Hook：在线作品加载/刷新、tracks 解析为音频列表 |
 | `hooks/useSubtitle.js` | 字幕管理 Hook：字幕选项/索引状态、语言异步检测、字幕选择/添加/刷新、自动翻译 |
 | `hooks/usePlayer.js` | 核心播放控制 Hook：音频选择、上一曲/下一曲、播放完成、进度保存、历史记录、时间更新 |
-| `hooks/useFilters.js` | 筛选状态 Hook：CV/社团/标签筛选状态、筛选结果计算 |
+| `hooks/useFilters.js` | 筛选状态 Hook：CV/社团/标签筛选状态、筛选结果计算、多标签 AND/OR 模式 |
 | `hooks/useTheme.js` | 主题与缩放 Hook：窗口响应式缩放（0.6x-1.2x）、主题切换与过渡动画、CSS 变量同步、数据库设置加载 |
 | `hooks/useWorkMetadata.js` | 元数据编辑与刷新 Hook：handleEditMetadata（更新作品信息）、handleRefreshMetadata（从 DLsite 重新刮削） |
 | `hooks/useToast.js` | Toast 通知 Hook：Toast 状态（toasts/showToast/removeToast） |
@@ -132,6 +132,7 @@
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
 | `hooks/useBookmarks.js` | 书签功能 Hook：书签状态管理、按作品/音频筛选、增删改查、本地持久化 |
 | `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
+| `hooks/useTags.js` | 标签管理 Hook：标签列表加载、标签颜色设置、重命名/合并/删除标签、作品标签增删、批量操作 |
 | `hooks/useVirtualScroll.js` | 虚拟滚动 Hook：列表/网格虚拟滚动、动态列数、ResizeObserver、滚动位置记忆、返回顶部 |
 | `hooks/useDownloadImport.js` | 下载完成自动导入 Hook：下载任务完成/失败通知、自动添加到媒体库 |
 | `hooks/useSystemIntegration.js` | 系统集成 Hook：系统托盘、迷你播放器、媒体会话（MediaSession）、全局媒体快捷键、曲目切换系统通知 |
@@ -155,6 +156,7 @@
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/数据管理/关于，七个 Tab） |
 | `components/KeyboardShortcutsPanel.jsx` | 快捷键配置面板（自定义快捷键、冲突检测） |
 | `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索历史、作品、收藏、播放列表分类展示，关键词高亮，快捷键唤起，方向键选择+回车跳转） |
+| `components/TagManagerModal.jsx` | 标签管理弹窗（标签列表、搜索、颜色设置、重命名、合并、删除、批量操作） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
 | `components/StateView.jsx` | 统一空态/加载态/错误状态组件（13+ 预置图标、sm/md/lg 尺寸、紧凑/行内模式） |
 | `components/LeftNavBar.jsx` | 左侧导航栏（64px 宽，卡片样式，包含继续听快捷入口、我的库/发现/最近播放/使用报告/下载/播放列表/设置入口） |
@@ -318,6 +320,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 #### 标签样式
 - CV/标签：灰色低调风格（`--tag-bg` / `--tag-border` / `--tag-text`）
 - 激活态：暖橙色渐变背景
+- 支持自定义标签颜色（通过 `--tag-color` CSS 变量），标签背景和边框基于该颜色自动生成
+- 标签管理入口：左侧导航栏底部标签图标按钮
 
 #### 高DPI适配
 - 使用 `@media (min-resolution: 1.5dppx/2dppx/2.5dppx)` 自动缩放字号和间距
@@ -426,7 +430,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
   "translateCache": {},  // 翻译缓存 { workId::audioPath: { text, timestamp } }
   "favorites": [],        // 收藏列表 [{ workId, title, cover, circle, isOnline, addedAt }]
   "folderGroups": [],      // 文件夹分组 [{ id, name, color, order, createdAt, updatedAt }]
-  "bookmarks": []          // 书签列表 [{ id, workId, workTitle, audioPath, audioName, time, name, color, createdAt, updatedAt }]
+  "bookmarks": [],          // 书签列表 [{ id, workId, workTitle, audioPath, audioName, time, name, color, createdAt, updatedAt }]
+  "tagMetadata": {},        // 标签元数据 { tagName: { color, createdAt, updatedAt } }
 }
 ```
 
@@ -908,6 +913,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 | `favorites` | 收藏列表 | array |
 | `folderGroups` | 文件夹分组 | array |
 | `bookmarks` | 书签列表 | array |
+| `tagMetadata` | 标签元数据 | object |
 
 #### 导出功能
 - 支持自由选择要导出的数据类型（全选/取消全选）

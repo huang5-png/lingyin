@@ -6,8 +6,10 @@ import RightTabBar from './RightTabBar'
 const DiscoverLayout = memo(function DiscoverLayout({
   selectedWork,
   settings,
+  allWorks,
   discoverViewRef,
   onSelectWork,
+  onSelectOnlineWork,
   onTranslate,
   onTranslateBatch,
   getTranslatedText,
@@ -53,6 +55,7 @@ const DiscoverLayout = memo(function DiscoverLayout({
   onAddBookmark,
   onUpdateBookmark,
   onDeleteBookmark,
+  onToast,
 }) {
   const hasDetail = !!selectedWork && !!selectedWork.isOnline
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -136,6 +139,9 @@ const DiscoverLayout = memo(function DiscoverLayout({
                 onUpdateBookmark={onUpdateBookmark}
                 onDeleteBookmark={onDeleteBookmark}
                 currentAudio={currentAudio}
+                allWorks={allWorks}
+                onSelectWork={onSelectWork}
+                onToast={onToast}
               />
             </div>
           </div>

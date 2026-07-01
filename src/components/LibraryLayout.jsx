@@ -7,6 +7,7 @@ const LibraryLayout = memo(function LibraryLayout({
   selectedWork,
   settings,
   filteredWorks,
+  allWorks,
   isLoadingWorks,
   onSelectWork,
   onAddFolder,
@@ -87,6 +88,7 @@ const LibraryLayout = memo(function LibraryLayout({
   sortBy,
   sortOrder,
   onSortChange,
+  onToast,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -207,6 +209,10 @@ const LibraryLayout = memo(function LibraryLayout({
                 onUpdateBookmark={onUpdateBookmark}
                 onDeleteBookmark={onDeleteBookmark}
                 currentAudio={currentAudio}
+                allWorks={allWorks}
+                onSelectWork={onSelectWork}
+                onAddToPlaylist={onAddToPlaylist}
+                onToast={onToast}
               />
             </div>
           </div>
