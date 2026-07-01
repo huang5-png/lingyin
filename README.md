@@ -4,6 +4,35 @@
 
 ## 📋 更新日志
 
+### v1.39.0 — 架构优化与性能提升，更流畅的聆听体验
+**发布日期：2026-07-01**
+
+本次更新专注于架构优化和性能提升，通过组件 memo 化、渲染优化和模块重构，让应用运行更加流畅高效。
+
+**⚡ 性能优化**
+- **全面组件 Memo 化** — 为核心业务组件添加 React.memo，减少不必要的重渲染
+  - WorkDetail、RecentPlaysView、PlaylistView、DiscoverView 等组件
+  - DiscoverView 正确处理 forwardRef + memo 的组合使用
+- **内联回调稳定性优化** — 将 App.jsx 中的内联函数提取为 useCallback
+  - 提升回调函数引用稳定性，增强子组件 memo 效果
+  - 包括 onCloseDetail、onFilterCV、onFilterTag、onCircleClick 等
+  - commonLayoutProps 中的计算值使用 useMemo 缓存
+- **CSS 渲染性能优化** — 添加 content-visibility 和 contain 优化
+  - 作品卡片、播放列表、字幕行等长列表项启用 content-visibility: auto
+  - 合理设置 contain-intrinsic-size，提升滚动性能
+  - 图片渲染优化，减少布局抖动
+
+**🏗️ 架构重构**
+- **系统集成模块独立** — 将系统集成功能从 useAppState 中抽离为独立的 useSystemIntegration hook
+  - 职责分离更清晰，便于维护和测试
+  - 减少 useAppState 的复杂度
+- **项目规则完善** — 更新 project_rules.md，同步最新的开发规范和约定
+
+**🔧 技术细节**
+- 优化 commonLayoutProps 依赖，提升 memo 缓存命中率
+- 统一内联函数提取模式，保持代码风格一致
+- CSS 优化类（will-change、scrollbar-hide 等）可复用
+
 ### v1.38.0 — 音频频谱可视化系统，让声音看得见
 **发布日期：2026-07-01**
 
