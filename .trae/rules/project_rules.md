@@ -132,11 +132,14 @@
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
 | `hooks/useBookmarks.js` | 书签功能 Hook：书签状态管理、按作品/音频筛选、增删改查、本地持久化 |
 | `hooks/useFolderGroups.js` | 文件夹分组 Hook：分组管理、分组筛选、作品分组设置、本地持久化 |
+| `hooks/useVirtualScroll.js` | 虚拟滚动 Hook：列表/网格虚拟滚动、动态列数、ResizeObserver、滚动位置记忆、返回顶部 |
 | `hooks/useDownloadImport.js` | 下载完成自动导入 Hook：下载任务完成/失败通知、自动添加到媒体库 |
 | `hooks/useSystemIntegration.js` | 系统集成 Hook：系统托盘、迷你播放器、媒体会话（MediaSession）、全局媒体快捷键、曲目切换系统通知 |
 | `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、鼠标闲置自动隐藏） |
 | `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、集成 QueuePanel 浮层） |
-| `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换 |
+| `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换、虚拟滚动、滚动位置记忆 |
+| `components/WorkCard.jsx` | 作品网格卡片组件（React.memo 优化，自定义比较函数） |
+| `components/WorkRow.jsx` | 作品列表行组件（React.memo 优化，自定义比较函数） |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
 | `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
 | `components/BookmarksPanel.jsx` | 书签面板（当前音频书签列表、作品书签列表、添加/编辑/删除书签、点击跳转、双击重命名、空态展示） |
@@ -196,6 +199,56 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 - 全局样式变量在 `src/styles/global.css` 中
 - 使用 `@` 别名引用 `src/` 目录（`import X from '@/utils/scanner'`）
 - 回调函数用 `useCallback` 包裹
+
+### 2.5 性能优化与虚拟滚动
+
+#### 虚拟滚动 (useVirtualScroll)
+- **使用场景**：当列表项数量超过 50 项时，启用虚拟滚动以提升渲染性能
+- **Hook 位置**：`src/hooks/useVirtualScroll.js`
+- **核心特性**：
+  - 支持网格 (grid) 和列表 (list) 两种布局模式
+  - 动态列数计算（基于容器宽度）
+  - 过扫描 (overscan) 缓冲，减少快速滚动时的白屏
+  - ResizeObserver 监听容器尺寸变化
+  - requestAnimationFrame 优化滚动性能
+  - 返回顶部按钮支持（滚动超过 300px 时显示）
+  - 滚动位置记忆（localStorage 持久化）
+- **API**：
+  ```javascript
+  const {
+    startIndex, endIndex,       // 可见项索引范围
+    offsetY, totalHeight,      // 偏移量与总高度
+    handleScroll, measureViewport,
+    scrollToIndex, scrollToTop, // 滚动控制
+    columnCount, scrollTop,
+    showBackToTop, visibleItemCount,
+  } = useVirtualScroll({
+    itemCount, itemHeight,
+    containerRef,
+    overscan = 5,
+    mode = 'list',             // 'list' | 'grid'
+    getColumnCount,            // (containerWidth) => number
+  })
+  ```
+- **组件拆分**：
+  - 列表项组件必须使用 `React.memo` 包裹，并提供自定义比较函数
+  - 网格卡片：`src/components/WorkCard.jsx`
+  - 列表行：`src/components/WorkRow.jsx`
+- **CSS 约定**：
+  - 虚拟滚动容器：`.virtual-scroll` + `.virtual-spacer` + `.virtual-content`
+  - 内容使用 `transform: translateY()` 定位，避免重排
+  - 列表项使用 `content-visibility: auto` 优化离屏渲染
+- **滚动位置记忆**：
+  - Key 命名：`{context}_scroll_position`（如 `sidebar_scroll_position`）
+  - 按子视图区分存储（如 library / favorites）
+  - 数据加载完成后延迟 50ms 恢复滚动位置
+
+#### 通用性能优化
+- 列表数据使用 `useMemo` 计算派生数据（筛选、排序）
+- 事件处理函数使用 `useCallback` 缓存
+- 大型列表项使用 `React.memo` + 自定义比较函数
+- 图片使用 `loading="lazy" decoding="async"` 懒加载
+- CSS 动画优先使用 `transform` 和 `opacity`，避免触发布局重排
 
 ### 3. CSS 约定
 
