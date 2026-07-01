@@ -589,6 +589,67 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
           </div>
         </div>
       </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">音频可视化</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">显示频谱</div>
+            <div className="setting-desc">在播放器和沉浸式模式中显示音频频谱动画</div>
+          </div>
+          <div className="setting-control">
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={settings.showSpectrum !== false}
+                onChange={(e) => setSettings((p) => ({ ...p, showSpectrum: e.target.checked }))}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">可视化模式</div>
+            <div className="setting-desc">选择频谱可视化的显示样式</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.spectrumMode || 'bars'}
+              onChange={(e) => setSettings((p) => ({ ...p, spectrumMode: e.target.value }))}
+              disabled={settings.showSpectrum === false}
+            >
+              <option value="bars">柱状图</option>
+              <option value="wave">波形图</option>
+              <option value="circle">圆形频谱</option>
+            </select>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">灵敏度</div>
+            <div className="setting-desc">调整频谱动画的反应灵敏度</div>
+          </div>
+          <div className="setting-control">
+            <div className="setting-slider-wrapper">
+              <input
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.1"
+                value={settings.spectrumSensitivity || 1.5}
+                onChange={(e) => setSettings((p) => ({ ...p, spectrumSensitivity: parseFloat(e.target.value) }))}
+                className="setting-slider"
+                disabled={settings.showSpectrum === false}
+              />
+              <span className="setting-slider-value">
+                {settings.spectrumSensitivity || 1.5}x
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 

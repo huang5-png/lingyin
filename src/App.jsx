@@ -614,6 +614,9 @@ export default function App() {
             onAddBookmark={addBookmark}
             hasCurrentBookmark={playingWork && currentAudio ? hasBookmarkAtTime(playingWork.id, currentAudio.path, currentTime) : false}
             bookmarkCount={playingWork && currentAudio ? (bookmarks.filter(b => b.workId === playingWork.id && b.audioPath === currentAudio.path)).length : 0}
+            showSpectrum={settings.showSpectrum !== false}
+            spectrumMode={settings.spectrumMode || 'bars'}
+            spectrumSensitivity={settings.spectrumSensitivity || 1.5}
           />
         </div>
       )}
@@ -645,6 +648,9 @@ export default function App() {
           sleepTimerActive={sleepTimerActive}
           sleepTimerStatusText={getSleepTimerStatusText()}
           onToggleSleepTimer={handleSetCountdownTimer}
+          showSpectrum={settings.showSpectrum !== false}
+          spectrumMode={settings.spectrumMode || 'bars'}
+          spectrumSensitivity={settings.spectrumSensitivity || 1.5}
         />
       )}
 
