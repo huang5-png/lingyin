@@ -161,10 +161,14 @@ export function useAppState() {
     cvFilter,
     circleFilter,
     tagFilter,
+    tagFilterMode,
     allCVs,
     allCircles,
+    allTags,
     filteredWorks: filterByTagWorks,
     handleFilterChange,
+    handleClearFilter,
+    handleToggleTagFilter,
   } = useFilters(groupFilteredWorks)
 
   const filteredWorks = useMemo(() => {
@@ -393,7 +397,7 @@ export function useAppState() {
     try {
       window.electronAPI?.lastPlayStateSave?.(state)
     } catch (e) {}
-  }, [playingWork, currentAudio, currentTime, duration, playerRef, durationRef])
+  }, [playingWork, currentAudio, playerRef, durationRef])
 
   useEffect(() => {
     if (!playingWork || !currentAudio) return

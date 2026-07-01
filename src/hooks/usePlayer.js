@@ -31,12 +31,20 @@ export function usePlayer({
 
   const lastSaveTimeRef = useRef(0)
   const durationRef = useRef(0)
+  const seekIntervalRef = useRef(null)
   const internalHandleSelectAudioRef = useRef(null)
   const handleSelectAudioRef = externalHandleSelectAudioRef || internalHandleSelectAudioRef
 
   const handleSelectAudio = useCallback(
     async (audio) => {
       if (!selectedWork) return
+
+      // Clear any pending progress-restore seek from a previously selected
+      // track; otherwise it would seek this track to the old track's position.
+      if (seekIntervalRef.current) {
+        clearInterval(seekIntervalRef.current)
+        seekIntervalRef.current = null
+      }
 
       setPlayingWork(selectedWork)
       setCurrentAudio(audio)
@@ -84,13 +92,19 @@ export function usePlayer({
           const progress = await window.electronAPI.dbGetProgress(selectedWork.id, audio.path)
           if (progress && progress.currentTime > 5 && progress.duration > 0) {
             const targetTime = progress.currentTime
-            const checkAndSeek = setInterval(() => {
+            seekIntervalRef.current = setInterval(() => {
               if (playerRef.current && playerRef.current.getDuration() > 0) {
                 playerRef.current.seekTo(targetTime)
-                clearInterval(checkAndSeek)
+                clearInterval(seekIntervalRef.current)
+                seekIntervalRef.current = null
               }
             }, 200)
-            setTimeout(() => clearInterval(checkAndSeek), 10000)
+            setTimeout(() => {
+              if (seekIntervalRef.current) {
+                clearInterval(seekIntervalRef.current)
+                seekIntervalRef.current = null
+              }
+            }, 10000)
           }
         } catch (e) {
           console.error('Failed to load progress:', e)

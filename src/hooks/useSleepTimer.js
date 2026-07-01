@@ -90,7 +90,6 @@ export function useSleepTimer({ playerRef, showToast, isPlaying, onFinish }) {
     setRemainingSeconds(0)
     setTargetTime(null)
     setIsFading(false)
-    trackEndRegisteredRef.current = false
   }, [playerRef])
 
   const setCountdownTimer = useCallback((minutes) => {

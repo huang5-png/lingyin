@@ -65,17 +65,20 @@ function parseSRT(text) {
     const timeLine = lines.find((l) => l.includes('-->'))
     if (!timeLine) continue
 
-    const timeMatch = timeLine.match(/(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})/)
+    // WebVTT allows MM:SS.mmm (one colon) for sub-hour cues, while SRT uses
+    // HH:MM:SS,mmm (two colons). Make the hours group optional and accept both
+    // `.` and `,` as the sub-second separator so parseSRT works for both.
+    const timeMatch = timeLine.match(/(?:(\d{2}):)?(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(?:(\d{2}):)?(\d{2}):(\d{2})[.,](\d{3})/)
     if (!timeMatch) continue
 
     const startTime =
-      parseInt(timeMatch[1], 10) * 3600 +
+      parseInt(timeMatch[1] || '0', 10) * 3600 +
       parseInt(timeMatch[2], 10) * 60 +
       parseInt(timeMatch[3], 10) +
       parseInt(timeMatch[4], 10) / 1000
 
     const endTime =
-      parseInt(timeMatch[5], 10) * 3600 +
+      parseInt(timeMatch[5] || '0', 10) * 3600 +
       parseInt(timeMatch[6], 10) * 60 +
       parseInt(timeMatch[7], 10) +
       parseInt(timeMatch[8], 10) / 1000

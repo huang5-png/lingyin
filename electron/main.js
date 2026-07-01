@@ -1678,7 +1678,11 @@ async function processDownloadQueue() {
     logger.error(`[下载队列] 任务出错: ${task.workTitle}, ${e.message}`)
   }
 
-  const finishedTask = activeDownloadTask
+  // Re-add the finished task to the queue so it stays visible in the UI and
+  // remains actionable by download:retryTask / download:removeTask /
+  // download:clearCompleted (which all look up tasks in downloadQueue).
+  downloadQueue.push(task)
+
   activeDownloadTask = null
   activeAbortControllers.clear()
   broadcastDownloadState()
