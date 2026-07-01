@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState, getSmartPlaylists, getSmartPlaylistItems, getDataStats, exportData, importData } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState, getSmartPlaylists, getSmartPlaylistItems, getDataStats, exportData, importData, getAllTags, getTagMetadata, setTagColor, renameTag, mergeTags, deleteTag, addTagToWork, removeTagFromWork, batchAddTags, batchRemoveTags } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
@@ -814,6 +814,47 @@ ipcMain.handle('bookmarks:deleteByWork', async (_, workId) => {
 
 ipcMain.handle('bookmarks:clearAll', async () => {
   return clearAllBookmarks()
+})
+
+// ===== 标签 IPC =====
+ipcMain.handle('tags:getAll', async () => {
+  return getAllTags()
+})
+
+ipcMain.handle('tags:getMetadata', async (_, tagName) => {
+  return getTagMetadata(tagName)
+})
+
+ipcMain.handle('tags:setColor', async (_, tagName, color) => {
+  return setTagColor(tagName, color)
+})
+
+ipcMain.handle('tags:rename', async (_, oldName, newName) => {
+  return renameTag(oldName, newName)
+})
+
+ipcMain.handle('tags:merge', async (_, sourceNames, targetName) => {
+  return mergeTags(sourceNames, targetName)
+})
+
+ipcMain.handle('tags:delete', async (_, tagName) => {
+  return deleteTag(tagName)
+})
+
+ipcMain.handle('tags:addToWork', async (_, workId, tagName) => {
+  return addTagToWork(workId, tagName)
+})
+
+ipcMain.handle('tags:removeFromWork', async (_, workId, tagName) => {
+  return removeTagFromWork(workId, tagName)
+})
+
+ipcMain.handle('tags:batchAdd', async (_, workIds, tagNames) => {
+  return batchAddTags(workIds, tagNames)
+})
+
+ipcMain.handle('tags:batchRemove', async (_, workIds, tagNames) => {
+  return batchRemoveTags(workIds, tagNames)
 })
 
 ipcMain.handle('playQueue:get', async () => {

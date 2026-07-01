@@ -153,6 +153,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   bookmarksDeleteByWork: (workId) => ipcRenderer.invoke('bookmarks:deleteByWork', workId),
   bookmarksClearAll: () => ipcRenderer.invoke('bookmarks:clearAll'),
 
+  // 标签管理
+  tagsGetAll: () => ipcRenderer.invoke('tags:getAll'),
+  tagsGetMetadata: (tagName) => ipcRenderer.invoke('tags:getMetadata', tagName),
+  tagsSetColor: (tagName, color) => ipcRenderer.invoke('tags:setColor', tagName, color),
+  tagsRename: (oldName, newName) => ipcRenderer.invoke('tags:rename', oldName, newName),
+  tagsMerge: (sourceNames, targetName) => ipcRenderer.invoke('tags:merge', sourceNames, targetName),
+  tagsDelete: (tagName) => ipcRenderer.invoke('tags:delete', tagName),
+  tagsAddToWork: (workId, tagName) => ipcRenderer.invoke('tags:addToWork', workId, tagName),
+  tagsRemoveFromWork: (workId, tagName) => ipcRenderer.invoke('tags:removeFromWork', workId, tagName),
+  tagsBatchAdd: (workIds, tagNames) => ipcRenderer.invoke('tags:batchAdd', workIds, tagNames),
+  tagsBatchRemove: (workIds, tagNames) => ipcRenderer.invoke('tags:batchRemove', workIds, tagNames),
+
   // 播放队列持久化
   playQueueGet: () => ipcRenderer.invoke('playQueue:get'),
   playQueueSave: (queue) => ipcRenderer.invoke('playQueue:save', queue),

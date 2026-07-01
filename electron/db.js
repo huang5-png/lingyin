@@ -21,6 +21,7 @@ async function initDB() {
     bookmarks: [],
     playQueue: [],
     lastPlayState: null,
+    tagMetadata: {},
   }
 
   try {
@@ -1238,6 +1239,273 @@ async function getSmartPlaylistItems(smartId, limit = 100) {
   return items
 }
 
+// ===== 标签元数据 =====
+// 结构：tagMetadata: { [tagName]: { color, createdAt, updatedAt } }
+
+const DEFAULT_TAG_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+  '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+  '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+  '#ec4899', '#f43f5e', '#78716c', '#64748b', '#0ea5e9',
+]
+
+function ensureTagMetadata() {
+  if (!dbData.tagMetadata || typeof dbData.tagMetadata !== 'object') {
+    dbData.tagMetadata = {}
+  }
+  return dbData.tagMetadata
+}
+
+function getAllTagsFromWorks() {
+  const tagSet = new Set()
+  const tagCountMap = new Map()
+  for (const work of dbData.works || []) {
+    for (const tag of work.tags || []) {
+      tagSet.add(tag)
+      tagCountMap.set(tag, (tagCountMap.get(tag) || 0) + 1)
+    }
+  }
+  return { tagSet, tagCountMap }
+}
+
+async function getAllTags() {
+  const tagMeta = ensureTagMetadata()
+  const { tagCountMap } = getAllTagsFromWorks()
+  const tags = []
+
+  for (const [name, count] of tagCountMap.entries()) {
+    const meta = tagMeta[name] || {}
+    tags.push({
+      name,
+      count,
+      color: meta.color || '',
+      createdAt: meta.createdAt || null,
+      updatedAt: meta.updatedAt || null,
+    })
+  }
+
+  tags.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+  return tags
+}
+
+async function getTagMetadata(tagName) {
+  const tagMeta = ensureTagMetadata()
+  return tagMeta[tagName] || null
+}
+
+async function setTagColor(tagName, color) {
+  const tagMeta = ensureTagMetadata()
+  const now = Date.now()
+  if (!tagMeta[tagName]) {
+    tagMeta[tagName] = { color, createdAt: now, updatedAt: now }
+  } else {
+    tagMeta[tagName].color = color || ''
+    tagMeta[tagName].updatedAt = now
+  }
+  saveDB()
+  return tagMeta[tagName]
+}
+
+async function renameTag(oldName, newName) {
+  if (!oldName || !newName || oldName === newName) return false
+
+  const tagMeta = ensureTagMetadata()
+  const now = Date.now()
+
+  const oldMeta = tagMeta[oldName] || {}
+  const newMeta = tagMeta[newName] || {}
+
+  let updatedCount = 0
+  for (const work of dbData.works || []) {
+    const tags = work.tags || []
+    const idx = tags.indexOf(oldName)
+    if (idx > -1) {
+      if (!tags.includes(newName)) {
+        tags[idx] = newName
+      } else {
+        tags.splice(idx, 1)
+      }
+      work.tags = tags
+      work.updatedAt = now
+      updatedCount++
+    }
+  }
+
+  const mergedColor = newMeta.color || oldMeta.color || ''
+  tagMeta[newName] = {
+    color: mergedColor,
+    createdAt: newMeta.createdAt || oldMeta.createdAt || now,
+    updatedAt: now,
+  }
+  delete tagMeta[oldName]
+
+  saveDB()
+  return { success: true, updatedCount, newName }
+}
+
+async function mergeTags(sourceNames, targetName) {
+  if (!Array.isArray(sourceNames) || sourceNames.length === 0 || !targetName) {
+    return { success: false, updatedCount: 0 }
+  }
+
+  const tagMeta = ensureTagMetadata()
+  const now = Date.now()
+  let updatedCount = 0
+
+  const sourceSet = new Set(sourceNames.filter(n => n && n !== targetName))
+
+  for (const work of dbData.works || []) {
+    const tags = work.tags || []
+    let hasTarget = tags.includes(targetName)
+    let modified = false
+
+    for (const src of sourceSet) {
+      const idx = tags.indexOf(src)
+      if (idx > -1) {
+        tags.splice(idx, 1)
+        modified = true
+      }
+    }
+
+    if (modified && !hasTarget) {
+      tags.push(targetName)
+    }
+
+    if (modified) {
+      work.tags = tags
+      work.updatedAt = now
+      updatedCount++
+    }
+  }
+
+  let targetColor = tagMeta[targetName]?.color || ''
+  for (const src of sourceSet) {
+    if (tagMeta[src]?.color && !targetColor) {
+      targetColor = tagMeta[src].color
+    }
+    delete tagMeta[src]
+  }
+
+  if (!tagMeta[targetName]) {
+    tagMeta[targetName] = { color: targetColor, createdAt: now, updatedAt: now }
+  } else {
+    if (targetColor && !tagMeta[targetName].color) {
+      tagMeta[targetName].color = targetColor
+    }
+    tagMeta[targetName].updatedAt = now
+  }
+
+  saveDB()
+  return { success: true, updatedCount, targetName }
+}
+
+async function deleteTag(tagName) {
+  if (!tagName) return false
+
+  const tagMeta = ensureTagMetadata()
+  let updatedCount = 0
+  const now = Date.now()
+
+  for (const work of dbData.works || []) {
+    const tags = work.tags || []
+    const idx = tags.indexOf(tagName)
+    if (idx > -1) {
+      tags.splice(idx, 1)
+      work.tags = tags
+      work.updatedAt = now
+      updatedCount++
+    }
+  }
+
+  delete tagMeta[tagName]
+  saveDB()
+  return { success: true, updatedCount }
+}
+
+async function addTagToWork(workId, tagName) {
+  if (!workId || !tagName) return null
+
+  const work = (dbData.works || []).find(w => w.id === workId)
+  if (!work) return null
+
+  if (!work.tags) work.tags = []
+  if (!work.tags.includes(tagName)) {
+    work.tags.push(tagName)
+    work.updatedAt = Date.now()
+    saveDB()
+  }
+  return work
+}
+
+async function removeTagFromWork(workId, tagName) {
+  if (!workId || !tagName) return null
+
+  const work = (dbData.works || []).find(w => w.id === workId)
+  if (!work || !work.tags) return work
+
+  const idx = work.tags.indexOf(tagName)
+  if (idx > -1) {
+    work.tags.splice(idx, 1)
+    work.updatedAt = Date.now()
+    saveDB()
+  }
+  return work
+}
+
+async function batchAddTags(workIds, tagNames) {
+  if (!Array.isArray(workIds) || !Array.isArray(tagNames)) {
+    return { success: false, updatedCount: 0 }
+  }
+
+  let updatedCount = 0
+  const now = Date.now()
+  const workIdSet = new Set(workIds)
+
+  for (const work of dbData.works || []) {
+    if (!workIdSet.has(work.id)) continue
+    if (!work.tags) work.tags = []
+    let modified = false
+    for (const tag of tagNames) {
+      if (!work.tags.includes(tag)) {
+        work.tags.push(tag)
+        modified = true
+      }
+    }
+    if (modified) {
+      work.updatedAt = now
+      updatedCount++
+    }
+  }
+
+  if (updatedCount > 0) saveDB()
+  return { success: true, updatedCount }
+}
+
+async function batchRemoveTags(workIds, tagNames) {
+  if (!Array.isArray(workIds) || !Array.isArray(tagNames)) {
+    return { success: false, updatedCount: 0 }
+  }
+
+  let updatedCount = 0
+  const now = Date.now()
+  const workIdSet = new Set(workIds)
+  const tagNameSet = new Set(tagNames)
+
+  for (const work of dbData.works || []) {
+    if (!workIdSet.has(work.id)) continue
+    if (!work.tags || work.tags.length === 0) continue
+    const beforeLen = work.tags.length
+    work.tags = work.tags.filter(t => !tagNameSet.has(t))
+    if (work.tags.length !== beforeLen) {
+      work.updatedAt = now
+      updatedCount++
+    }
+  }
+
+  if (updatedCount > 0) saveDB()
+  return { success: true, updatedCount }
+}
+
 // ===== 数据备份与恢复 =====
 // 可导出的数据类型
 const EXPORTABLE_KEYS = [
@@ -1253,6 +1521,7 @@ const EXPORTABLE_KEYS = [
   'playQueue',
   'lastPlayState',
   'translateCache',
+  'tagMetadata',
 ]
 
 const EXPORT_KEY_LABELS = {
@@ -1268,6 +1537,7 @@ const EXPORT_KEY_LABELS = {
   playQueue: '播放队列',
   lastPlayState: '上次播放状态',
   translateCache: '翻译缓存',
+  tagMetadata: '标签元数据',
 }
 
 async function getDataStats() {
@@ -1473,6 +1743,18 @@ module.exports = {
   saveLastPlayState,
   getSmartPlaylists,
   getSmartPlaylistItems,
+
+  // ===== 标签元数据 =====
+  getAllTags,
+  getTagMetadata,
+  setTagColor,
+  renameTag,
+  mergeTags,
+  deleteTag,
+  addTagToWork,
+  removeTagFromWork,
+  batchAddTags,
+  batchRemoveTags,
 
   // ===== 数据备份与恢复 =====
   exportData,
