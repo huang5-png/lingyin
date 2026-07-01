@@ -64,6 +64,52 @@ let miniPlayerState = {
   workTitle: '',
 }
 
+function updateTrayMenu() {
+  if (!tray) return
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: isPlaying ? '暂停' : '播放',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('tray:togglePlay')
+        }
+      }
+    },
+    {
+      label: '上一曲',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('tray:prevTrack')
+        }
+      }
+    },
+    {
+      label: '下一曲',
+      click: () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('tray:nextTrack')
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '显示主窗口',
+      click: () => {
+        showMainWindow()
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        app.isQuiting = true
+        app.quit()
+      }
+    }
+  ])
+  tray.setContextMenu(contextMenu)
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, '..', 'build', 'icon-16.png')
   const trayIcon = nativeImage.createFromPath(iconPath)
@@ -75,51 +121,6 @@ function createTray() {
 
   tray = new Tray(trayIcon)
   tray.setToolTip('聆音 - 沉浸式 ASMR 音声播放器')
-
-  const updateTrayMenu = () => {
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: isPlaying ? '暂停' : '播放',
-        click: () => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('tray:togglePlay')
-          }
-        }
-      },
-      {
-        label: '上一曲',
-        click: () => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('tray:prevTrack')
-          }
-        }
-      },
-      {
-        label: '下一曲',
-        click: () => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('tray:nextTrack')
-          }
-        }
-      },
-      { type: 'separator' },
-      {
-        label: '显示主窗口',
-        click: () => {
-          showMainWindow()
-        }
-      },
-      { type: 'separator' },
-      {
-        label: '退出',
-        click: () => {
-          app.isQuiting = true
-          app.quit()
-        }
-      }
-    ])
-    tray.setContextMenu(contextMenu)
-  }
 
   updateTrayMenu()
 
@@ -139,7 +140,7 @@ function createTray() {
     showMainWindow()
   })
 
-  return { tray, updateTrayMenu }
+  return { tray }
 }
 
 function showMainWindow() {
@@ -164,14 +165,7 @@ function updateTrayPlayState(playing, title) {
       ? `聆音${isPlaying ? ' · 播放中' : ' · 已暂停'}\n${currentTrackTitle}`
       : '聆音 - 沉浸式 ASMR 音声播放器'
     tray.setToolTip(tip)
-    
-    const contextMenu = tray.getContextMenu()
-    if (contextMenu) {
-      const playItem = contextMenu.items[0]
-      if (playItem) {
-        playItem.label = isPlaying ? '暂停' : '播放'
-      }
-    }
+    updateTrayMenu()
   }
 }
 
