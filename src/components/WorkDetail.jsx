@@ -15,7 +15,7 @@ const TrackSkeletonItem = memo(function TrackSkeletonItem({ hasDuration = true }
   )
 })
 
-export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup }) {
+const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
@@ -553,4 +553,6 @@ export default function WorkDetail({ work, audioFiles, currentAudio, onSelectAud
       )}
     </div>
   )
-}
+})
+
+export default WorkDetail

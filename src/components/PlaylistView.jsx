@@ -82,7 +82,7 @@ const SkeletonPlaylistRow = memo(({ index }) => {
 })
 SkeletonPlaylistRow.displayName = 'SkeletonPlaylistRow'
 
-export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) {
+const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) {
   const [playlists, setPlaylists] = useState([])
   const [smartPlaylists, setSmartPlaylists] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -664,4 +664,6 @@ export default function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) 
       </div>
     </div>
   )
-}
+})
+
+export default PlaylistView

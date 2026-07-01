@@ -155,7 +155,7 @@ const SkeletonCard = memo(() => {
 })
 SkeletonCard.displayName = 'SkeletonCard'
 
-const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }, ref) => {
+const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }, ref) => {
   const [works, setWorks] = useState([])
   const [allTags, setAllTags] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1265,7 +1265,7 @@ const DiscoverView = forwardRef(({ onSelectWork, selectedWorkId, onTranslate, on
       </button>
     </div>
   )
-})
+}))
 
 DiscoverView.displayName = 'DiscoverView'
 

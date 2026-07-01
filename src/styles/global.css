@@ -203,6 +203,48 @@ body::before {
   z-index: 1;
 }
 
+/* ── Rendering Performance Optimizations ───────────── */
+
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 500px;
+}
+
+.work-item,
+.playlist-item-row,
+.rp-item,
+.audio-item,
+.lyric-line,
+.bookmark-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+.work-item.card {
+  contain-intrinsic-size: 200px 240px;
+}
+
+img {
+  content-visibility: auto;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
 /* ── Theme Switch Transition ────────────────────────── */
 /* Temporarily applied to #root when theme changes for smooth color transition */
 .theme-transitioning,

@@ -294,7 +294,7 @@ export default function App() {
     activeFontSize: settings.subtitleImmersiveActiveFontSize || 34,
     color: settings.subtitleImmersiveColor || '#ffffff',
     activeColor: settings.subtitleImmersiveActiveColor || '#ffffff',
-    fontWeight: settings.subtitleImmersiveFontWeight || 500,
+    fontWeight: settings.subtitleImmersiveFontWeight || 50,
     shadow: settings.subtitleImmersiveShadow !== false,
     shadowBlur: settings.subtitleImmersiveShadowBlur || 4,
   }), [
@@ -306,6 +306,56 @@ export default function App() {
     settings.subtitleImmersiveShadow,
     settings.subtitleImmersiveShadowBlur,
   ])
+
+  const handleCloseDetail = useCallback(() => {
+    setSelectedWork(null)
+  }, [setSelectedWork])
+
+  const handleFilterCV = useCallback((cv) => {
+    handleFilterChange('cv', cv)
+  }, [handleFilterChange])
+
+  const handleFilterTag = useCallback((tag) => {
+    handleFilterChange('tag', tag)
+  }, [handleFilterChange])
+
+  const handleCircleClick = useCallback((circle) => {
+    handleFilterChange('circle', circle)
+  }, [handleFilterChange])
+
+  const selectedWorkIsFavorite = useMemo(() => {
+    return isFavorite(selectedWork?.id)
+  }, [isFavorite, selectedWork?.id])
+
+  const handleOpenDownloadModal = useCallback(() => {
+    setShowDownloadModal(true)
+  }, [])
+
+  const handleCloseQueuePanel = useCallback(() => {
+    setShowQueuePanel(false)
+  }, [setShowQueuePanel])
+
+  const handleCloseSettings = useCallback(() => {
+    setShowSettingsModal(false)
+  }, [])
+
+  const handleCloseDownloadModal = useCallback(() => {
+    setShowDownloadModal(false)
+  }, [])
+
+  const handleNavigateToDownload = useCallback(() => {
+    setCurrentView('download')
+  }, [setCurrentView])
+
+  const handleCloseGlobalSearch = useCallback(() => {
+    setShowGlobalSearch(false)
+  }, [])
+
+  const handleContinueListenLast = useCallback(() => {
+    if (lastPlayedAudio) {
+      handleContinueListen(lastPlayedAudio)
+    }
+  }, [lastPlayedAudio, handleContinueListen])
 
   // 共享的布局 props（LibraryLayout 和 DiscoverLayout 共用部分）
   const commonLayoutProps = useMemo(() => ({
@@ -341,8 +391,8 @@ export default function App() {
     onPlayNext: handlePlayNext,
     // 作品相关
     selectedWork,
-    isFavorite: isFavorite(selectedWork?.id),
-    onCloseDetail: () => setSelectedWork(null),
+    isFavorite: selectedWorkIsFavorite,
+    onCloseDetail: handleCloseDetail,
     contentAreaRef,
     // 书签相关
     bookmarks,
@@ -355,9 +405,9 @@ export default function App() {
     rightTab,
     onTabChange: setRightTab,
     // 筛选相关
-    onFilterCV: (cv) => handleFilterChange('cv', cv),
-    onFilterTag: (tag) => handleFilterChange('tag', tag),
-    onCircleClick: (circle) => handleFilterChange('circle', circle),
+    onFilterCV: handleFilterCV,
+    onFilterTag: handleFilterTag,
+    onCircleClick: handleCircleClick,
     activeCV: cvFilter,
     activeTag: tagFilter,
     // 设置
@@ -369,10 +419,10 @@ export default function App() {
     handleTranslate, handleTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating,
     handleEditMetadata, handleRefreshMetadata, handleRefreshSubtitles,
     handleOpenAddToPlaylistForAudio, handleAddToQueue, handlePlayNext,
-    selectedWork, isFavorite,
+    selectedWork, selectedWorkIsFavorite, handleCloseDetail,
     bookmarks, addBookmark, updateBookmark, deleteBookmark,
     rightPanelWidth, handleSplitterMouseDown, rightTab, setRightTab,
-    handleFilterChange, cvFilter, tagFilter,
+    handleFilterCV, handleFilterTag, handleCircleClick, cvFilter, tagFilter,
     settings,
   ])
 
@@ -411,7 +461,7 @@ export default function App() {
           onViewChange={setCurrentView}
           onOpenSettings={handleOpenSettings}
           lastPlayedAudio={lastPlayedAudio}
-          onContinueListen={() => lastPlayedAudio && handleContinueListen(lastPlayedAudio)}
+          onContinueListen={handleContinueListenLast}
         />
 
         <div className="right-content-area">
@@ -515,7 +565,7 @@ export default function App() {
           onCircleClick={handleCircleClickInDiscover}
           activeCV={''}
           activeTag={''}
-          onDownload={() => setShowDownloadModal(true)}
+          onDownload={handleOpenDownloadModal}
           onReloadTracks={handleReloadOnlineTracks}
         />
       )}
@@ -592,7 +642,7 @@ export default function App() {
             onRemoveFromQueue={handleRemoveFromQueue}
             onClearQueue={handleClearQueue}
             onReorderQueue={handleReorderQueue}
-            onCloseQueuePanel={() => setShowQueuePanel(false)}
+            onCloseQueuePanel={handleCloseQueuePanel}
             sleepTimerMode={sleepTimerMode}
             sleepTimerActive={sleepTimerActive}
             sleepTimerFading={sleepTimerFading}
@@ -656,7 +706,7 @@ export default function App() {
 
       <SettingsModal
         isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
+        onClose={handleCloseSettings}
         onSave={handleSaveSettings}
         currentSettings={settings}
         defaultTab={settingsDefaultTab}
@@ -665,14 +715,14 @@ export default function App() {
       {showDownloadModal && selectedWork && selectedWork.isOnline && (
         <DownloadModal
           work={selectedWork}
-          onClose={() => setShowDownloadModal(false)}
-          onNavigateToDownload={() => setCurrentView('download')}
+          onClose={handleCloseDownloadModal}
+          onNavigateToDownload={handleNavigateToDownload}
         />
       )}
 
       <GlobalSearchModal
         isOpen={showGlobalSearch}
-        onClose={() => setShowGlobalSearch(false)}
+        onClose={handleCloseGlobalSearch}
         works={works}
         currentAudio={currentAudio}
         currentWork={selectedWork}

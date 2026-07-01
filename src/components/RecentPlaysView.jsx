@@ -31,7 +31,7 @@ const SkeletonItem = memo(() => {
 })
 SkeletonItem.displayName = 'SkeletonItem'
 
-export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onToast, onAutoPlay, onContinueListen }) {
+const RecentPlaysView = memo(function RecentPlaysView({ works, onSelectWork, onPlayAudio, onToast, onAutoPlay, onContinueListen }) {
   const [recentList, setRecentList] = useState([])
   const [loading, setLoading] = useState(true)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -341,4 +341,6 @@ export default function RecentPlaysView({ works, onSelectWork, onPlayAudio, onTo
       )}
     </div>
   )
-}
+})
+
+export default RecentPlaysView
