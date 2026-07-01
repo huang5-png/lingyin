@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useRef, useCallback, memo, useState } from 'react'
 import { findCurrentCue, formatTime } from '../utils/subtitleParser'
 import UpscaledImage from './UpscaledImage'
+import SpectrumVisualizer from './SpectrumVisualizer'
 import './ImmersiveView.css'
 
 function throttle(fn, delay) {
@@ -40,6 +41,10 @@ const ImmersiveView = memo(function ImmersiveView({
   sleepTimerActive = false,
   sleepTimerStatusText = '',
   onToggleSleepTimer,
+  // 频谱可视化相关
+  showSpectrum = true,
+  spectrumMode = 'bars',
+  spectrumSensitivity = 1.5,
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
@@ -48,6 +53,7 @@ const ImmersiveView = memo(function ImmersiveView({
   const [showVolumeSlider, setShowVolumeSlider] = useState(false)
   const [showRateMenu, setShowRateMenu] = useState(false)
   const [volume, setVolume] = useState(0.8)
+  const [audioElement, setAudioElement] = useState(null)
   const progressRef = useRef(null)
 
   if (!seekThrottleRef.current) {
@@ -118,6 +124,10 @@ const ImmersiveView = memo(function ImmersiveView({
   useEffect(() => {
     if (playerRef.current) {
       setVolume(playerRef.current.getVolume?.() || 0.8)
+      const audio = playerRef.current.getAudioElement?.()
+      if (audio) {
+        setAudioElement(audio)
+      }
     }
   }, [playerRef, isPlaying])
 
@@ -254,6 +264,20 @@ const ImmersiveView = memo(function ImmersiveView({
       </div>
 
       <div className={`immersive-bottom ${showControls ? 'controls-visible' : ''}`}>
+        {showSpectrum && audioElement && (
+          <div className="immersive-spectrum-bg">
+            <SpectrumVisualizer
+              audioElement={audioElement}
+              mode={spectrumMode}
+              sensitivity={spectrumSensitivity}
+              height={120}
+              showBg={false}
+              barCount={96}
+              colorStart="rgba(201, 100, 66, 0.3)"
+              colorEnd="rgba(236, 72, 153, 0.6)"
+            />
+          </div>
+        )}
         <div className="immersive-bottom-inner">
           <div className="immersive-info-row">
             <div className="immersive-info-text">
