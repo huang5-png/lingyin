@@ -14,7 +14,9 @@ import GlobalSearchModal from './components/GlobalSearchModal'
 import Toast from './components/Toast'
 import AddToPlaylistModal from './components/AddToPlaylistModal'
 import SettingsModal from './components/SettingsModal'
+import TagManagerModal from './components/TagManagerModal'
 import { useAppState } from './hooks/useAppState'
+import { useTags } from './hooks/useTags'
 import './App.css'
 
 export default function App() {
@@ -111,10 +113,14 @@ export default function App() {
     cvFilter,
     circleFilter,
     tagFilter,
+    tagFilterMode,
     allCVs,
     allCircles,
+    allTags,
     filteredWorks,
     handleFilterChange,
+    handleClearFilter,
+    handleToggleTagFilter,
 
     // 排序
     librarySortBy,
@@ -323,6 +329,36 @@ export default function App() {
     handleFilterChange('circle', circle)
   }, [handleFilterChange])
 
+  const [showTagManager, setShowTagManager] = useState(false)
+
+  const {
+    allTags: allTagsWithMeta,
+    loading: tagsLoading,
+    loadTags,
+    setTagColor,
+    renameTag,
+    mergeTags,
+    deleteTag,
+    addTagToWork,
+    removeTagFromWork,
+    batchAddTags,
+    batchRemoveTags,
+    getTagColor,
+  } = useTags({
+    onToast: showToast,
+    onRefreshWorks: () => {
+      // 标签操作后刷新作品列表
+    },
+  })
+
+  const handleOpenTagManager = useCallback(() => {
+    setShowTagManager(true)
+  }, [])
+
+  const handleCloseTagManager = useCallback(() => {
+    setShowTagManager(false)
+  }, [])
+
   const selectedWorkIsFavorite = useMemo(() => {
     return isFavorite(selectedWork?.id)
   }, [isFavorite, selectedWork?.id])
@@ -407,9 +443,19 @@ export default function App() {
     // 筛选相关
     onFilterCV: handleFilterCV,
     onFilterTag: handleFilterTag,
+    onToggleTagFilter: handleToggleTagFilter,
     onCircleClick: handleCircleClick,
     activeCV: cvFilter,
     activeTag: tagFilter,
+    tagFilterMode,
+    onTagFilterModeChange: setTagFilterMode,
+    allTagsForFilter: allTags,
+    // 标签操作
+    onAddTagToWork: addTagToWork,
+    onRemoveTagFromWork: removeTagFromWork,
+    allTagsWithMeta: allTagsWithMeta,
+    getTagColor,
+    onOpenTagManager: handleOpenTagManager,
     // 设置
     settings,
   }), [
@@ -422,7 +468,9 @@ export default function App() {
     selectedWork, selectedWorkIsFavorite, handleCloseDetail,
     bookmarks, addBookmark, updateBookmark, deleteBookmark,
     rightPanelWidth, handleSplitterMouseDown, rightTab, setRightTab,
-    handleFilterCV, handleFilterTag, handleCircleClick, cvFilter, tagFilter,
+    handleFilterCV, handleFilterTag, handleToggleTagFilter, handleCircleClick, cvFilter, tagFilter,
+    tagFilterMode, allTags, allTagsWithMeta, addTagToWork, removeTagFromWork, getTagColor,
+    handleOpenTagManager,
     settings,
   ])
 
@@ -460,6 +508,7 @@ export default function App() {
           currentView={currentView}
           onViewChange={setCurrentView}
           onOpenSettings={handleOpenSettings}
+          onOpenTagManager={handleOpenTagManager}
           lastPlayedAudio={lastPlayedAudio}
           onContinueListen={handleContinueListenLast}
         />
@@ -710,6 +759,18 @@ export default function App() {
         onSave={handleSaveSettings}
         currentSettings={settings}
         defaultTab={settingsDefaultTab}
+      />
+
+      <TagManagerModal
+        isOpen={showTagManager}
+        onClose={handleCloseTagManager}
+        allTags={allTagsWithMeta}
+        loading={tagsLoading}
+        onSetColor={setTagColor}
+        onRename={renameTag}
+        onMerge={mergeTags}
+        onDelete={deleteTag}
+        onRefresh={loadTags}
       />
 
       {showDownloadModal && selectedWork && selectedWork.isOnline && (

@@ -882,10 +882,14 @@ export function useAppState() {
     cvFilter,
     circleFilter,
     tagFilter,
+    tagFilterMode,
     allCVs,
     allCircles,
+    allTags,
     filteredWorks,
     handleFilterChange,
+    handleClearFilter,
+    handleToggleTagFilter,
 
     // 排序
     librarySortBy: settings?.librarySortBy || 'createdAt',
