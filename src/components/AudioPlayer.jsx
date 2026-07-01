@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useImperativeHandle, forwardRef, memo } fr
 import WaveSurfer from 'wavesurfer.js'
 import { formatTime } from '../utils/subtitleParser'
 import QueuePanel from './QueuePanel'
+import SpectrumVisualizer from './SpectrumVisualizer'
 import './AudioPlayer.css'
 
 
@@ -45,12 +46,18 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     playbackRate = 1, onPlaybackRateChange,
     // 书签相关
     onAddBookmark, hasCurrentBookmark = false, bookmarkCount = 0, onToggleBookmarksTab,
+    // 频谱可视化相关
+    showSpectrum = true,
+    spectrumMode = 'bars',
+    spectrumSensitivity = 1.5,
   },
   ref,
 ) {
   const waveformRef = useRef(null)
   const waveformContainerRef = useRef(null)
   const wavesurferRef = useRef(null)
+  const audioElementRef = useRef(null)
+  const [audioElementReady, setAudioElementReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -106,6 +113,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     },
     getPlaybackRate: () => playbackRate,
     isPlaying: () => isPlaying,
+    getAudioElement: () => audioElementRef.current,
   }))
 
   const handlePlayPause = () => {
@@ -175,6 +183,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
       if (!waveformRef.current || !audioPath) return
 
       setIsReady(false)
+      setAudioElementReady(false)
       setCurrentTime(0)
       setDuration(0)
       setError(null)
@@ -216,6 +225,12 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           setIsReady(true)
           const dur = ws.getDuration()
           setDuration(dur)
+
+          const media = ws.getMediaElement?.()
+          if (media) {
+            audioElementRef.current = media
+            setAudioElementReady(true)
+          }
 
           ws.setPlaybackRate(playbackRate)
           ws.play()
@@ -350,6 +365,18 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           >
             {formatTime(tooltipTime)}
           </div>
+          {showSpectrum && audioElementReady && audioElementRef.current && (
+            <div className="spectrum-container">
+              <SpectrumVisualizer
+                audioElement={audioElementRef.current}
+                mode={spectrumMode}
+                sensitivity={spectrumSensitivity}
+                height={40}
+                showBg={false}
+                barCount={48}
+              />
+            </div>
+          )}
         </div>
 
         <div className="player-controls">
