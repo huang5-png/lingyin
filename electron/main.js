@@ -1745,11 +1745,18 @@ ipcMain.handle('download:getState', async () => {
 // 取消下载任务
 ipcMain.handle('download:cancelTask', async (_, taskId) => {
   if (activeDownloadTask && activeDownloadTask.id === taskId) {
-    // 取消所有正在进行的下载
+    activeDownloadTask.status = 'cancelled'
+    activeDownloadTask.files.forEach((f) => {
+      if (f.status === 'pending' || f.status === 'downloading') {
+        f.status = 'cancelled'
+        f.error = '已取消'
+      }
+    })
     for (const controller of activeAbortControllers) {
       try { controller.abort() } catch (e) {}
     }
     activeAbortControllers.clear()
+    broadcastDownloadState()
     return true
   }
   const idx = downloadQueue.findIndex((t) => t.id === taskId)

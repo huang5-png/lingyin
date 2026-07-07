@@ -4,6 +4,8 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let saveLock = Promise.resolve()
+let saveInProgress = false
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -40,11 +42,17 @@ async function initDB() {
   return dbData
 }
 
-function saveDB() {
+async function saveDB() {
+  if (saveInProgress) {
+    return
+  }
+  saveInProgress = true
   try {
     fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
   } catch (e) {
     console.error('Save DB error:', e)
+  } finally {
+    saveInProgress = false
   }
 }
 

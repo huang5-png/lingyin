@@ -120,10 +120,15 @@ export function usePlayer({
         const now = Date.now()
         if (!currentAudio.isOnline && now - lastSaveTimeRef.current > PROGRESS_SAVE_INTERVAL) {
           lastSaveTimeRef.current = now
-          window.electronAPI.dbSaveProgress(selectedWork.id, currentAudio.path, {
-            currentTime: time,
-            duration: durationRef.current,
-          })
+          const currentWorkId = selectedWork.id
+          const currentAudioPath = currentAudio.path
+          const currentDuration = durationRef.current
+          setTimeout(() => {
+            window.electronAPI.dbSaveProgress(currentWorkId, currentAudioPath, {
+              currentTime: time,
+              duration: currentDuration,
+            })
+          }, 0)
         }
         recordHistoryIfNeeded(selectedWork, currentAudio, now)
       }

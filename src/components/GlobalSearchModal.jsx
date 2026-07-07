@@ -463,11 +463,9 @@ const GlobalSearchModal = memo(function GlobalSearchModal({
   const showHistory = !debouncedQuery.trim() && (searchHistory.length > 0 || playingResult)
   const showLoadingMore = isOnlineLoading && debouncedQuery.trim()
 
-  let flatIndex = -1
-  const getFlatIndex = () => {
-    flatIndex++
-    return flatIndex
-  }
+  const getFlatIndex = useCallback((index, offset = 0) => {
+    return offset + index
+  }, [])
 
   const getResultIcon = (type) => {
     switch (type) {
@@ -683,18 +681,21 @@ const GlobalSearchModal = memo(function GlobalSearchModal({
 
         {debouncedQuery.trim() && (allResults.length > 0 || showLoadingMore) && (
           <div className="global-search-results" ref={listRef}>
-            {groupedResults.map((group, gi) => (
-              <div key={gi} className="search-results-group">
-                <div className="results-section-title">
-                  {group.title}
-                  <span className="results-count">{group.items.length}</span>
+            {(() => {
+              let offset = 0
+              return groupedResults.map((group, gi) => (
+                <div key={gi} className="search-results-group">
+                  <div className="results-section-title">
+                    {group.title}
+                    <span className="results-count">{group.items.length}</span>
+                  </div>
+                  {group.items.map((result, ii) => {
+                    const idx = offset + ii
+                    return renderResultItem(result, idx)
+                  })}
                 </div>
-                {group.items.map((result) => {
-                  const idx = getFlatIndex()
-                  return renderResultItem(result, idx)
-                })}
-              </div>
-            ))}
+              ))
+            })()}
             {showLoadingMore && (
               <div className="search-loading-more">
                 <div className="loading-spinner-small"></div>
