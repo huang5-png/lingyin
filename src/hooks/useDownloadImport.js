@@ -25,7 +25,7 @@ export function useDownloadImport({ showToast, autoImportDownloaded, works, load
 
               if (folderInfo.audioFiles.length > 0) {
                 const rjCode = data.rjCode || ''
-                const workId = rjCode || `local_${Date.now()}`
+                const workId = rjCode || `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
                 const existing = works.find(w => w.id === workId || w.folderPath === folderPath)
                 if (!existing) {

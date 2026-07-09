@@ -940,7 +940,14 @@ ipcMain.handle('log:openFolder', async () => {
 })
 
 ipcMain.handle('shell:openExternal', async (_, url) => {
+  if (!url || typeof url !== 'string') return false
+  const safeProtocols = ['http:', 'https:', 'mailto:', 'ftp:', 'ftps:']
   try {
+    const parsed = new URL(url)
+    if (!safeProtocols.includes(parsed.protocol)) {
+      logger.warn('Blocked unsafe URL protocol:', parsed.protocol)
+      return false
+    }
     await shell.openExternal(url)
     return true
   } catch (e) {
@@ -1369,6 +1376,11 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       if (writer && writer.destroy) {
         writer.destroy()
       }
+      try {
+        if (fs.existsSync(finalPath)) {
+          fs.unlinkSync(finalPath)
+        }
+      } catch (_) {}
     }
     signal.addEventListener('abort', onAbort)
 
@@ -1546,6 +1558,11 @@ async function downloadFileInTask(task, file, fileIndex) {
       const onAbort = () => {
         if (response.data && response.data.destroy) response.data.destroy()
         if (writer && writer.destroy) writer.destroy()
+        try {
+          if (fs.existsSync(finalPath)) {
+            fs.unlinkSync(finalPath)
+          }
+        } catch (_) {}
       }
       signal.addEventListener('abort', onAbort)
 

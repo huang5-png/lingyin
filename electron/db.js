@@ -42,9 +42,15 @@ async function initDB() {
 
 function saveDB() {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    const tmpPath = dbPath + '.tmp'
+    fs.writeFileSync(tmpPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    fs.renameSync(tmpPath, dbPath)
   } catch (e) {
     console.error('Save DB error:', e)
+    try {
+      const tmpPath = dbPath + '.tmp'
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
+    } catch (_) {}
   }
 }
 
@@ -1654,7 +1660,11 @@ async function importData(jsonString, mode = 'merge') {
           if (!dbData[key] || typeof dbData[key] !== 'object') {
             dbData[key] = {}
           }
-          Object.assign(dbData[key], imported)
+          for (const [k, v] of Object.entries(imported)) {
+            if (!(k in dbData[key])) {
+              dbData[key][k] = v
+            }
+          }
           importedKeys.push(key)
         } else {
           if (dbData[key] === undefined || dbData[key] === null) {
