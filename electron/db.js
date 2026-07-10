@@ -4,6 +4,28 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let writeLock = null
+let writeQueue = []
+
+function acquireWriteLock() {
+  return new Promise((resolve) => {
+    if (!writeLock) {
+      writeLock = true
+      resolve()
+    } else {
+      writeQueue.push(resolve)
+    }
+  })
+}
+
+function releaseWriteLock() {
+  if (writeQueue.length > 0) {
+    const nextResolve = writeQueue.shift()
+    nextResolve()
+  } else {
+    writeLock = null
+  }
+}
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -40,11 +62,15 @@ async function initDB() {
   return dbData
 }
 
-function saveDB() {
+async function saveDB() {
+  await acquireWriteLock()
   try {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true })
     fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
   } catch (e) {
     console.error('Save DB error:', e)
+  } finally {
+    releaseWriteLock()
   }
 }
 
@@ -1651,11 +1677,15 @@ async function importData(jsonString, mode = 'merge') {
           }
           importedKeys.push(key)
         } else if (imported && typeof imported === 'object' && !Array.isArray(imported)) {
-          if (!dbData[key] || typeof dbData[key] !== 'object') {
-            dbData[key] = {}
+          if (Array.isArray(dbData[key])) {
+            skippedKeys.push(key)
+          } else {
+            if (!dbData[key] || typeof dbData[key] !== 'object') {
+              dbData[key] = {}
+            }
+            Object.assign(dbData[key], imported)
+            importedKeys.push(key)
           }
-          Object.assign(dbData[key], imported)
-          importedKeys.push(key)
         } else {
           if (dbData[key] === undefined || dbData[key] === null) {
             dbData[key] = imported
@@ -1684,6 +1714,7 @@ async function importData(jsonString, mode = 'merge') {
 module.exports = {
   initDB,
   getDB,
+  saveDB,
   getAllWorks,
   addWork,
   updateWork,

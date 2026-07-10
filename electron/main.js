@@ -9,6 +9,13 @@ const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require(
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const logger = require('./logger')
 
+function isValidFilePath(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false
+  const normalized = path.normalize(filePath)
+  if (normalized.includes('..')) return false
+  return true
+}
+
 // 创建 keep-alive agent，复用连接，减少 ECONNRESET
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 })
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 })
@@ -524,6 +531,10 @@ ipcMain.handle('dialog:openDirectory', async () => {
 })
 
 ipcMain.handle('fs:readDir', async (_, dirPath) => {
+  if (!isValidFilePath(dirPath)) {
+    logger.warn('Invalid path for fs:readDir:', dirPath)
+    return []
+  }
   try {
     const files = fs.readdirSync(dirPath, { withFileTypes: true })
     return files.map((f) => ({
@@ -537,6 +548,10 @@ ipcMain.handle('fs:readDir', async (_, dirPath) => {
 })
 
 ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
+  if (!isValidFilePath(filePath)) {
+    logger.warn('Invalid path for fs:readFile:', filePath)
+    return null
+  }
   try {
     return fs.readFileSync(filePath, encoding)
   } catch (e) {
@@ -566,10 +581,18 @@ ipcMain.handle('dialog:openSubtitleFile', async () => {
 })
 
 ipcMain.handle('fs:fileExists', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) {
+    logger.warn('Invalid path for fs:fileExists:', filePath)
+    return false
+  }
   return fs.existsSync(filePath)
 })
 
 ipcMain.handle('fs:stat', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) {
+    logger.warn('Invalid path for fs:stat:', filePath)
+    return null
+  }
   try {
     const stat = fs.statSync(filePath)
     return {
@@ -1262,6 +1285,10 @@ ipcMain.handle('asmrOne:getTags', async () => {
 })
 
 ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) {
+    logger.warn('Invalid path for fs:readAudioBuffer:', filePath)
+    return null
+  }
   try {
     const buffer = fs.readFileSync(filePath)
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
@@ -1273,6 +1300,10 @@ ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
 })
 
 ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) {
+    logger.warn('Invalid path for fs:getAudioDuration:', filePath)
+    return 0
+  }
   try {
     const pf = await getParseFile()
     const metadata = await pf(filePath, { duration: true })
@@ -1282,9 +1313,6 @@ ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
     return 0
   }
 })
-
-// 全局下载取消控制器
-let downloadAbortController = null
 
 // 下载队列的取消控制器集合（支持多线程并发取消）
 let activeAbortControllers = new Set()
@@ -1304,9 +1332,9 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
     const finalPath = path.join(targetDir, fileName)
     logger.info('[下载] 完整路径:', finalPath)
 
-    // 创建取消控制器
-    downloadAbortController = new AbortController()
-    const signal = downloadAbortController.signal
+    const abortController = new AbortController()
+    activeAbortControllers.add(abortController)
+    const signal = abortController.signal
 
     logger.info('[下载] 发起请求...')
     const proxy = await getProxyConfig()
@@ -1360,7 +1388,10 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
     response.data.pipe(writer)
 
-    // 监听取消信号
+    const cleanup = () => {
+      activeAbortControllers.delete(abortController)
+    }
+
     const onAbort = () => {
       logger.info('[下载] 用户取消:', fileName)
       if (response.data && response.data.destroy) {
@@ -1374,6 +1405,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
     await new Promise((resolve, reject) => {
       writer.on('finish', () => {
+        cleanup()
         logger.info('[下载] 完成:', fileName, '共', downloaded, '字节')
         signal.removeEventListener('abort', onAbort)
         try {
@@ -1384,6 +1416,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
         resolve()
       })
       writer.on('error', (err) => {
+        cleanup()
         signal.removeEventListener('abort', onAbort)
         if (signal.aborted) {
           reject(new Error('已取消'))
@@ -1393,6 +1426,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
         }
       })
       response.data.on('error', (err) => {
+        cleanup()
         signal.removeEventListener('abort', onAbort)
         if (signal.aborted) {
           reject(new Error('已取消'))
@@ -1403,10 +1437,8 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       })
     })
 
-    downloadAbortController = null
     return { success: true, path: finalPath, size: downloaded }
   } catch (e) {
-    downloadAbortController = null
     logger.error('[下载] 失败:', fileName, e.message, e.code)
     return { success: false, error: e.message || '下载失败', cancelled: e.message === '已取消' }
   }
@@ -1414,11 +1446,15 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
 // 取消当前下载
 ipcMain.handle('asmrOne:cancelDownload', async () => {
-  if (downloadAbortController) {
-    downloadAbortController.abort()
-    return true
+  let cancelled = false
+  for (const controller of activeAbortControllers) {
+    try {
+      controller.abort()
+      cancelled = true
+    } catch (e) {}
   }
-  return false
+  activeAbortControllers.clear()
+  return cancelled
 })
 
 // 选择下载目录
