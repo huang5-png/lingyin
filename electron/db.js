@@ -4,6 +4,7 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let writeLock = null
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -30,7 +31,7 @@ async function initDB() {
       dbData = JSON.parse(content)
     } else {
       dbData = defaultData
-      saveDB()
+      await saveDB()
     }
   } catch (e) {
     console.error('Init DB error:', e)
@@ -40,11 +41,21 @@ async function initDB() {
   return dbData
 }
 
-function saveDB() {
+async function saveDB() {
+  while (writeLock) {
+    await writeLock
+  }
+  let resolveLock = null
+  writeLock = new Promise((resolve) => {
+    resolveLock = resolve
+  })
   try {
     fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
   } catch (e) {
     console.error('Save DB error:', e)
+  } finally {
+    writeLock = null
+    if (resolveLock) resolveLock()
   }
 }
 
@@ -82,7 +93,47 @@ async function deleteWork(id) {
   const index = dbData.works.findIndex((w) => w.id === id)
   if (index > -1) {
     dbData.works.splice(index, 1)
-    saveDB()
+
+    const prefix = `${id}::`
+    for (const key of Object.keys(dbData.progress)) {
+      if (key.startsWith(prefix)) {
+        delete dbData.progress[key]
+      }
+    }
+
+    for (const key of Object.keys(dbData.subtitles)) {
+      if (key.startsWith(prefix)) {
+        delete dbData.subtitles[key]
+      }
+    }
+
+    for (const key of Object.keys(dbData.translateCache)) {
+      if (key.startsWith(prefix)) {
+        delete dbData.translateCache[key]
+      }
+    }
+
+    if (dbData.bookmarks) {
+      dbData.bookmarks = dbData.bookmarks.filter((b) => b.workId !== id)
+    }
+
+    if (dbData.history) {
+      dbData.history = dbData.history.filter((h) => h.workId !== id)
+    }
+
+    if (dbData.favorites) {
+      dbData.favorites = dbData.favorites.filter((f) => f.workId !== id)
+    }
+
+    if (dbData.playlists) {
+      for (const playlist of dbData.playlists) {
+        if (playlist.items) {
+          playlist.items = playlist.items.filter((item) => item.workId !== id)
+        }
+      }
+    }
+
+    await saveDB()
     return true
   }
   return false
@@ -163,18 +214,17 @@ async function appendHistory(entry) {
     ts: entry.ts || Date.now(),
     workId: entry.workId || null,
     audioFile: entry.audioFile || '',
-    seconds: Math.max(0, Math.min(3600, Number(entry.seconds) || 0)),
+    seconds: Math.max(0, Number(entry.seconds) || 0),
     title: entry.title || '',
     cover: entry.cover || '',
     circle: entry.circle || '',
     cvs: Array.isArray(entry.cvs) ? entry.cvs : [],
     tags: Array.isArray(entry.tags) ? entry.tags : [],
   })
-  // Cap history size to avoid unbounded growth (keep last 20000 entries)
   if (dbData.history.length > 20000) {
     dbData.history = dbData.history.slice(-20000)
   }
-  saveDB()
+  await saveDB()
   return true
 }
 
@@ -513,13 +563,13 @@ async function clearAllHistory() {
 
 // 获取最近播放的作品（去重后按时间倒序），用于侧边栏快捷访问
 async function getRecentWorks(limit = 8) {
-  const history = dbData.history || []
-  const progressMap = dbData.progress || {}
+  const history = Array.isArray(dbData.history) ? dbData.history : []
+  const progressMap = typeof dbData.progress === 'object' && dbData.progress !== null ? dbData.progress : {}
   const seen = new Set()
   const recent = []
   for (let i = history.length - 1; i >= 0; i--) {
     const h = history[i]
-    if (!h || !h.workId) continue
+    if (!h || typeof h !== 'object' || !h.workId) continue
     if (seen.has(h.workId)) continue
     seen.add(h.workId)
     const audioFile = h.audioFile || ''
@@ -527,9 +577,9 @@ async function getRecentWorks(limit = 8) {
     const progress = progressMap[progressKey] || null
     let workProgress = 0
     let workDuration = 0
-    let workLastPlayed = h.ts
+    let workLastPlayed = h.ts || 0
     for (const [key, data] of Object.entries(progressMap)) {
-      if (key.startsWith(`${h.workId}::`)) {
+      if (key.startsWith(`${h.workId}::`) && data && typeof data === 'object') {
         workProgress += data.currentTime || 0
         workDuration += data.duration || 0
         if (data.lastPlayed && data.lastPlayed > workLastPlayed) {
@@ -543,16 +593,16 @@ async function getRecentWorks(limit = 8) {
       title: h.title || '',
       cover: h.cover || '',
       circle: h.circle || '',
-      cvs: h.cvs || [],
-      tags: h.tags || [],
+      cvs: Array.isArray(h.cvs) ? h.cvs : [],
+      tags: Array.isArray(h.tags) ? h.tags : [],
       lastPlayed: workLastPlayed,
       audioFile: audioFile,
       audioName: h.audioName || '',
-      currentTime: progress?.currentTime || 0,
-      duration: progress?.duration || 0,
-      percentage: progress && progress.duration > 0 ? Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)) : 0,
+      currentTime: progress && typeof progress === 'object' ? progress.currentTime || 0 : 0,
+      duration: progress && typeof progress === 'object' ? progress.duration || 0 : 0,
+      percentage: progress && typeof progress === 'object' && progress.duration > 0 ? Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)) : 0,
       workPercentage,
-      isUnfinished: progress && progress.duration > 0 && progress.currentTime > 0 && progress.currentTime < progress.duration * 0.95,
+      isUnfinished: progress && typeof progress === 'object' && progress.duration > 0 && progress.currentTime > 0 && progress.currentTime < progress.duration * 0.95,
     })
     if (recent.length >= limit) break
   }
@@ -561,32 +611,33 @@ async function getRecentWorks(limit = 8) {
 
 // 获取最近播放的音频（用于继续听功能）
 async function getLastPlayedAudio() {
-  const history = dbData.history || []
-  const progressMap = dbData.progress || {}
+  const history = Array.isArray(dbData.history) ? dbData.history : []
+  const progressMap = typeof dbData.progress === 'object' && dbData.progress !== null ? dbData.progress : {}
   for (let i = history.length - 1; i >= 0; i--) {
     const h = history[i]
-    if (!h || !h.workId || !h.audioFile) continue
+    if (!h || typeof h !== 'object' || !h.workId || !h.audioFile) continue
     const progressKey = `${h.workId}::${h.audioFile}`
     const progress = progressMap[progressKey]
-    if (progress && progress.duration > 0 && progress.currentTime > 0 && progress.currentTime < progress.duration * 0.95) {
+    if (progress && typeof progress === 'object' && progress.duration > 0 && progress.currentTime > 0 && progress.currentTime < progress.duration * 0.95) {
       return {
         workId: h.workId,
         title: h.title || '',
         cover: h.cover || '',
         circle: h.circle || '',
-        cvs: h.cvs || [],
-        tags: h.tags || [],
+        cvs: Array.isArray(h.cvs) ? h.cvs : [],
+        tags: Array.isArray(h.tags) ? h.tags : [],
         audioFile: h.audioFile,
         audioName: h.audioName || '',
-        currentTime: progress.currentTime,
-        duration: progress.duration,
+        currentTime: progress.currentTime || 0,
+        duration: progress.duration || 0,
         percentage: Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)),
-        lastPlayed: progress.lastPlayed || h.ts,
+        lastPlayed: progress.lastPlayed || h.ts || 0,
       }
     }
   }
   if (history.length > 0) {
     const h = history[history.length - 1]
+    if (!h || typeof h !== 'object' || !h.workId) return null
     const progressKey = `${h.workId}::${h.audioFile || ''}`
     const progress = progressMap[progressKey] || {}
     return {
@@ -594,14 +645,14 @@ async function getLastPlayedAudio() {
       title: h.title || '',
       cover: h.cover || '',
       circle: h.circle || '',
-      cvs: h.cvs || [],
-      tags: h.tags || [],
+      cvs: Array.isArray(h.cvs) ? h.cvs : [],
+      tags: Array.isArray(h.tags) ? h.tags : [],
       audioFile: h.audioFile || '',
       audioName: h.audioName || '',
-      currentTime: progress.currentTime || 0,
-      duration: progress.duration || 0,
-      percentage: progress.duration > 0 ? Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)) : 0,
-      lastPlayed: progress.lastPlayed || h.ts,
+      currentTime: progress && typeof progress === 'object' ? progress.currentTime || 0 : 0,
+      duration: progress && typeof progress === 'object' ? progress.duration || 0 : 0,
+      percentage: progress && typeof progress === 'object' && progress.duration > 0 ? Math.min(100, Math.round((progress.currentTime / progress.duration) * 100)) : 0,
+      lastPlayed: (progress && typeof progress === 'object' ? progress.lastPlayed : 0) || h.ts || 0,
     }
   }
   return null

@@ -1283,8 +1283,8 @@ ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
   }
 })
 
-// 全局下载取消控制器
-let downloadAbortController = null
+// 下载取消控制器 Map（支持多任务独立取消）
+const downloadAbortControllers = new Map()
 
 // 下载队列的取消控制器集合（支持多线程并发取消）
 let activeAbortControllers = new Set()
@@ -1304,9 +1304,9 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
     const finalPath = path.join(targetDir, fileName)
     logger.info('[下载] 完整路径:', finalPath)
 
-    // 创建取消控制器
-    downloadAbortController = new AbortController()
-    const signal = downloadAbortController.signal
+    const controller = new AbortController()
+    downloadAbortControllers.set('single', controller)
+    const signal = controller.signal
 
     logger.info('[下载] 发起请求...')
     const proxy = await getProxyConfig()
@@ -1360,7 +1360,6 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
     response.data.pipe(writer)
 
-    // 监听取消信号
     const onAbort = () => {
       logger.info('[下载] 用户取消:', fileName)
       if (response.data && response.data.destroy) {
@@ -1376,6 +1375,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       writer.on('finish', () => {
         logger.info('[下载] 完成:', fileName, '共', downloaded, '字节')
         signal.removeEventListener('abort', onAbort)
+        downloadAbortControllers.delete('single')
         try {
           event.sender.send('download:progress', { 
             fileName, progress: 100, downloaded, totalLength, speed: 0
@@ -1385,6 +1385,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       })
       writer.on('error', (err) => {
         signal.removeEventListener('abort', onAbort)
+        downloadAbortControllers.delete('single')
         if (signal.aborted) {
           reject(new Error('已取消'))
         } else {
@@ -1394,6 +1395,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       })
       response.data.on('error', (err) => {
         signal.removeEventListener('abort', onAbort)
+        downloadAbortControllers.delete('single')
         if (signal.aborted) {
           reject(new Error('已取消'))
         } else {
@@ -1403,10 +1405,9 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       })
     })
 
-    downloadAbortController = null
     return { success: true, path: finalPath, size: downloaded }
   } catch (e) {
-    downloadAbortController = null
+    downloadAbortControllers.delete('single')
     logger.error('[下载] 失败:', fileName, e.message, e.code)
     return { success: false, error: e.message || '下载失败', cancelled: e.message === '已取消' }
   }
@@ -1414,8 +1415,9 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
 // 取消当前下载
 ipcMain.handle('asmrOne:cancelDownload', async () => {
-  if (downloadAbortController) {
-    downloadAbortController.abort()
+  const controller = downloadAbortControllers.get('single')
+  if (controller) {
+    controller.abort()
     return true
   }
   return false
