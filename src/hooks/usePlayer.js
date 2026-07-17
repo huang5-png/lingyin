@@ -31,12 +31,18 @@ export function usePlayer({
 
   const lastSaveTimeRef = useRef(0)
   const durationRef = useRef(0)
+  const seekTimerRef = useRef(null)
   const internalHandleSelectAudioRef = useRef(null)
   const handleSelectAudioRef = externalHandleSelectAudioRef || internalHandleSelectAudioRef
 
   const handleSelectAudio = useCallback(
     async (audio) => {
       if (!selectedWork) return
+
+      if (seekTimerRef.current) {
+        clearInterval(seekTimerRef.current)
+        seekTimerRef.current = null
+      }
 
       setPlayingWork(selectedWork)
       setCurrentAudio(audio)
@@ -88,9 +94,14 @@ export function usePlayer({
               if (playerRef.current && playerRef.current.getDuration() > 0) {
                 playerRef.current.seekTo(targetTime)
                 clearInterval(checkAndSeek)
+                seekTimerRef.current = null
               }
             }, 200)
-            setTimeout(() => clearInterval(checkAndSeek), 10000)
+            setTimeout(() => {
+              clearInterval(checkAndSeek)
+              seekTimerRef.current = null
+            }, 10000)
+            seekTimerRef.current = checkAndSeek
           }
         } catch (e) {
           console.error('Failed to load progress:', e)

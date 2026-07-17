@@ -291,13 +291,20 @@ export function findAllSubtitlesForAudio(audioName, subtitleFiles, audioPath) {
   return results
 }
 
-async function scanRecursive(dirPath, baseDir) {
+const MAX_RECURSION_DEPTH = 30
+
+async function scanRecursive(dirPath, baseDir, depth = 0) {
+  if (depth > MAX_RECURSION_DEPTH) {
+    console.warn('Max recursion depth exceeded for:', dirPath)
+    return { audioFiles: [], subtitleFiles: [] }
+  }
+
   const result = { audioFiles: [], subtitleFiles: [] }
   const files = await window.electronAPI.readDir(dirPath)
 
   for (const file of files) {
     if (file.isDirectory) {
-      const subResult = await scanRecursive(file.path, baseDir)
+      const subResult = await scanRecursive(file.path, baseDir, depth + 1)
       result.audioFiles.push(...subResult.audioFiles)
       result.subtitleFiles.push(...subResult.subtitleFiles)
     } else if (isAudioFile(file.name)) {

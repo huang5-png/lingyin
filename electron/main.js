@@ -1283,11 +1283,8 @@ ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
   }
 })
 
-// 全局下载取消控制器
-let downloadAbortController = null
-
-// 下载队列的取消控制器集合（支持多线程并发取消）
-let activeAbortControllers = new Set()
+// 下载取消控制器映射（支持多个并发下载）
+let downloadAbortControllers = new Map()
 
 // ===== ASMR-One 文件下载 =====
 // 下载单个文件到指定目录，支持进度回调
@@ -1305,8 +1302,10 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
     logger.info('[下载] 完整路径:', finalPath)
 
     // 创建取消控制器
-    downloadAbortController = new AbortController()
-    const signal = downloadAbortController.signal
+    const abortController = new AbortController()
+    const signal = abortController.signal
+    const taskKey = `${url}_${fileName}`
+    downloadAbortControllers.set(taskKey, abortController)
 
     logger.info('[下载] 发起请求...')
     const proxy = await getProxyConfig()
@@ -1373,9 +1372,13 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
     signal.addEventListener('abort', onAbort)
 
     await new Promise((resolve, reject) => {
-      writer.on('finish', () => {
-        logger.info('[下载] 完成:', fileName, '共', downloaded, '字节')
+      const cleanup = () => {
         signal.removeEventListener('abort', onAbort)
+        downloadAbortControllers.delete(taskKey)
+      }
+      writer.on('finish', () => {
+        cleanup()
+        logger.info('[下载] 完成:', fileName, '共', downloaded, '字节')
         try {
           event.sender.send('download:progress', { 
             fileName, progress: 100, downloaded, totalLength, speed: 0
@@ -1384,7 +1387,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
         resolve()
       })
       writer.on('error', (err) => {
-        signal.removeEventListener('abort', onAbort)
+        cleanup()
         if (signal.aborted) {
           reject(new Error('已取消'))
         } else {
@@ -1393,7 +1396,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
         }
       })
       response.data.on('error', (err) => {
-        signal.removeEventListener('abort', onAbort)
+        cleanup()
         if (signal.aborted) {
           reject(new Error('已取消'))
         } else {
@@ -1403,10 +1406,9 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
       })
     })
 
-    downloadAbortController = null
     return { success: true, path: finalPath, size: downloaded }
   } catch (e) {
-    downloadAbortController = null
+    downloadAbortControllers.delete(taskKey)
     logger.error('[下载] 失败:', fileName, e.message, e.code)
     return { success: false, error: e.message || '下载失败', cancelled: e.message === '已取消' }
   }
@@ -1414,11 +1416,15 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
 // 取消当前下载
 ipcMain.handle('asmrOne:cancelDownload', async () => {
-  if (downloadAbortController) {
-    downloadAbortController.abort()
-    return true
+  let cancelled = false
+  for (const [key, controller] of downloadAbortControllers) {
+    try {
+      controller.abort()
+      cancelled = true
+    } catch (e) {}
   }
-  return false
+  downloadAbortControllers.clear()
+  return cancelled
 })
 
 // 选择下载目录
@@ -1484,6 +1490,7 @@ function broadcastDownloadState() {
 
 async function downloadFileInTask(task, file, fileIndex) {
   return new Promise(async (resolve, reject) => {
+    let abortController = null
     try {
       const targetDir = file.savePath
       if (!fs.existsSync(targetDir)) {
@@ -1491,7 +1498,7 @@ async function downloadFileInTask(task, file, fileIndex) {
       }
       const finalPath = path.join(targetDir, file.fileName)
 
-      const abortController = new AbortController()
+      abortController = new AbortController()
       activeAbortControllers.add(abortController)
       const signal = abortController.signal
 
@@ -1589,6 +1596,9 @@ async function downloadFileInTask(task, file, fileIndex) {
         }
       })
     } catch (e) {
+      if (abortController) {
+        activeAbortControllers.delete(abortController)
+      }
       file.status = 'failed'
       file.error = e.message || '下载失败'
       reject(e)
