@@ -7,6 +7,8 @@ let dbPath = ''
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
+  const tmpPath = dbPath + '.tmp'
+  const backupPath = dbPath + '.bak'
 
   const defaultData = {
     works: [],
@@ -25,6 +27,27 @@ async function initDB() {
   }
 
   try {
+    if (fs.existsSync(tmpPath)) {
+      if (fs.existsSync(dbPath)) {
+        try {
+          const mainContent = fs.readFileSync(dbPath, 'utf-8')
+          JSON.parse(mainContent)
+          fs.unlinkSync(tmpPath)
+        } catch (_) {
+          fs.unlinkSync(dbPath)
+          fs.renameSync(tmpPath, dbPath)
+        }
+      } else {
+        try {
+          const tmpContent = fs.readFileSync(tmpPath, 'utf-8')
+          JSON.parse(tmpContent)
+          fs.renameSync(tmpPath, dbPath)
+        } catch (_) {
+          fs.unlinkSync(tmpPath)
+        }
+      }
+    }
+
     if (fs.existsSync(dbPath)) {
       const content = fs.readFileSync(dbPath, 'utf-8')
       dbData = JSON.parse(content)
@@ -34,7 +57,18 @@ async function initDB() {
     }
   } catch (e) {
     console.error('Init DB error:', e)
-    dbData = defaultData
+    if (fs.existsSync(dbPath) && fs.existsSync(backupPath)) {
+      try {
+        const backupContent = fs.readFileSync(backupPath, 'utf-8')
+        dbData = JSON.parse(backupContent)
+        console.error('Recovered from backup')
+      } catch (e2) {
+        console.error('Backup recovery failed:', e2)
+        dbData = defaultData
+      }
+    } else {
+      dbData = defaultData
+    }
   }
 
   return dbData
@@ -42,7 +76,22 @@ async function initDB() {
 
 function saveDB() {
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    const tmpPath = dbPath + '.tmp'
+    const backupPath = dbPath + '.bak'
+    const dataStr = JSON.stringify(dbData, null, 2)
+
+    fs.writeFileSync(tmpPath, dataStr, 'utf-8')
+
+    if (fs.existsSync(dbPath)) {
+      try {
+        if (fs.existsSync(backupPath)) {
+          fs.unlinkSync(backupPath)
+        }
+        fs.renameSync(dbPath, backupPath)
+      } catch (_) {}
+    }
+
+    fs.renameSync(tmpPath, dbPath)
   } catch (e) {
     console.error('Save DB error:', e)
   }
