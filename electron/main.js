@@ -523,7 +523,19 @@ ipcMain.handle('dialog:openDirectory', async () => {
   return result.canceled ? null : result.filePaths[0]
 })
 
+function validatePath(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false
+  if (filePath.includes('..')) return false
+  try {
+    const resolved = path.resolve(filePath)
+    return fs.existsSync(resolved)
+  } catch {
+    return false
+  }
+}
+
 ipcMain.handle('fs:readDir', async (_, dirPath) => {
+  if (!validatePath(dirPath)) return []
   try {
     const files = fs.readdirSync(dirPath, { withFileTypes: true })
     return files.map((f) => ({
@@ -537,6 +549,7 @@ ipcMain.handle('fs:readDir', async (_, dirPath) => {
 })
 
 ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
+  if (!validatePath(filePath)) return null
   try {
     return fs.readFileSync(filePath, encoding)
   } catch (e) {

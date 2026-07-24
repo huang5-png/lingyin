@@ -4,6 +4,7 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let saveQueue = Promise.resolve()
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -41,11 +42,16 @@ async function initDB() {
 }
 
 function saveDB() {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
-  } catch (e) {
-    console.error('Save DB error:', e)
-  }
+  saveQueue = saveQueue.then(() => {
+    try {
+      fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    } catch (e) {
+      console.error('Save DB error:', e)
+    }
+  }).catch((e) => {
+    console.error('Save DB queue error:', e)
+  })
+  return saveQueue
 }
 
 function getDB() {
@@ -82,6 +88,41 @@ async function deleteWork(id) {
   const index = dbData.works.findIndex((w) => w.id === id)
   if (index > -1) {
     dbData.works.splice(index, 1)
+
+    for (const key of Object.keys(dbData.progress || {})) {
+      if (key.startsWith(`${id}::`)) {
+        delete dbData.progress[key]
+      }
+    }
+
+    for (const key of Object.keys(dbData.subtitles || {})) {
+      if (key.startsWith(`${id}::`)) {
+        delete dbData.subtitles[key]
+      }
+    }
+
+    for (const key of Object.keys(dbData.translateCache || {})) {
+      if (key.startsWith(`${id}::`)) {
+        delete dbData.translateCache[key]
+      }
+    }
+
+    if (dbData.history) {
+      dbData.history = dbData.history.filter((h) => h.workId !== id)
+    }
+
+    if (dbData.bookmarks) {
+      dbData.bookmarks = dbData.bookmarks.filter((b) => b.workId !== id)
+    }
+
+    if (dbData.favorites) {
+      dbData.favorites = dbData.favorites.filter((f) => f.workId !== id)
+    }
+
+    if (dbData.playQueue) {
+      dbData.playQueue = dbData.playQueue.filter((q) => q.workId !== id)
+    }
+
     saveDB()
     return true
   }
@@ -1644,6 +1685,24 @@ async function importData(jsonString, mode = 'merge') {
                 existingIds.add(item.id)
               }
             }
+          } else if (key === 'history') {
+            for (const item of existingData) existingIds.add(item.ts + ':' + (item.workId || '') + ':' + (item.audioFile || ''))
+            for (const item of imported) {
+              const key = item.ts + ':' + (item.workId || '') + ':' + (item.audioFile || '')
+              if (!existingIds.has(key)) {
+                existingData.push(item)
+                existingIds.add(key)
+              }
+            }
+          } else if (key === 'playQueue') {
+            for (const item of existingData) existingIds.add(item.id || (item.workId + ':' + (item.audioPath || '')))
+            for (const item of imported) {
+              const key = item.id || (item.workId + ':' + (item.audioPath || ''))
+              if (!existingIds.has(key)) {
+                existingData.push(item)
+                existingIds.add(key)
+              }
+            }
           } else {
             for (const item of imported) {
               existingData.push(item)
@@ -1654,7 +1713,11 @@ async function importData(jsonString, mode = 'merge') {
           if (!dbData[key] || typeof dbData[key] !== 'object') {
             dbData[key] = {}
           }
-          Object.assign(dbData[key], imported)
+          for (const [k, v] of Object.entries(imported)) {
+            if (!(k in dbData[key])) {
+              dbData[key][k] = v
+            }
+          }
           importedKeys.push(key)
         } else {
           if (dbData[key] === undefined || dbData[key] === null) {
