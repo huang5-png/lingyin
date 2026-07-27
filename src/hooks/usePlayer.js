@@ -36,7 +36,7 @@ export function usePlayer({
 
   const handleSelectAudio = useCallback(
     async (audio) => {
-      if (!selectedWork) return
+      if (!selectedWork || !audio) return
 
       setPlayingWork(selectedWork)
       setCurrentAudio(audio)
@@ -62,6 +62,7 @@ export function usePlayer({
       if (selectedIndex >= 0 && updatedOptions[selectedIndex]) {
         try {
           const sub = updatedOptions[selectedIndex]
+          if (!sub.file?.path) return
           const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
           if (content) {
             const ext = getExtension(sub.file.name)
@@ -85,7 +86,7 @@ export function usePlayer({
           if (progress && progress.currentTime > 5 && progress.duration > 0) {
             const targetTime = progress.currentTime
             const checkAndSeek = setInterval(() => {
-              if (playerRef.current && playerRef.current.getDuration() > 0) {
+              if (playerRef.current && typeof playerRef.current.getDuration === 'function' && playerRef.current.getDuration() > 0) {
                 playerRef.current.seekTo(targetTime)
                 clearInterval(checkAndSeek)
               }

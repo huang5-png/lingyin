@@ -104,7 +104,9 @@ export function usePlayQueue({
   const advanceQueue = useCallback((direction = 1, isAutoFinish = false) => {
     if (queueIndex < 0 || playQueue.length === 0) return false
     if (isAutoFinish && loopMode === 'one') {
-      if (playerRef?.current) playerRef.current.seekTo?.(0)
+      if (playerRef?.current && typeof playerRef.current.seekTo === 'function') {
+        playerRef.current.seekTo(0)
+      }
       return true
     }
     if (shuffle && playQueue.length > 1) {

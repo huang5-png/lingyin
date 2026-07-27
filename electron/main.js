@@ -1289,11 +1289,20 @@ let downloadAbortController = null
 // 下载队列的取消控制器集合（支持多线程并发取消）
 let activeAbortControllers = new Set()
 
+function sanitizeFileName(fileName) {
+  if (!fileName) return 'unknown'
+  const sanitized = fileName.replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\.\./g, '_')
+    .trim()
+  return sanitized || 'unknown'
+}
+
 // ===== ASMR-One 文件下载 =====
 // 下载单个文件到指定目录，支持进度回调
 ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }) => {
   try {
-    logger.info('[下载] 开始:', fileName)
+    const safeFileName = sanitizeFileName(fileName)
+    logger.info('[下载] 开始:', safeFileName)
     logger.info('[下载] URL:', url)
     logger.info('[下载] 目录:', savePath)
     
@@ -1301,7 +1310,7 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true })
     }
-    const finalPath = path.join(targetDir, fileName)
+    const finalPath = path.join(targetDir, safeFileName)
     logger.info('[下载] 完整路径:', finalPath)
 
     // 创建取消控制器
@@ -1362,12 +1371,20 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
 
     // 监听取消信号
     const onAbort = () => {
-      logger.info('[下载] 用户取消:', fileName)
+      logger.info('[下载] 用户取消:', safeFileName)
       if (response.data && response.data.destroy) {
         response.data.destroy()
       }
       if (writer && writer.destroy) {
         writer.destroy()
+      }
+      try {
+        if (fs.existsSync(finalPath)) {
+          fs.unlinkSync(finalPath)
+          logger.info('[下载] 已清理不完整文件:', finalPath)
+        }
+      } catch (e) {
+        logger.warn('[下载] 清理临时文件失败:', e.message)
       }
     }
     signal.addEventListener('abort', onAbort)
@@ -1489,7 +1506,8 @@ async function downloadFileInTask(task, file, fileIndex) {
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true })
       }
-      const finalPath = path.join(targetDir, file.fileName)
+      const safeFileName = sanitizeFileName(file.fileName)
+      const finalPath = path.join(targetDir, safeFileName)
 
       const abortController = new AbortController()
       activeAbortControllers.add(abortController)
@@ -1546,6 +1564,14 @@ async function downloadFileInTask(task, file, fileIndex) {
       const onAbort = () => {
         if (response.data && response.data.destroy) response.data.destroy()
         if (writer && writer.destroy) writer.destroy()
+        try {
+          if (fs.existsSync(finalPath)) {
+            fs.unlinkSync(finalPath)
+            logger.info('[下载队列] 已清理不完整文件:', finalPath)
+          }
+        } catch (e) {
+          logger.warn('[下载队列] 清理临时文件失败:', e.message)
+        }
       }
       signal.addEventListener('abort', onAbort)
 
@@ -1695,7 +1721,7 @@ ipcMain.handle('download:addTask', async (event, { work, files, saveDir }) => {
     const subDir = f.path ? `${saveDir}/${workFolder}/${f.path}` : `${saveDir}/${workFolder}`
     return {
       url: f.url,
-      fileName: f.title,
+      fileName: sanitizeFileName(f.title),
       savePath: subDir,
       size: f.size || 0,
       status: 'pending',
