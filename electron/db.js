@@ -4,6 +4,8 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let saveInProgress = false
+let pendingSave = false
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -34,17 +36,65 @@ async function initDB() {
     }
   } catch (e) {
     console.error('Init DB error:', e)
-    dbData = defaultData
+    // 尝试从备份恢复
+    const backupPath = dbPath + '.backup'
+    if (fs.existsSync(backupPath)) {
+      try {
+        const backupContent = fs.readFileSync(backupPath, 'utf-8')
+        dbData = JSON.parse(backupContent)
+        console.log('Recovered from backup')
+      } catch (be) {
+        console.error('Backup recovery failed:', be)
+        dbData = defaultData
+      }
+    } else {
+      dbData = defaultData
+    }
   }
 
   return dbData
 }
 
 function saveDB() {
+  // 防止并发写入
+  if (saveInProgress) {
+    pendingSave = true
+    return
+  }
+
+  saveInProgress = true
+
   try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
+    const tempPath = dbPath + '.tmp'
+    const backupPath = dbPath + '.backup'
+    const data = JSON.stringify(dbData, null, 2)
+
+    // 1. 先写入临时文件
+    fs.writeFileSync(tempPath, data, 'utf-8')
+
+    // 2. 如果已有备份，删除旧备份
+    if (fs.existsSync(backupPath)) {
+      fs.unlinkSync(backupPath)
+    }
+
+    // 3. 如果已有数据库文件，创建备份
+    if (fs.existsSync(dbPath)) {
+      fs.renameSync(dbPath, backupPath)
+    }
+
+    // 4. 将临时文件重命名为正式数据库文件
+    fs.renameSync(tempPath, dbPath)
   } catch (e) {
     console.error('Save DB error:', e)
+  } finally {
+    saveInProgress = false
+
+    // 如果有待处理的保存请求，执行它
+    if (pendingSave) {
+      pendingSave = false
+      // 使用 setImmediate 避免递归过深
+      setImmediate(() => saveDB())
+    }
   }
 }
 
