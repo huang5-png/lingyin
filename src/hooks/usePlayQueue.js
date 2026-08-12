@@ -186,16 +186,22 @@ export function usePlayQueue({
   }, [buildQueueItem, queueIndex, showToast])
 
   const removeFromQueue = useCallback((itemId) => {
-    const idx = playQueue.findIndex((it) => it.id === itemId)
-    if (idx < 0) return
-    setPlayQueue((prev) => prev.filter((it) => it.id !== itemId))
-    setQueueIndex((qi) => {
-      if (qi < 0) return -1
-      if (idx < qi) return qi - 1
-      if (idx === qi) return idx >= playQueue.length - 1 ? -1 : idx
-      return qi
+    setPlayQueue((prev) => {
+      const idx = prev.findIndex((it) => it.id === itemId)
+      if (idx < 0) return prev
+
+      const next = prev.filter((it) => it.id !== itemId)
+
+      setQueueIndex((qi) => {
+        if (qi < 0) return -1
+        if (idx < qi) return qi - 1
+        if (idx === qi) return idx >= prev.length - 1 ? -1 : qi
+        return qi
+      })
+
+      return next
     })
-  }, [playQueue])
+  }, [])
 
   const clearQueue = useCallback(() => {
     setPlayQueue([])

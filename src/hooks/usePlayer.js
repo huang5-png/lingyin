@@ -37,6 +37,10 @@ export function usePlayer({
   const handleSelectAudio = useCallback(
     async (audio) => {
       if (!selectedWork) return
+      if (!audio || (!audio.path && !audio.isOnline)) {
+        console.error('Invalid audio object provided')
+        return
+      }
 
       setPlayingWork(selectedWork)
       setCurrentAudio(audio)
@@ -62,14 +66,18 @@ export function usePlayer({
       if (selectedIndex >= 0 && updatedOptions[selectedIndex]) {
         try {
           const sub = updatedOptions[selectedIndex]
-          const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
-          if (content) {
-            const ext = getExtension(sub.file.name)
-            let cues = parseSubtitle(content, ext)
+          if (!sub || !sub.file || !sub.file.path) {
+            console.error('Invalid subtitle file object')
+          } else {
+            const content = await window.electronAPI.readFile(sub.file.path, 'utf-8')
+            if (content) {
+              const ext = getExtension(sub.file.name)
+              let cues = parseSubtitle(content, ext)
 
-            handleAutoTranslate(cues, sub, setCurrentCues)
+              handleAutoTranslate(cues, sub, setCurrentCues)
 
-            setCurrentCues(cues)
+              setCurrentCues(cues)
+            }
           }
         } catch (e) {
           console.error('Failed to load subtitle:', e)
@@ -84,13 +92,42 @@ export function usePlayer({
           const progress = await window.electronAPI.dbGetProgress(selectedWork.id, audio.path)
           if (progress && progress.currentTime > 5 && progress.duration > 0) {
             const targetTime = progress.currentTime
-            const checkAndSeek = setInterval(() => {
-              if (playerRef.current && playerRef.current.getDuration() > 0) {
-                playerRef.current.seekTo(targetTime)
-                clearInterval(checkAndSeek)
+            const seekIntervalId = { id: null }
+            const timeoutId = { id: null }
+
+            seekIntervalId.id = setInterval(() => {
+              try {
+                if (!playerRef.current) {
+                  clearInterval(seekIntervalId.id)
+                  if (timeoutId.id) clearTimeout(timeoutId.id)
+                  return
+                }
+
+                const currentDuration = playerRef.current.getDuration()
+                if (currentDuration > 0 && !isNaN(currentDuration)) {
+                  if (targetTime >= 0 && targetTime <= currentDuration) {
+                    playerRef.current.seekTo(targetTime)
+                  }
+                  clearInterval(seekIntervalId.id)
+                  if (timeoutId.id) clearTimeout(timeoutId.id)
+                  seekIntervalId.id = null
+                  timeoutId.id = null
+                }
+              } catch (err) {
+                console.error('Seek operation failed:', err)
+                clearInterval(seekIntervalId.id)
+                if (timeoutId.id) clearTimeout(timeoutId.id)
+                seekIntervalId.id = null
+                timeoutId.id = null
               }
             }, 200)
-            setTimeout(() => clearInterval(checkAndSeek), 10000)
+
+            timeoutId.id = setTimeout(() => {
+              if (seekIntervalId.id) {
+                clearInterval(seekIntervalId.id)
+                seekIntervalId.id = null
+              }
+            }, 10000)
           }
         } catch (e) {
           console.error('Failed to load progress:', e)

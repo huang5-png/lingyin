@@ -169,10 +169,14 @@ export function findCurrentCue(cues, currentTime) {
 }
 
 export function formatTime(seconds) {
-  if (!seconds || isNaN(seconds)) return '00:00'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
+  if (!seconds || isNaN(seconds) || !Number.isFinite(seconds)) return '00:00'
+
+  // 处理负数：取绝对值
+  const absSeconds = Math.abs(seconds)
+
+  const h = Math.floor(absSeconds / 3600)
+  const m = Math.floor((absSeconds % 3600) / 60)
+  const s = Math.floor(absSeconds % 60)
   const mm = String(m).padStart(2, '0')
   const ss = String(s).padStart(2, '0')
   if (h > 0) {
