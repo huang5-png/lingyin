@@ -159,6 +159,13 @@ async function saveSettings(settings) {
 // Each entry: { ts, workId, audioFile, seconds, title, cover, circle, cvs:[], tags:[] }
 async function appendHistory(entry) {
   if (!dbData.history) dbData.history = []
+  const MAX_HISTORY = 20000
+  const history = dbData.history
+  // 先裁剪到上限以内，确保追加后不超过限制
+  if (history.length >= MAX_HISTORY) {
+    const overflow = history.length - MAX_HISTORY + 1
+    dbData.history = history.slice(overflow)
+  }
   dbData.history.push({
     ts: entry.ts || Date.now(),
     workId: entry.workId || null,
@@ -170,9 +177,9 @@ async function appendHistory(entry) {
     cvs: Array.isArray(entry.cvs) ? entry.cvs : [],
     tags: Array.isArray(entry.tags) ? entry.tags : [],
   })
-  // Cap history size to avoid unbounded growth (keep last 20000 entries)
-  if (dbData.history.length > 20000) {
-    dbData.history = dbData.history.slice(-20000)
+  // 确保最终不超限
+  if (dbData.history.length > MAX_HISTORY) {
+    dbData.history = dbData.history.slice(-MAX_HISTORY)
   }
   saveDB()
   return true

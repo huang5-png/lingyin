@@ -14,15 +14,76 @@ const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 })
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 })
 
 let parseFile = null
+let parseFileError = null
 async function getParseFile() {
+  if (parseFileError) {
+    throw new Error('music-metadata module failed to load: ' + parseFileError)
+  }
   if (!parseFile) {
-    const mm = await import('music-metadata')
-    parseFile = mm.parseFile
+    try {
+      const mm = await import('music-metadata')
+      parseFile = mm.parseFile
+    } catch (e) {
+      parseFileError = e.message
+      throw new Error('Failed to load music-metadata module: ' + e.message)
+    }
   }
   return parseFile
 }
 
 const isDev = process.env.NODE_ENV === 'development'
+
+// ========== 安全：路径遍历防护 ==========
+const allowedBaseDirs = new Set()
+
+function addAllowedDir(dirPath) {
+  if (dirPath && fs.existsSync(dirPath)) {
+    const resolved = path.resolve(dirPath)
+    allowedBaseDirs.add(resolved)
+  }
+}
+
+function getSafePath(inputPath) {
+  if (!inputPath || typeof inputPath !== 'string') return null
+  const resolved = path.resolve(inputPath)
+  for (const base of allowedBaseDirs) {
+    if (resolved === base || resolved.startsWith(base + path.sep)) {
+      return resolved
+    }
+  }
+  return null
+}
+
+function sanitizeFileName(fileName) {
+  if (!fileName || typeof fileName !== 'string') return null
+  const baseName = path.basename(fileName)
+  if (!baseName || baseName === '.' || baseName === '..') return null
+  if (baseName.includes('\0')) return null
+  return baseName
+}
+
+// 收集已知的允许目录
+function refreshAllowedDirs() {
+  allowedBaseDirs.clear()
+  try {
+    const userDataPath = app.getPath('userData')
+    addAllowedDir(userDataPath)
+    const homePath = app.getPath('home')
+    if (homePath) addAllowedDir(homePath)
+    const tempPath = app.getPath('temp')
+    if (tempPath) addAllowedDir(tempPath)
+    const downloadsPath = app.getPath('downloads')
+    if (downloadsPath) addAllowedDir(downloadsPath)
+  } catch (e) {
+    logger.warn('Failed to refresh allowed dirs:', e.message)
+  }
+}
+
+// 初始化安全目录
+refreshAllowedDirs()
+
+// 启动时从设置中添加用户配置的媒体目录
+// （在 app.whenReady 回调中执行，确保 DB 已初始化）
 
 // ========== 白屏防护：GPU / 硬件加速相关开关 ==========
 // 禁用 GPU 着色器磁盘缓存，减少 IO 和权限错误
@@ -461,6 +522,35 @@ app.whenReady().then(async () => {
     logger.error('Failed to init database:', e.message)
   }
 
+  // 从设置中添加用户配置的媒体目录到安全白名单
+  try {
+    const settings = await getSettings()
+    if (settings && Array.isArray(settings.mediaLibraryPaths)) {
+      for (const dir of settings.mediaLibraryPaths) {
+        addAllowedDir(dir)
+      }
+    }
+    if (settings && settings.downloadDir) {
+      addAllowedDir(settings.downloadDir)
+    }
+    // 设置更新时动态刷新安全目录
+    setInterval(async () => {
+      try {
+        const s = await getSettings()
+        if (s && Array.isArray(s.mediaLibraryPaths)) {
+          for (const dir of s.mediaLibraryPaths) {
+            addAllowedDir(dir)
+          }
+        }
+        if (s && s.downloadDir) {
+          addAllowedDir(s.downloadDir)
+        }
+      } catch (e) {}
+    }, 30000)
+  } catch (e) {
+    logger.warn('Failed to load media library paths for security:', e.message)
+  }
+
   createWindow()
   createTray()
   registerGlobalShortcuts()
@@ -524,12 +614,14 @@ ipcMain.handle('dialog:openDirectory', async () => {
 })
 
 ipcMain.handle('fs:readDir', async (_, dirPath) => {
+  const safePath = getSafePath(dirPath)
+  if (!safePath) return []
   try {
-    const files = fs.readdirSync(dirPath, { withFileTypes: true })
+    const files = fs.readdirSync(safePath, { withFileTypes: true })
     return files.map((f) => ({
       name: f.name,
       isDirectory: f.isDirectory(),
-      path: path.join(dirPath, f.name),
+      path: path.join(safePath, f.name),
     }))
   } catch (e) {
     return []
@@ -537,8 +629,10 @@ ipcMain.handle('fs:readDir', async (_, dirPath) => {
 })
 
 ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
+  const safePath = getSafePath(filePath)
+  if (!safePath) return null
   try {
-    return fs.readFileSync(filePath, encoding)
+    return fs.readFileSync(safePath, encoding)
   } catch (e) {
     return null
   }
@@ -566,12 +660,16 @@ ipcMain.handle('dialog:openSubtitleFile', async () => {
 })
 
 ipcMain.handle('fs:fileExists', async (_, filePath) => {
-  return fs.existsSync(filePath)
+  const safePath = getSafePath(filePath)
+  if (!safePath) return false
+  return fs.existsSync(safePath)
 })
 
 ipcMain.handle('fs:stat', async (_, filePath) => {
+  const safePath = getSafePath(filePath)
+  if (!safePath) return null
   try {
-    const stat = fs.statSync(filePath)
+    const stat = fs.statSync(safePath)
     return {
       size: stat.size,
       mtime: stat.mtime,
@@ -941,6 +1039,12 @@ ipcMain.handle('log:openFolder', async () => {
 
 ipcMain.handle('shell:openExternal', async (_, url) => {
   try {
+    if (!url || typeof url !== 'string') return false
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      logger.warn('Blocked non-HTTP URL open attempt:', url)
+      return false
+    }
     await shell.openExternal(url)
     return true
   } catch (e) {
@@ -1262,23 +1366,27 @@ ipcMain.handle('asmrOne:getTags', async () => {
 })
 
 ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
+  const safePath = getSafePath(filePath)
+  if (!safePath) return null
   try {
-    const buffer = fs.readFileSync(filePath)
+    const buffer = fs.readFileSync(safePath)
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
     return arrayBuffer
   } catch (e) {
-    logger.error('Failed to read audio buffer:', filePath, e.message)
+    logger.error('Failed to read audio buffer:', safePath, e.message)
     return null
   }
 })
 
 ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
+  const safePath = getSafePath(filePath)
+  if (!safePath) return 0
   try {
     const pf = await getParseFile()
-    const metadata = await pf(filePath, { duration: true })
+    const metadata = await pf(safePath, { duration: true })
     return metadata.format.duration || 0
   } catch (e) {
-    logger.error('Failed to read audio duration:', filePath, e.message)
+    logger.error('Failed to read audio duration:', safePath, e.message)
     return 0
   }
 })
@@ -1297,11 +1405,25 @@ ipcMain.handle('asmrOne:downloadFile', async (event, { url, savePath, fileName }
     logger.info('[下载] URL:', url)
     logger.info('[下载] 目录:', savePath)
     
+    const safeFileName = sanitizeFileName(fileName)
+    if (!safeFileName) {
+      return { success: false, error: '无效的文件名' }
+    }
+    
     const targetDir = savePath
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true })
     }
-    const finalPath = path.join(targetDir, fileName)
+    const finalPath = path.join(targetDir, safeFileName)
+    
+    // 确认最终路径在目标目录内，防止路径遍历
+    const resolvedFinalPath = path.resolve(finalPath)
+    const resolvedTargetDir = path.resolve(targetDir)
+    if (!resolvedFinalPath.startsWith(resolvedTargetDir)) {
+      logger.error('[下载] 路径遍历检测：', fileName)
+      return { success: false, error: '文件名包含非法路径字符' }
+    }
+    
     logger.info('[下载] 完整路径:', finalPath)
 
     // 创建取消控制器
@@ -1485,11 +1607,25 @@ function broadcastDownloadState() {
 async function downloadFileInTask(task, file, fileIndex) {
   return new Promise(async (resolve, reject) => {
     try {
+      const safeFileName = sanitizeFileName(file.fileName)
+      if (!safeFileName) {
+        reject(new Error('无效的文件名'))
+        return
+      }
+      
       const targetDir = file.savePath
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true })
       }
-      const finalPath = path.join(targetDir, file.fileName)
+      const finalPath = path.join(targetDir, safeFileName)
+      
+      // 确认最终路径在目标目录内，防止路径遍历
+      const resolvedFinalPath = path.resolve(finalPath)
+      const resolvedTargetDir = path.resolve(targetDir)
+      if (!resolvedFinalPath.startsWith(resolvedTargetDir)) {
+        reject(new Error('文件名包含非法路径字符'))
+        return
+      }
 
       const abortController = new AbortController()
       activeAbortControllers.add(abortController)
