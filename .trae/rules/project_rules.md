@@ -1534,6 +1534,28 @@ function getStatusText() {
 - 同时保存到 localStorage 和 db.json
 - 启动时从设置中恢复
 
+### 21.5 A-B 片段循环
+
+#### 功能概述
+- 支持标记 A 点与 B 点，在区间内循环播放，便于反复听某段音声
+- 单个按钮三态循环：设置 A 点 → 设置 B 点并开启 → 关闭
+- **会话级功能**：状态仅存在于 AudioPlayer 内存中，**不写入设置、不做持久化**；切换音频（`audioPath` 变化）时自动清空
+
+#### 实现方式
+- 状态：`AudioPlayer.jsx` 内 `useState({ a, b, enabled })`，并用 `abLoopRef` 同步一份供事件回调读取，避免闭包读到过期值
+- 循环判定在播放器底层时间回调中完成（就近处理，不经过 React 状态）：
+  - 简单模式：`<audio>` 的 `timeupdate` 中，`currentTime >= b` 时直接 `audio.currentTime = a`
+  - 波形模式：WaveSurfer 的 `audioprocess` 中，`time >= b` 时 `ws.seekTo(a / duration)`
+  - 判定条件统一为 `enabled && a != null && b != null && b > a`；设置 B 点时要求 `t > a + 0.3`，防止区间过窄导致抖动
+- `useImperativeHandle` 额外暴露 `cycleAbLoop()` 与 `getAbLoop()`，供沉浸模式等外部调用（沉浸模式复用同一实现，不另起一套状态）
+- 播放器右栏 `ab-loop-btn` 三态样式：未设置（默认）/ 已设 A 点（`pending`）/ 循环中（`active`），激活时按钮内显示区间时间
+- 波形上叠加 `.waveform-ab-region` 高亮区间，并以 `.waveform-ab-marker` 标注 A / B；未设置 B 点时区间预览到当前播放位置。所有叠加层 `pointer-events: none`，不拦截波形点击
+- `<AudioPlayer>` 需传入 `onToast` 用于操作反馈（已设置 A 点 / 区间不合法 / 已开启 / 已关闭）
+
+#### UI 入口
+- 底部播放栏右栏，位于书签按钮与播放速度按钮之间
+- 沉浸模式控制条右栏，书签按钮之后（通过 `playerRef.current.cycleAbLoop()` 触发）
+
 ### 22. 收藏功能
 
 #### 功能概述
