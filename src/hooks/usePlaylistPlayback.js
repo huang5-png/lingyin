@@ -131,7 +131,7 @@ export function usePlaylistPlayback({
       const suffix = parts.length > 0 ? `（${parts.join('，')}）` : ''
       showToast(`已按队列播放「${playlist.name}」，共 ${queueItems.length} 首${suffix}`, 'success')
     },
-    [buildQueueItemsFromPlaylist, setPlayQueue, setQueueIndex, playFromQueue, showToast],
+    [buildQueueItemsFromPlaylist, setPlayQueue, playFromQueue, showToast],
   )
 
   // 将播放列表追加到当前队列（不打断正在播放的曲目）
