@@ -1,4 +1,8 @@
 import { useState, useMemo, useCallback } from 'react'
+import { isSfwMode, SFW_TAG } from '../utils/sfw'
+
+// 全年龄模式下必须包含的标签（本地媒体库严格过滤）
+const sfwTagFilter = isSfwMode() ? [SFW_TAG] : []
 
 /**
  * 管理作品列表的筛选状态（CV / 社团 / 标签）
@@ -35,6 +39,10 @@ export function useFilters(works) {
 
   const filteredWorks = useMemo(() => {
     return works.filter((w) => {
+      // 全年龄模式：强制必须包含「健全」标签
+      if (sfwTagFilter.length > 0) {
+        if (!sfwTagFilter.every((t) => (w.tags || []).includes(t))) return false
+      }
       if (cvFilter && !(w.cvs || []).includes(cvFilter)) return false
       if (circleFilter && w.circle !== circleFilter) return false
       if (tagFilter.length > 0) {

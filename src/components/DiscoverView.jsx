@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, memo, forwardRef, useImperativeHandle, useRef } from 'react'
 import './DiscoverView.css'
 import StateView from './StateView'
+import { isSfwMode } from '../utils/sfw'
+
+// 全年龄模式：发现页强制只显示全年龄作品
+const SFW_ACTIVE = isSfwMode()
 
 const ADVANCED_COMMANDS = [
   { cmd: '$tag:', desc: '搜索标签', icon: 'tag' },
@@ -54,6 +58,23 @@ const formatDLCount = (count) => {
 }
 
 const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWork, onVaClick, onTagClick, getTranslatedText }) => {
+  const formatDate = (dateInput) => {
+    if (!dateInput) return ''
+    let date
+    if (typeof dateInput === 'number') {
+      date = new Date(dateInput)
+    } else {
+      date = new Date(dateInput)
+    }
+    if (isNaN(date.getTime())) return ''
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
+  const displayDate = formatDate(work.release || work.create_date)
+
   return (
     <div
       className={`discover-work-card ${selectedWorkId === `online_${work.id}` ? 'selected' : ''}`}
@@ -99,6 +120,9 @@ const WorkCard = memo(({ work, selectedWorkId, activeTags, activeVas, onSelectWo
                 </span>
               ))}
             </div>
+          )}
+          {displayDate && (
+            <p className="discover-card-date">{displayDate}</p>
           )}
           {work.tags && work.tags.length > 0 && (
             <div className="discover-card-tags">
@@ -156,6 +180,32 @@ const SkeletonCard = memo(() => {
 SkeletonCard.displayName = 'SkeletonCard'
 
 const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating }, ref) => {
+  // 从 sessionStorage 恢复保存的筛选状态
+  const getSavedFilterState = () => {
+    try {
+      const saved = sessionStorage.getItem('discoverFilterState')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // 检查保存时间，超过 30 分钟则忽略
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 30 * 60 * 1000) {
+          // 校验 sortBy/sortOrder 是 API 允许的值，过滤旧版本残留的无效值
+          const validSortBy = ['create_date', 'release', 'dl_count', 'rate_average_2dp', 'price']
+          const validSortOrder = ['desc', 'asc']
+          if (parsed.sortBy && !validSortBy.includes(parsed.sortBy)) {
+            parsed.sortBy = 'create_date'
+          }
+          if (parsed.sortOrder && !validSortOrder.includes(parsed.sortOrder)) {
+            parsed.sortOrder = 'desc'
+          }
+          return parsed
+        }
+      }
+    } catch (e) {}
+    return null
+  }
+
+  const savedState = getSavedFilterState()
+
   const [works, setWorks] = useState([])
   const [allTags, setAllTags] = useState([])
   const [loading, setLoading] = useState(true)
@@ -164,37 +214,38 @@ const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslat
   const [tagsRetryCount, setTagsRetryCount] = useState(0)
   const [worksRetryCount, setWorksRetryCount] = useState(0)
   const [error, setError] = useState(null)
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(savedState?.page || 1)
   const [pageSize] = useState(20)
   const [totalPages, setTotalPages] = useState(0)
   const [pageInput, setPageInput] = useState('')
-  const [searchKeyword, setSearchKeyword] = useState('')
-  const [activeTags, setActiveTags] = useState([])
-  const [excludeTags, setExcludeTags] = useState([])
-  const [activeVas, setActiveVas] = useState([])
-  const [excludeVas, setExcludeVas] = useState([])
-  const [activeCircles, setActiveCircles] = useState([])
-  const [excludeCircles, setExcludeCircles] = useState([])
-  const [minDuration, setMinDuration] = useState('')
-  const [maxDuration, setMaxDuration] = useState('')
-  const [minRate, setMinRate] = useState('')
-  const [maxRate, setMaxRate] = useState('')
-  const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
-  const [ageRating, setAgeRating] = useState('')
-  const [language, setLanguage] = useState('')
-  const [sortBy, setSortBy] = useState('create_date')
-  const [sortOrder, setSortOrder] = useState('desc')
-  const [hasSubtitle, setHasSubtitle] = useState(false)
-  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState(savedState?.searchKeyword || '')
+  const [activeTags, setActiveTags] = useState(savedState?.activeTags || [])
+  const [excludeTags, setExcludeTags] = useState(savedState?.excludeTags || [])
+  const [activeVas, setActiveVas] = useState(savedState?.activeVas || [])
+  const [excludeVas, setExcludeVas] = useState(savedState?.excludeVas || [])
+  const [activeCircles, setActiveCircles] = useState(savedState?.activeCircles || [])
+  const [excludeCircles, setExcludeCircles] = useState(savedState?.excludeCircles || [])
+  const [minDuration, setMinDuration] = useState(savedState?.minDuration || '')
+  const [maxDuration, setMaxDuration] = useState(savedState?.maxDuration || '')
+  const [minRate, setMinRate] = useState(savedState?.minRate || '')
+  const [maxRate, setMaxRate] = useState(savedState?.maxRate || '')
+  const [minPrice, setMinPrice] = useState(savedState?.minPrice || '')
+  const [maxPrice, setMaxPrice] = useState(savedState?.maxPrice || '')
+  const [ageRating, setAgeRating] = useState(SFW_ACTIVE ? 'general' : (savedState?.ageRating || ''))
+  const [language, setLanguage] = useState(savedState?.language || '')
+  const [sortBy, setSortBy] = useState(savedState?.sortBy || 'create_date')
+  const [sortOrder, setSortOrder] = useState(savedState?.sortOrder || 'desc')
+  const [hasSubtitle, setHasSubtitle] = useState(savedState?.hasSubtitle || false)
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(savedState?.showAdvancedFilter || false)
   const [showTagPicker, setShowTagPicker] = useState(false)
   const [tagPickerMode, setTagPickerMode] = useState('include')
   const [tagSearch, setTagSearch] = useState('')
   const [visibleTagCount, setVisibleTagCount] = useState(50)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestionIndex, setSuggestionIndex] = useState(-1)
-  const [activeFilterTab, setActiveFilterTab] = useState('tags')
+  const [activeFilterTab, setActiveFilterTab] = useState(savedState?.activeFilterTab || 'tags')
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [savedScrollTop, setSavedScrollTop] = useState(savedState?.scrollTop || 0)
   const searchInputRef = useRef(null)
   const suggestionsRef = useRef(null)
   const tagListRef = useRef(null)
@@ -218,6 +269,45 @@ const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslat
     }
     throw lastError
   }
+
+  // 保存筛选状态到 sessionStorage（离开页面时）
+  useEffect(() => {
+    const saveFilterState = () => {
+      const stateToSave = {
+        page,
+        searchKeyword,
+        activeTags,
+        excludeTags,
+        activeVas,
+        excludeVas,
+        activeCircles,
+        excludeCircles,
+        minDuration,
+        maxDuration,
+        minRate,
+        maxRate,
+        minPrice,
+        maxPrice,
+        ageRating,
+        language,
+        sortBy,
+        sortOrder,
+        hasSubtitle,
+        showAdvancedFilter,
+        activeFilterTab,
+        scrollTop: contentRef.current?.scrollTop || 0,
+        timestamp: Date.now(),
+      }
+      sessionStorage.setItem('discoverFilterState', JSON.stringify(stateToSave))
+    }
+
+    // 监听页面切换时保存状态
+    window.addEventListener('beforeunload', saveFilterState)
+    return () => {
+      saveFilterState() // 组件卸载时保存
+      window.removeEventListener('beforeunload', saveFilterState)
+    }
+  }, [page, searchKeyword, activeTags, excludeTags, activeVas, excludeVas, activeCircles, excludeCircles, minDuration, maxDuration, minRate, maxRate, minPrice, maxPrice, ageRating, language, sortBy, sortOrder, hasSubtitle, showAdvancedFilter, activeFilterTab])
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -331,6 +421,15 @@ const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslat
     } finally {
       setLoading(false)
       setIsFetching(false)
+      // 恢复保存的滚动位置
+      if (savedScrollTop > 0 && contentRef.current) {
+        setTimeout(() => {
+          if (contentRef.current) {
+            contentRef.current.scrollTop = savedScrollTop
+            setSavedScrollTop(0) // 只恢复一次
+          }
+        }, 100)
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageSize, sortBy, sortOrder, hasSubtitle])
@@ -588,7 +687,7 @@ const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslat
     setMaxRate('')
     setMinPrice('')
     setMaxPrice('')
-    setAgeRating('')
+    setAgeRating(SFW_ACTIVE ? 'general' : '')
     setLanguage('')
     setSearchKeyword('')
     setHasSubtitle(false)
@@ -705,7 +804,7 @@ const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslat
               onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleKeyDown}
             />
-            <button type="submit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+            <button type="submit" onClick={() => { setShowSuggestions(false); setPage(1) }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
           </form>
           {showSuggestions && totalSuggestions > 0 && (
             <div className="search-suggestions" ref={suggestionsRef}>
@@ -1052,6 +1151,7 @@ const DiscoverView = memo(forwardRef(({ onSelectWork, selectedWorkId, onTranslat
                     <label className="filter-label">年龄分级</label>
                     <select 
                       value={ageRating}
+                      disabled={SFW_ACTIVE}
                       onChange={(e) => { setAgeRating(e.target.value); setPage(1) }}
                     >
                       <option value="">全部</option>

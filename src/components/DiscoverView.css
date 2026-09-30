@@ -760,6 +760,13 @@
   gap: 6px;
 }
 
+.discover-card-date {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
 .discover-card-vas {
   display: flex;
   flex-wrap: wrap;
