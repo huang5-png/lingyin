@@ -101,7 +101,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 系统托盘
   trayUpdatePlayState: (playing, title) => ipcRenderer.invoke('tray:updatePlayState', playing, title),
-  traySetCloseToTray: (enabled) => ipcRenderer.invoke('tray:setCloseToTray', enabled),
   onTrayTogglePlay: (callback) => {
     const handler = () => callback()
     ipcRenderer.on('tray:togglePlay', handler)
@@ -119,8 +118,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // 翻译
-  translateText: (text, targetLang) => ipcRenderer.invoke('translate:text', text, targetLang),
-  translateBatch: (texts, targetLang) => ipcRenderer.invoke('translate:batch', texts, targetLang),
+  translateText: (text, targetLang, engine, extraOptions) => ipcRenderer.invoke('translate:text', text, targetLang, engine, extraOptions),
+  translateBatch: (texts, targetLang, cancelId) => ipcRenderer.invoke('translate:batch', texts, targetLang, cancelId),
+  translateCancel: (cancelId) => ipcRenderer.invoke('translate:cancel', cancelId),
   // 翻译缓存
   translateGetCache: (workId, audioPath) => ipcRenderer.invoke('translate:getCache', workId, audioPath),
   translateSaveCache: (workId, audioPath, cues) => ipcRenderer.invoke('translate:saveCache', workId, audioPath, cues),

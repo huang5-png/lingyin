@@ -4,6 +4,32 @@ export function useTranslate(showToast) {
   const translateCacheRef = useRef(new Map())
   const [translateVersion, setTranslateVersion] = useState(0)
   const [translating, setTranslating] = useState(new Set())
+  const cancelRef = useRef({ cancelled: false, cancelId: null, isTranslating: false })
+
+  const cancelTranslation = useCallback(() => {
+    cancelRef.current.cancelled = true
+    cancelRef.current.isTranslating = false
+    if (cancelRef.current.cancelId) {
+      window.electronAPI?.translateCancel?.(cancelRef.current.cancelId)
+    }
+    setTranslating(new Set())
+    showToast?.('已取消翻译', 'info')
+  }, [showToast])
+
+  const startTranslation = useCallback(() => {
+    cancelRef.current.cancelled = false
+    cancelRef.current.isTranslating = true
+    cancelRef.current.cancelId = Date.now().toString()
+    return cancelRef.current.cancelId
+  }, [])
+
+  const isCancelled = useCallback(() => {
+    return cancelRef.current.cancelled
+  }, [])
+
+  const getIsTranslating = useCallback(() => {
+    return cancelRef.current.isTranslating
+  }, [])
 
   const translate = useCallback(async (text) => {
     if (!text || !text.trim()) return text
@@ -28,7 +54,11 @@ export function useTranslate(showToast) {
         showToast?.('翻译失败，可能已是中文或网络错误', 'warning')
       }
     } catch (e) {
-      showToast?.('翻译失败: ' + (e.message || '未知错误'), 'error')
+      if (e.message === 'cancelled') {
+        showToast?.('翻译已取消', 'info')
+      } else {
+        showToast?.('翻译失败: ' + (e.message || '未知错误'), 'error')
+      }
     } finally {
       setTranslating(prev => {
         const next = new Set(prev)
@@ -61,7 +91,12 @@ export function useTranslate(showToast) {
       })
       setTranslateVersion(v => v + 1)
     } catch (e) {
-      showToast?.('批量翻译失败', 'error')
+      console.error('翻译失败:', e)
+      if (e.message === 'cancelled') {
+        showToast?.('翻译已取消', 'info')
+      } else {
+        showToast?.('批量翻译失败: ' + (e.message || '未知错误'), 'error')
+      }
     } finally {
       setTranslating(prev => {
         const next = new Set(prev)
@@ -74,12 +109,12 @@ export function useTranslate(showToast) {
   const getTranslatedText = useCallback((text) => {
     if (!text) return text
     return translateCacheRef.current.get(text) || text
-  }, [])
+  }, [translateVersion])
 
   const isTranslated = useCallback((text) => {
     if (!text) return false
     return translateCacheRef.current.has(text)
-  }, [])
+  }, [translateVersion])
 
   const isTranslating = useCallback((text) => {
     if (!text) return false
@@ -91,6 +126,11 @@ export function useTranslate(showToast) {
   const toggleSubtitleTranslate = useCallback(async ({ selectedWork, currentAudio, currentCues, setCurrentCues }) => {
     if (!selectedWork || !currentAudio || currentCues.length === 0) {
       showToast?.('请先选择字幕', 'warning')
+      return
+    }
+
+    if (getIsTranslating()) {
+      cancelTranslation()
       return
     }
 
@@ -150,45 +190,120 @@ export function useTranslate(showToast) {
       return
     }
 
+    const cancelId = startTranslation()
     setTranslating(new Set(texts))
     showToast?.(`开始翻译 ${texts.length} 条字幕...`, 'info')
 
+    const BATCH_SIZE = 10
+
     try {
-      const results = await window.electronAPI.translateBatch(texts, 'zh-CN')
-      const resultMap = new Map(texts.map((text, i) => [text, results[i]]))
+      const allResults = new Map()
+      const total = texts.length
+      let completed = 0
+      let failedBatches = 0
 
-      const updatedCues = currentCues.map(cue => {
-        if (!cue.text || !cue.text.trim()) return cue
-        const translated = resultMap.get(cue.text)
-        if (translated && translated !== cue.text) {
-          translateCacheRef.current.set(cue.text, translated)
-          return { ...cue, translated }
+      for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+        if (isCancelled()) {
+          break
         }
-        return cue
-      })
 
-      setCurrentCues(updatedCues)
-      setTranslateVersion(v => v + 1)
+        const batch = texts.slice(i, i + BATCH_SIZE)
+        const batchCancelId = `${cancelId}_${i}`
 
-      try {
-        const cacheData = updatedCues.map(cue => ({
+        try {
+          const results = await window.electronAPI.translateBatch(batch, 'zh-CN', batchCancelId)
+
+          if (isCancelled()) {
+            break
+          }
+
+          let batchSuccessCount = 0
+          batch.forEach((text, j) => {
+            if (results[j] && results[j] !== text) {
+              translateCacheRef.current.set(text, results[j])
+              allResults.set(text, results[j])
+              batchSuccessCount++
+            }
+          })
+
+          completed += batch.length
+
+          if (batchSuccessCount === 0) {
+            failedBatches++
+          }
+
+          setCurrentCues(prevCues => {
+            return prevCues.map(cue => {
+              if (!cue.text || !cue.text.trim()) return cue
+              if (cue.translated) return cue
+              const translated = allResults.get(cue.text)
+              if (translated) {
+                return { ...cue, translated }
+              }
+              return cue
+            })
+          })
+          setTranslateVersion(v => v + 1)
+
+          if (completed < total) {
+            showToast?.(`已翻译 ${allResults.size}/${total} 条...`, 'info')
+          }
+        } catch (batchErr) {
+          if (batchErr.message === 'cancelled') {
+            break
+          }
+          failedBatches++
+          console.warn(`批次 ${i / BATCH_SIZE + 1} 翻译失败:`, batchErr.message)
+        }
+      }
+
+      if (isCancelled()) {
+        return
+      }
+
+      setCurrentCues(prevCues => {
+        const finalCues = prevCues.map(cue => {
+          if (!cue.text || !cue.text.trim()) return cue
+          const translated = allResults.get(cue.text)
+          if (translated) {
+            return { ...cue, translated }
+          }
+          return cue
+        })
+
+        const saveData = finalCues.map(cue => ({
           time: cue.time,
           text: cue.text,
           translated: cue.translated
         }))
-        await window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, cacheData)
-      } catch (e) {
-        console.error('Failed to save translate cache:', e)
-      }
+        window.electronAPI.translateSaveCache(selectedWork.id, currentAudio.path, saveData).catch(() => {})
 
-      const translatedCount = updatedCues.filter(c => c.translated).length
-      showToast?.(`翻译完成！成功翻译 ${translatedCount} 条字幕`, 'success')
+        return finalCues
+      })
+
+      setTranslateVersion(v => v + 1)
+
+      const translatedCount = allResults.size
+      if (translatedCount === 0) {
+        showToast?.('翻译失败，请检查网络或翻译引擎配置', 'error')
+      } else if (failedBatches > 0) {
+        showToast?.(`翻译完成！成功 ${translatedCount}/${total} 条，${failedBatches} 个批次失败`, 'warning')
+      } else {
+        showToast?.(`翻译完成！成功翻译 ${translatedCount}/${total} 条字幕`, 'success')
+      }
     } catch (e) {
-      showToast?.('翻译失败: ' + (e.message || '未知错误'), 'error')
+      if (e.message === 'cancelled') {
+        showToast?.('翻译已取消', 'info')
+      } else {
+        showToast?.('翻译失败: ' + (e.message || '未知错误'), 'error')
+      }
     } finally {
       setTranslating(new Set())
+      cancelRef.current.cancelled = false
+      cancelRef.current.isTranslating = false
+      cancelRef.current.cancelId = null
     }
-  }, [showToast])
+  }, [showToast, cancelTranslation, startTranslation, isCancelled, getIsTranslating])
 
   return {
     translateCacheRef,
@@ -202,5 +317,6 @@ export function useTranslate(showToast) {
     isTranslating,
     isAnyTranslating,
     toggleSubtitleTranslate,
+    cancelTranslation,
   }
 }

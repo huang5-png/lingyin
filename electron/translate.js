@@ -21,6 +21,9 @@ let msTokenExpire = 0
 
 let getProxyConfig = null
 
+// 取消翻译的控制器映射
+const abortControllers = new Map()
+
 function setProxyHelper(getProxy) {
   getProxyConfig = getProxy
 }
@@ -43,6 +46,235 @@ async function getAxiosConfig() {
     }
   }
   return config
+}
+
+// 取消指定翻译任务
+function cancelTranslation(cancelId) {
+  let cancelled = false
+  // 支持前缀匹配：取消所有以该 cancelId 开头的请求
+  for (const [id, controller] of abortControllers.entries()) {
+    if (id === cancelId || id.startsWith(cancelId + '_')) {
+      controller.abort()
+      abortControllers.delete(id)
+      cancelled = true
+    }
+  }
+  return cancelled
+}
+
+// 创建取消令牌
+function createAbortSignal(cancelId) {
+  if (!cancelId) return null
+  const controller = new AbortController()
+  abortControllers.set(cancelId, controller)
+  return controller.signal
+}
+
+// 清理取消令牌
+function clearAbortSignal(cancelId) {
+  if (cancelId && abortControllers.has(cancelId)) {
+    abortControllers.delete(cancelId)
+  }
+}
+
+// AI 翻译（OpenAI 兼容 API）
+async function aiTranslate(text, targetLang = 'zh-CN', aiConfig) {
+  if (!aiConfig || !aiConfig.apiKey || !aiConfig.baseUrl) {
+    throw new Error('AI 翻译配置不完整')
+  }
+
+  const baseConfig = await getAxiosConfig()
+  const config = {
+    timeout: 60000,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${aiConfig.apiKey}`,
+    },
+  }
+  // 只有明确开启时才使用代理
+  if (aiConfig.useProxy && baseConfig.proxy) {
+    config.proxy = baseConfig.proxy
+  }
+
+  let baseUrl = aiConfig.baseUrl.replace(/\/$/, '')
+  // 智能检测：如果用户填的 URL 已经包含 /chat/completions，就不重复拼接
+  let url
+  if (/\/chat\/completions\/?$/.test(baseUrl)) {
+    url = baseUrl
+  } else {
+    url = `${baseUrl}/chat/completions`
+  }
+
+  const targetLangName = targetLang === 'zh-CN' || targetLang === 'zh-Hans' ? '简体中文' :
+                        targetLang === 'zh' ? '中文' :
+                        targetLang === 'ja' ? '日语' :
+                        targetLang === 'en' ? '英语' : targetLang
+
+  const systemPrompt = `翻译为${targetLangName}。只输出译文，不加解释。`
+
+  const body = {
+    model: aiConfig.model || 'gpt-3.5-turbo',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: text }
+    ],
+    temperature: 0.2,
+  }
+
+  try {
+    const resp = await axios.post(url, body, config)
+    if (resp.data && resp.data.choices && resp.data.choices[0] && resp.data.choices[0].message) {
+      return resp.data.choices[0].message.content.trim()
+    }
+    return text
+  } catch (e) {
+    if (e.code === 'ERR_CANCELED') {
+      const err = new Error('cancelled')
+      err.name = 'CancelError'
+      throw err
+    }
+    let errorMsg = e.message
+    if (e.response) {
+      const data = e.response.data
+      if (data?.error?.message) {
+        errorMsg = data.error.message
+      } else if (typeof data === 'string') {
+        errorMsg = data
+      }
+    }
+    logger.error(`[翻译:ai] 失败:`, errorMsg)
+    const err = new Error(errorMsg)
+    err.name = 'TranslateError'
+    err.status = e.response?.status
+    throw err
+  }
+}
+
+// AI 批量翻译
+async function aiTranslateBatch(texts, targetLang = 'zh-CN', aiConfig, cancelId) {
+  if (texts.length === 0) return []
+
+  const validTexts = texts.filter(t => t && t.trim())
+  if (validTexts.length === 0) return texts
+
+  const baseConfig = await getAxiosConfig()
+  const config = {
+    timeout: 120000,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${aiConfig.apiKey}`,
+    },
+  }
+  // 只有明确开启时才使用代理
+  if (aiConfig.useProxy && baseConfig.proxy) {
+    config.proxy = baseConfig.proxy
+  }
+
+  if (cancelId) {
+    const signal = createAbortSignal(cancelId)
+    if (signal) {
+      config.signal = signal
+    }
+  }
+
+  try {
+    let baseUrl = aiConfig.baseUrl.trim().replace(/[\/,]+$/, '')
+    // 智能检测：如果用户填的 URL 已经包含 /chat/completions，就不重复拼接
+    let url
+    if (/\/chat\/completions\/?$/.test(baseUrl)) {
+      url = baseUrl
+    } else {
+      url = `${baseUrl}/chat/completions`
+    }
+
+    logger.info(`[翻译:ai] 请求地址: ${url}, 模型: ${aiConfig.model}, 文本数: ${validTexts.length}`)
+    logger.info(`[翻译:ai] 代理配置: ${config.proxy ? `${config.proxy.protocol}://${config.proxy.host}:${config.proxy.port}` : '无'}`)
+
+    const targetLangName = targetLang === 'zh-CN' || targetLang === 'zh-Hans' ? '简体中文' :
+                          targetLang === 'zh' ? '中文' :
+                          targetLang === 'ja' ? '日语' :
+                          targetLang === 'en' ? '英语' : targetLang
+
+    const numberedText = validTexts.map((text, i) => `${i + 1}. ${text}`).join('\n')
+
+    const systemPrompt = `翻译为${targetLangName}。保留行号格式：数字+点+空格+译文。只输出译文，不加解释。`
+
+    const body = {
+      model: aiConfig.model || 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: numberedText }
+      ],
+      temperature: 0.2,
+    }
+
+    logger.info(`[翻译:ai] 请求体大小: ${JSON.stringify(body).length} bytes`)
+
+    const resp = await axios.post(url, body, config)
+    
+    if (resp.data && resp.data.choices && resp.data.choices[0] && resp.data.choices[0].message) {
+      const translatedText = resp.data.choices[0].message.content.trim()
+      const lines = translatedText.split('\n').map(l => l.trim()).filter(l => l)
+      
+      const results = [...texts]
+      const translatedMap = new Map()
+      
+      for (const line of lines) {
+        const match = line.match(/^(\d+)[.、\s]+(.+)$/)
+        if (match) {
+          const idx = parseInt(match[1]) - 1
+          const translated = match[2].trim()
+          if (idx >= 0 && idx < validTexts.length && translated) {
+            translatedMap.set(validTexts[idx], translated)
+          }
+        }
+      }
+      
+      let validIdx = 0
+      for (let i = 0; i < texts.length; i++) {
+        if (!texts[i] || !texts[i].trim()) continue
+        
+        if (translatedMap.has(texts[i])) {
+          results[i] = translatedMap.get(texts[i])
+        } else if (validIdx < lines.length) {
+          let line = lines[validIdx].replace(/^\d+[.、\s]+/, '').trim()
+          if (line) {
+            results[i] = line
+          }
+          validIdx++
+        }
+      }
+      
+      clearAbortSignal(cancelId)
+      return results
+    }
+    
+    clearAbortSignal(cancelId)
+    return texts
+  } catch (e) {
+    clearAbortSignal(cancelId)
+    if (e.code === 'ERR_CANCELED' || e.name === 'CancelError') {
+      const err = new Error('cancelled')
+      err.name = 'CancelError'
+      throw err
+    }
+    let errorMsg = e.message
+    if (e.response) {
+      const status = e.response.status
+      const data = e.response.data
+      logger.error(`[翻译:ai] 错误响应 ${status}:`, JSON.stringify(data))
+      if (data?.error?.message) {
+        errorMsg = data.error.message
+      } else if (typeof data === 'string') {
+        errorMsg = data
+      }
+    }
+    logger.error(`[翻译:ai] 批量翻译失败:`, errorMsg)
+    const err = new Error(errorMsg)
+    err.name = 'TranslateError'
+    err.status = e.response?.status
+    throw err
+  }
 }
 
 // 谷歌翻译：单条/单块文本
@@ -287,7 +519,7 @@ async function baiduTranslateBatch(texts, targetLang = 'zh') {
 }
 
 // 翻译单条文本
-async function translateText(text, targetLang = 'zh-CN', engine = 'google') {
+async function translateText(text, targetLang = 'zh-CN', engine = 'google', extraOptions = {}) {
   if (!text || !text.trim()) return text
 
   try {
@@ -295,6 +527,9 @@ async function translateText(text, targetLang = 'zh-CN', engine = 'google') {
       return await baiduTranslate(text, 'zh')
     } else if (engine === 'microsoft') {
       return await msTranslate(text, 'zh-Hans')
+    } else if (engine === 'ai') {
+      const aiConfig = extraOptions.aiConfig || {}
+      return await aiTranslate(text, targetLang, aiConfig)
     } else {
       // 默认谷歌
       const result = await googleTranslate(text, targetLang)
@@ -303,6 +538,14 @@ async function translateText(text, targetLang = 'zh-CN', engine = 'google') {
       return await msTranslate(text, 'zh-Hans')
     }
   } catch (e) {
+    if (e.message === 'cancelled' || e.name === 'CancelError') {
+      throw e
+    }
+    // AI 翻译失败时不回退，直接抛出错误
+    if (engine === 'ai') {
+      logger.error(`[翻译:ai] 失败:`, e.message)
+      throw e
+    }
     logger.warn(`[翻译:${engine}] 失败:`, e.message)
     // 失败时尝试其他引擎
     try {
@@ -314,9 +557,11 @@ async function translateText(text, targetLang = 'zh-CN', engine = 'google') {
 }
 
 // 批量翻译：根据引擎选择最优策略，自动分块并发
-async function translateBatch(texts, targetLang = 'zh-CN', engine = 'google') {
+async function translateBatch(texts, targetLang = 'zh-CN', engine = 'google', extraOptions = {}) {
   const validTexts = texts.filter(t => t && t.trim())
   if (validTexts.length === 0) return texts
+
+  const cancelId = extraOptions.cancelId
 
   // 去重
   const uniqueTexts = [...new Set(validTexts)]
@@ -328,12 +573,23 @@ async function translateBatch(texts, targetLang = 'zh-CN', engine = 'google') {
       results = await baiduTranslateBatch(uniqueTexts, 'zh')
     } else if (engine === 'microsoft') {
       results = await msTranslateBatch(uniqueTexts, 'zh-Hans')
+    } else if (engine === 'ai') {
+      const aiConfig = extraOptions.aiConfig || {}
+      results = await aiTranslateBatch(uniqueTexts, targetLang, aiConfig, cancelId)
     } else {
       // 谷歌：分块并发，一次请求翻译大量文本
       results = await googleTranslateBatch(uniqueTexts, targetLang)
     }
     uniqueTexts.forEach((text, i) => translateMap.set(text, results[i] || text))
   } catch (e) {
+    if (e.message === 'cancelled' || e.name === 'CancelError') {
+      throw e
+    }
+    // AI 翻译失败时不回退，直接抛出错误
+    if (engine === 'ai') {
+      logger.error(`[翻译:ai] 翻译失败:`, e.message)
+      throw e
+    }
     logger.warn(`[翻译:${engine}] 批量翻译失败，尝试其他引擎:`, e.message)
     // 失败时尝试其他引擎
     try {
@@ -357,4 +613,5 @@ module.exports = {
   setProxyHelper,
   translateText,
   translateBatch,
+  cancelTranslation,
 }

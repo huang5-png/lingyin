@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut, Notification } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut, Notification, session } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const http = require('http')
@@ -24,6 +24,12 @@ async function getParseFile() {
 
 const isDev = process.env.NODE_ENV === 'development'
 
+// 校验来自渲染进程的文件路径，防止异常/恶意输入读取任意本地文件
+// 要求：非空字符串、不含空字节、必须是绝对路径
+function isValidFilePath(p) {
+  return typeof p === 'string' && p.length > 0 && !p.includes('\0') && path.isAbsolute(p)
+}
+
 // ========== 白屏防护：GPU / 硬件加速相关开关 ==========
 // 禁用 GPU 着色器磁盘缓存，减少 IO 和权限错误
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
@@ -36,9 +42,9 @@ app.commandLine.appendSwitch('disable-features', 'TranslateUI,Translate,MediaRou
 // 限制缓存大小
 app.commandLine.appendSwitch('disk-cache-size', '104857600')
 
-// 白屏防护：Windows 下常见 GPU 驱动问题导致渲染进程崩溃
-// 优先尝试禁用硬件加速（最稳妥的白屏解决方案）
-const shouldDisableHardwareAcceleration = !isDev || process.env.DISABLE_HW_ACCEL === '1'
+// 硬件加速：默认启用以提升 UI 流畅度（动画、毛玻璃、频谱、3D 渲染等）
+// 若遇到 GPU 驱动问题导致白屏，可设置环境变量 DISABLE_HW_ACCEL=1 回退到软件渲染
+const shouldDisableHardwareAcceleration = process.env.DISABLE_HW_ACCEL === '1'
 if (shouldDisableHardwareAcceleration) {
   app.disableHardwareAcceleration()
   app.commandLine.appendSwitch('disable-gpu')
@@ -424,25 +430,13 @@ function createWindow() {
     }
   })
 
-  mainWindow.on('close', async (e) => {
-    if (app.isQuiting) {
-      return
-    }
-    
-    try {
-      const settings = await getSettings()
-      if (settings.closeToTray !== false) {
-        e.preventDefault()
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.hide()
-        }
-        return
-      }
-    } catch (e) {
-      logger.warn('获取托盘设置失败，直接关闭:', e.message)
-    }
-    
+  mainWindow.on('close', () => {
+    // 用户希望点击关闭即彻底退出，不再最小化到托盘后台
     app.isQuiting = true
+    // 若迷你播放器仍打开，一并关闭以保证整体退出
+    if (miniWindow && !miniWindow.isDestroyed()) {
+      try { miniWindow.close() } catch (_) {}
+    }
   })
 
   mainWindow.on('closed', () => {
@@ -461,6 +455,11 @@ app.whenReady().then(async () => {
     logger.error('Failed to init database:', e.message)
   }
 
+  // 应用代理到 Chromium 网络层（影响 <audio> 在线播放、图片加载等）
+  await applySessionProxy()
+  // 注入正确的 Referer/Origin 给音频 CDN 请求，避免 403
+  setupMediaRequestInterceptor()
+
   createWindow()
   createTray()
   registerGlobalShortcuts()
@@ -477,13 +476,13 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   logger.info('All windows closed')
   if (process.platform !== 'darwin') {
-    if (tray) {
-      logger.info('托盘存在，保持应用在后台运行')
-    } else {
+    if (app.isQuiting || !tray) {
       app.quit()
       setTimeout(() => {
         process.exit(0)
       }, 500)
+    } else {
+      logger.info('托盘存在，保持应用在后台运行')
     }
   }
 })
@@ -524,6 +523,7 @@ ipcMain.handle('dialog:openDirectory', async () => {
 })
 
 ipcMain.handle('fs:readDir', async (_, dirPath) => {
+  if (!isValidFilePath(dirPath)) return []
   try {
     const files = fs.readdirSync(dirPath, { withFileTypes: true })
     return files.map((f) => ({
@@ -537,6 +537,7 @@ ipcMain.handle('fs:readDir', async (_, dirPath) => {
 })
 
 ipcMain.handle('fs:readFile', async (_, filePath, encoding = 'utf-8') => {
+  if (!isValidFilePath(filePath)) return null
   try {
     return fs.readFileSync(filePath, encoding)
   } catch (e) {
@@ -566,10 +567,12 @@ ipcMain.handle('dialog:openSubtitleFile', async () => {
 })
 
 ipcMain.handle('fs:fileExists', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) return false
   return fs.existsSync(filePath)
 })
 
 ipcMain.handle('fs:stat', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) return null
   try {
     const stat = fs.statSync(filePath)
     return {
@@ -648,7 +651,12 @@ ipcMain.handle('db:getSettings', async () => {
 })
 
 ipcMain.handle('db:saveSettings', async (_, settings) => {
-  return saveSettings(settings)
+  const result = await saveSettings(settings)
+  // 代理设置变化时，同步更新 Chromium 网络层代理
+  if (settings.proxyUrl !== undefined) {
+    await applySessionProxy()
+  }
+  return result
 })
 
 ipcMain.handle('db:appendHistory', async (_, entry) => {
@@ -993,11 +1001,6 @@ ipcMain.handle('tray:updatePlayState', (_, playing, title) => {
   return true
 })
 
-ipcMain.handle('tray:setCloseToTray', (_, enabled) => {
-  logger.info('设置关闭最小化到托盘:', enabled)
-  return true
-})
-
 // 全局媒体快捷键 IPC
 ipcMain.handle('globalShortcut:register', async () => {
   await registerGlobalShortcuts()
@@ -1020,26 +1023,80 @@ ipcMain.handle('notification:show', (_, { title, body, icon }) => {
 })
 
 // 翻译 IPC
-ipcMain.handle('translate:text', async (event, text, targetLang) => {
+ipcMain.handle('translate:text', async (event, text, targetLang, engineOverride, extraOptionsOverride) => {
   try {
     const settings = await getSettings()
-    const engine = settings.translateEngine || 'google'
-    return await translateText(text, targetLang || 'zh-CN', engine)
+    const engine = engineOverride || settings.translateEngine || 'google'
+    let extraOptions = {}
+    if (engine === 'ai') {
+      if (extraOptionsOverride && extraOptionsOverride.baseUrl) {
+        extraOptions.aiConfig = {
+          ...extraOptionsOverride,
+          useProxy: extraOptionsOverride.useProxy !== undefined ? extraOptionsOverride.useProxy : settings.aiTranslateUseProxy,
+        }
+      } else {
+        extraOptions.aiConfig = {
+          baseUrl: settings.aiTranslateBaseUrl,
+          apiKey: settings.aiTranslateApiKey,
+          model: settings.aiTranslateModel,
+          useProxy: settings.aiTranslateUseProxy,
+        }
+      }
+    }
+    return await translateText(text, targetLang || 'zh-CN', engine, extraOptions)
   } catch (e) {
+    if (e.message === 'cancelled' || e.name === 'CancelError') {
+      throw e
+    }
     logger.error('[翻译] 单条翻译失败:', e.message)
-    return text
+    throw e
   }
 })
 
-ipcMain.handle('translate:batch', async (event, texts, targetLang) => {
+ipcMain.handle('translate:batch', async (event, texts, targetLang, cancelId) => {
   try {
     const settings = await getSettings()
     const engine = settings.translateEngine || 'google'
-    return await translateBatch(texts, targetLang || 'zh-CN', engine)
+    logger.info(`[翻译] 收到批量翻译请求: 引擎=${engine}, 文本数=${texts?.length}, targetLang=${targetLang}`)
+    const extraOptions = { cancelId }
+    if (engine === 'ai') {
+      if (!settings.aiTranslateBaseUrl || !settings.aiTranslateApiKey || !settings.aiTranslateModel) {
+        logger.warn('[翻译] AI 翻译配置不完整:', { 
+          hasBaseUrl: !!settings.aiTranslateBaseUrl, 
+          hasApiKey: !!settings.aiTranslateApiKey, 
+          hasModel: !!settings.aiTranslateModel 
+        })
+      }
+      extraOptions.aiConfig = {
+        baseUrl: settings.aiTranslateBaseUrl,
+        apiKey: settings.aiTranslateApiKey,
+        model: settings.aiTranslateModel,
+        useProxy: settings.aiTranslateUseProxy,
+      }
+      logger.info(`[翻译] 使用 AI 引擎: ${settings.aiTranslateModel} @ ${settings.aiTranslateBaseUrl}, 文本数: ${texts.length}`)
+    }
+    const result = await translateBatch(texts, targetLang || 'zh-CN', engine, extraOptions)
+    if (engine === 'ai') {
+      const successCount = result.filter((r, i) => r && r !== texts[i]).length
+      logger.info(`[翻译] AI 翻译完成: ${successCount}/${texts.length} 条成功`)
+    } else {
+      const successCount = result.filter((r, i) => r && r !== texts[i]).length
+      logger.info(`[翻译] ${engine} 翻译完成: ${successCount}/${texts.length} 条成功`)
+    }
+    return result
   } catch (e) {
+    if (e.message === 'cancelled' || e.name === 'CancelError') {
+      logger.info('[翻译] 翻译已取消')
+      throw e
+    }
     logger.error('[翻译] 批量翻译失败:', e.message)
-    return texts
+    throw e
   }
+})
+
+ipcMain.handle('translate:cancel', async (_, cancelId) => {
+  const { cancelTranslation: cancelTranslateFn } = require('./translate')
+  return cancelTranslateFn(cancelId)
 })
 
 // 翻译缓存 IPC
@@ -1084,6 +1141,52 @@ async function getProxyConfig() {
   return null
 }
 
+// 把代理配置应用到 Electron Chromium 网络层
+// 影响 <audio>、<img>、fetch 等所有走 session.defaultSession 的请求
+// 这是关键：之前只给 axios 设了代理，<audio> 元素加载 mediaStreamUrl 仍直连导致在线播放慢
+async function applySessionProxy() {
+  try {
+    const proxy = await getProxyConfig()
+    if (!proxy) {
+      await session.defaultSession.setProxy({ mode: 'direct' })
+      logger.info('已清除 session 代理（直连模式）')
+      return
+    }
+    // 转成 Chromium proxyRules 格式
+    let proxyRules
+    if (proxy.protocol === 'socks5') {
+      proxyRules = `socks5://${proxy.host}:${proxy.port}`
+    } else {
+      proxyRules = `http=${proxy.host}:${proxy.port};https=${proxy.host}:${proxy.port}`
+    }
+    await session.defaultSession.setProxy({ proxyRules })
+    // 断开旧连接，强制后续请求使用新代理
+    session.defaultSession.closeAllConnections()
+    logger.info(`已应用 session 代理: ${proxyRules}`)
+  } catch (e) {
+    logger.warn('应用 session 代理失败:', e.message)
+  }
+}
+
+// 拦截音频/媒体请求，注入正确的 Referer 和 Origin
+// 原因：asmr.one 的音频 CDN（如 raw.kiko-play-niptan.one）会校验 Referer
+// Electron 开发模式下页面是 localhost:5173，Referer 不对会被 403 拒绝
+function setupMediaRequestInterceptor() {
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    const url = details.url
+    // 匹配音频文件和 asmr.one 相关媒体请求
+    const isMediaRequest = /\.(mp3|m4a|flac|wav|ogg|aac|opus)(\?|$)/i.test(url) ||
+                          url.includes('/media/stream/') ||
+                          url.includes('afdacdn') ||
+                          url.includes('kiko-play-niptan')
+    if (isMediaRequest) {
+      details.requestHeaders['Referer'] = 'https://asmr.one/'
+      details.requestHeaders['Origin'] = 'https://asmr.one'
+    }
+    callback({ requestHeaders: details.requestHeaders })
+  })
+}
+
 function parseProxyUrl(url) {
   try {
     // 支持格式: http://127.0.0.1:7897, socks5://127.0.0.1:7890, 127.0.0.1:7897
@@ -1122,42 +1225,44 @@ setTranslateProxyHelper(getProxyConfig)
 async function asmrOneGet(url, retries = 5) {
   const proxy = await getProxyConfig()
   let lastError = null
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const axiosConfig = {
         headers: asmrOneHeaders,
-        timeout: 15000,
+        timeout: 20000,
       }
       if (proxy) {
         if (proxy.protocol === 'socks5') {
-          // socks5 需要用 socks-proxy-agent，暂时不支持，提示用户用 http 代理
-          logger.warn('Socks5 代理暂不支持，请使用 HTTP 代理')
+          logger.warn('Socks5 代理暂不支持，改用直连')
         } else {
           axiosConfig.proxy = {
             host: proxy.host,
             port: proxy.port,
             protocol: proxy.protocol,
           }
-          logger.info('使用代理:', `${proxy.protocol}://${proxy.host}:${proxy.port}`)
+          if (attempt === 0) {
+            logger.info('使用代理:', `${proxy.protocol}://${proxy.host}:${proxy.port}`)
+          }
         }
       }
       const res = await axios.get(url, axiosConfig)
       return res
     } catch (e) {
       lastError = e
-      const isRetryable = e.code === 'ECONNRESET' || 
+      const isRetryable = e.code === 'ECONNRESET' ||
                          e.code === 'ECONNREFUSED' ||
                          e.code === 'ETIMEDOUT' ||
                          e.code === 'ECONNABORTED' ||
                          e.code === 'ERR_NETWORK' ||
                          e.code === 'EPIPE' ||
+                         e.code === 'ERR_BAD_RESPONSE' ||
                          (e.response && e.response.status >= 500)
-      
+
       if (!isRetryable || attempt >= retries - 1) {
         break
       }
-      logger.info(`asmrOneGet 重试第 ${attempt + 1}/${retries - 1} 次，错误: ${e.code}`)
-      // 指数退避：1s, 2s, 3s, 4s
+      logger.info(`asmrOneGet 重试第 ${attempt + 1}/${retries - 1} 次，错误: ${e.code || e.message}`)
       await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
     }
   }
@@ -1207,20 +1312,7 @@ ipcMain.handle('asmrOne:getTracks', async (_, workId) => {
   try {
     const res = await asmrOneGet(`${ASMR_ONE_API_BASE}/tracks/${workId}?v=2`)
     let data = res.data
-    
-    // 调试日志
-    logger.info('Tracks API response type:', typeof data, 'isArray:', Array.isArray(data))
-    if (data && typeof data === 'object') {
-      const keys = Object.keys(data)
-      logger.info('Tracks API keys:', JSON.stringify(keys.slice(0, 10)))
-      // 打印第一个元素的结构
-      const firstItem = Array.isArray(data) ? data[0] : data[keys[0]]
-      if (firstItem && typeof firstItem === 'object') {
-        logger.info('Tracks first item keys:', JSON.stringify(Object.keys(firstItem)))
-        logger.info('Tracks first item type:', firstItem.type)
-      }
-    }
-    
+
     // 统一转换成数组
     if (!Array.isArray(data)) {
       if (data && Array.isArray(data.tracks)) {
@@ -1262,6 +1354,7 @@ ipcMain.handle('asmrOne:getTags', async () => {
 })
 
 ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) return null
   try {
     const buffer = fs.readFileSync(filePath)
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
@@ -1273,6 +1366,7 @@ ipcMain.handle('fs:readAudioBuffer', async (_, filePath) => {
 })
 
 ipcMain.handle('fs:getAudioDuration', async (_, filePath) => {
+  if (!isValidFilePath(filePath)) return 0
   try {
     const pf = await getParseFile()
     const metadata = await pf(filePath, { duration: true })
@@ -1483,116 +1577,126 @@ function broadcastDownloadState() {
 }
 
 async function downloadFileInTask(task, file, fileIndex) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const targetDir = file.savePath
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true })
-      }
-      const finalPath = path.join(targetDir, file.fileName)
+  const targetDir = file.savePath
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true })
+  }
+  const finalPath = path.join(targetDir, file.fileName)
 
-      const abortController = new AbortController()
-      activeAbortControllers.add(abortController)
-      const signal = abortController.signal
+  const abortController = new AbortController()
+  activeAbortControllers.add(abortController)
+  const signal = abortController.signal
 
-      const proxy = await getProxyConfig()
-      const axiosConfig = {
-        method: 'GET',
-        url: file.url,
-        responseType: 'stream',
-        headers: asmrOneHeaders,
-        timeout: 60000,
-        signal: signal,
-      }
-      if (proxy && proxy.protocol !== 'socks5') {
-        axiosConfig.proxy = {
-          host: proxy.host,
-          port: proxy.port,
-          protocol: proxy.protocol,
-        }
-      }
-
-      const response = await axios(axiosConfig)
-      const totalLength = parseInt(response.headers['content-length'] || '0', 10)
-      let downloaded = 0
-      const writer = fs.createWriteStream(finalPath)
-      let lastProgressTime = 0
-      let lastDownloadedBytes = 0
-
-      file.status = 'downloading'
-      file.totalLength = totalLength
-      file.downloaded = 0
-      file.progress = 0
-      file.speed = 0
-
-      response.data.on('data', (chunk) => {
-        downloaded += chunk.length
-        file.downloaded = downloaded
-        const now = Date.now()
-        if (now - lastProgressTime >= 300 || downloaded === totalLength) {
-          const elapsed = lastProgressTime ? (now - lastProgressTime) / 1000 : 0
-          const speed = elapsed > 0 ? (downloaded - lastDownloadedBytes) / elapsed : 0
-          const progress = totalLength > 0 ? Math.round((downloaded / totalLength) * 100) : 0
-          file.progress = progress
-          file.speed = Math.round(speed)
-          lastProgressTime = now
-          lastDownloadedBytes = downloaded
-          broadcastDownloadState()
-        }
-      })
-
-      response.data.pipe(writer)
-
-      const onAbort = () => {
-        if (response.data && response.data.destroy) response.data.destroy()
-        if (writer && writer.destroy) writer.destroy()
-      }
-      signal.addEventListener('abort', onAbort)
-
-      const cleanup = () => {
-        signal.removeEventListener('abort', onAbort)
-        activeAbortControllers.delete(abortController)
-      }
-
-      writer.on('finish', () => {
-        cleanup()
-        file.status = 'done'
-        file.progress = 100
-        file.speed = 0
-        broadcastDownloadState()
-        resolve({ success: true, path: finalPath, size: downloaded })
-      })
-
-      writer.on('error', (err) => {
-        cleanup()
-        if (signal.aborted) {
-          file.status = 'cancelled'
-          file.error = '已取消'
-          reject(new Error('已取消'))
-        } else {
-          file.status = 'failed'
-          file.error = err.message
-          reject(err)
-        }
-      })
-
-      response.data.on('error', (err) => {
-        cleanup()
-        if (signal.aborted) {
-          file.status = 'cancelled'
-          file.error = '已取消'
-          reject(new Error('已取消'))
-        } else {
-          file.status = 'failed'
-          file.error = err.message
-          reject(err)
-        }
-      })
-    } catch (e) {
-      file.status = 'failed'
-      file.error = e.message || '下载失败'
-      reject(e)
+  const proxy = await getProxyConfig()
+  const axiosConfig = {
+    method: 'GET',
+    url: file.url,
+    responseType: 'stream',
+    headers: asmrOneHeaders,
+    timeout: 60000,
+    signal: signal,
+  }
+  if (proxy && proxy.protocol !== 'socks5') {
+    axiosConfig.proxy = {
+      host: proxy.host,
+      port: proxy.port,
+      protocol: proxy.protocol,
     }
+  }
+
+  // 发起请求阶段（异步）：失败时标记状态并向上抛错，避免 async executor 反模式
+  let response
+  try {
+    response = await axios(axiosConfig)
+  } catch (e) {
+    activeAbortControllers.delete(abortController)
+    if (signal.aborted) {
+      file.status = 'cancelled'
+      file.error = '已取消'
+      throw new Error('已取消')
+    }
+    file.status = 'failed'
+    file.error = e.message || '下载失败'
+    throw e
+  }
+
+  const totalLength = parseInt(response.headers['content-length'] || '0', 10)
+  let downloaded = 0
+  const writer = fs.createWriteStream(finalPath)
+  let lastProgressTime = 0
+  let lastDownloadedBytes = 0
+
+  file.status = 'downloading'
+  file.totalLength = totalLength
+  file.downloaded = 0
+  file.progress = 0
+  file.speed = 0
+
+  response.data.on('data', (chunk) => {
+    downloaded += chunk.length
+    file.downloaded = downloaded
+    const now = Date.now()
+    if (now - lastProgressTime >= 300 || downloaded === totalLength) {
+      const elapsed = lastProgressTime ? (now - lastProgressTime) / 1000 : 0
+      const speed = elapsed > 0 ? (downloaded - lastDownloadedBytes) / elapsed : 0
+      const progress = totalLength > 0 ? Math.round((downloaded / totalLength) * 100) : 0
+      file.progress = progress
+      file.speed = Math.round(speed)
+      lastProgressTime = now
+      lastDownloadedBytes = downloaded
+      broadcastDownloadState()
+    }
+  })
+
+  response.data.pipe(writer)
+
+  const onAbort = () => {
+    if (response.data && response.data.destroy) response.data.destroy()
+    if (writer && writer.destroy) writer.destroy()
+  }
+  signal.addEventListener('abort', onAbort)
+
+  const cleanup = () => {
+    signal.removeEventListener('abort', onAbort)
+    activeAbortControllers.delete(abortController)
+  }
+
+  // 流式写入阶段：用正常 Promise 包装 finish/error 事件
+  return new Promise((resolve, reject) => {
+    writer.on('finish', () => {
+      cleanup()
+      file.status = 'done'
+      file.progress = 100
+      file.speed = 0
+      broadcastDownloadState()
+      resolve({ success: true, path: finalPath, size: downloaded })
+    })
+
+    writer.on('error', (err) => {
+      cleanup()
+      if (signal.aborted) {
+        file.status = 'cancelled'
+        file.error = '已取消'
+        reject(new Error('已取消'))
+      } else {
+        file.status = 'failed'
+        file.error = err.message
+        reject(err)
+      }
+    })
+
+    response.data.on('error', (err) => {
+      cleanup()
+      if (signal.aborted) {
+        file.status = 'cancelled'
+        file.error = '已取消'
+        reject(new Error('已取消'))
+      } else {
+        file.status = 'failed'
+        file.error = err.message
+        reject(err)
+      }
+    })
   })
 }
 

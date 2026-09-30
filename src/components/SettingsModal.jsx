@@ -1,7 +1,6 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import './SettingsModal.css';
 import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
-import { getPresetList } from '../utils/upscaleShaders';
 import { THEME_PRESETS } from '../utils/themePresets';
 
 const SUBTITLE_STYLE_PRESETS = {
@@ -93,10 +92,8 @@ const DEFAULT_SETTINGS = {
   autoHideSidebar: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   downloadConcurrency: 3,
-  autoImportDownloaded: true,
+  autoImportDownloaded: false,
   downloadNotify: true,
-  upscalePreset: 'anime',
-  closeToTray: true,
   subtitleStylePreset: 'default',
   subtitleLyricFontSize: 14,
   subtitleLyricColor: '#e8e6e3',
@@ -117,6 +114,11 @@ const DEFAULT_SETTINGS = {
   continuousPlay: false,
   restorePlayOnStart: false,
   persistPlayQueue: true,
+  translateEngine: 'google',
+  aiTranslateBaseUrl: 'https://api.openai.com/v1',
+  aiTranslateApiKey: '',
+  aiTranslateModel: 'gpt-3.5-turbo',
+  aiTranslateUseProxy: false,
 };
 
 const TABS = [
@@ -134,6 +136,51 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [testAiStatus, setTestAiStatus] = useState('idle');
+  const [testAiError, setTestAiError] = useState('');
+
+  const handleTestAiTranslate = useCallback(async () => {
+    if (!settings.aiTranslateBaseUrl || !settings.aiTranslateApiKey || !settings.aiTranslateModel) {
+      setTestAiStatus('error');
+      setTestAiError('请先填写完整的 API 地址、API Key 和模型名称');
+      return;
+    }
+
+    setTestAiStatus('testing');
+    setTestAiError('');
+
+    try {
+      const result = await window.electronAPI.translateText(
+        'Hello, world!',
+        'zh-CN',
+        'ai',
+        {
+          baseUrl: settings.aiTranslateBaseUrl,
+          apiKey: settings.aiTranslateApiKey,
+          model: settings.aiTranslateModel,
+          useProxy: settings.aiTranslateUseProxy,
+        }
+      );
+      if (result && result !== 'Hello, world!') {
+        setTestAiStatus('success');
+        setTestAiError('');
+      } else {
+        setTestAiStatus('error');
+        setTestAiError('翻译结果与原文相同，可能配置有误');
+      }
+    } catch (e) {
+      setTestAiStatus('error');
+      setTestAiError(e.message || '未知错误');
+    }
+  }, [settings.aiTranslateBaseUrl, settings.aiTranslateApiKey, settings.aiTranslateModel, settings.aiTranslateUseProxy]);
+
+  // 数据管理 tab 相关状态 - 必须在早期返回之前声明
+  const [dataStats, setDataStats] = useState(null);
+  const [exportKeys, setExportKeys] = useState([]);
+  const [importMode, setImportMode] = useState('merge');
+  const [importResult, setImportResult] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -166,6 +213,25 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
       setActiveTab(defaultTab || 'basic');
     }
   }, [isOpen, defaultTab]);
+
+  // 数据统计加载
+  useEffect(() => {
+    if (isOpen && activeTab === 'data') {
+      loadDataStats();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadDataStats = async () => {
+    try {
+      const stats = await window.electronAPI.backupGetStats();
+      setDataStats(stats);
+      if (stats?.exportableKeys) {
+        setExportKeys([...stats.exportableKeys]);
+      }
+    } catch (e) {
+      console.error('Failed to load data stats:', e);
+    }
+  };
 
   const handleToggle = (key) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -317,21 +383,6 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
         </div>
       </div>
       <div className="settings-section">
-        <div className="settings-section-title">系统托盘</div>
-        <div className="setting-item">
-          <div className="setting-info">
-            <div className="setting-label">关闭窗口最小化到托盘</div>
-            <div className="setting-desc">点击关闭按钮时隐藏到系统托盘，继续后台播放</div>
-          </div>
-          <div className="setting-control">
-            <ToggleSwitch
-              checked={settings.closeToTray}
-              onChange={() => handleToggle('closeToTray')}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="settings-section">
         <div className="settings-section-title">系统媒体集成</div>
         <div className="setting-item">
           <div className="setting-info">
@@ -441,9 +492,131 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
               <option value="google">谷歌翻译</option>
               <option value="microsoft">微软翻译</option>
               <option value="baidu">百度翻译</option>
+              <option value="ai">AI 翻译 (OpenAI 兼容)</option>
             </select>
           </div>
         </div>
+        {settings.translateEngine === 'ai' && (
+          <>
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-label">API 地址</div>
+                <div className="setting-desc">OpenAI 兼容 API 的 Base URL，如 https://api.openai.com/v1</div>
+              </div>
+              <div className="setting-control">
+                <input
+                  type="text"
+                  className="settings-input"
+                  placeholder="https://api.openai.com/v1"
+                  value={settings.aiTranslateBaseUrl || ''}
+                  onChange={(e) => setSettings((p) => ({ ...p, aiTranslateBaseUrl: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-label">API Key</div>
+                <div className="setting-desc">API 密钥，仅保存在本地</div>
+              </div>
+              <div className="setting-control">
+                <input
+                  type="password"
+                  className="settings-input"
+                  placeholder="sk-..."
+                  value={settings.aiTranslateApiKey || ''}
+                  onChange={(e) => setSettings((p) => ({ ...p, aiTranslateApiKey: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-label">模型</div>
+                <div className="setting-desc">选择用于翻译的 AI 模型</div>
+              </div>
+              <div className="setting-control">
+                <input
+                  type="text"
+                  className="settings-input"
+                  placeholder="gpt-3.5-turbo"
+                  value={settings.aiTranslateModel || ''}
+                  onChange={(e) => setSettings((p) => ({ ...p, aiTranslateModel: e.target.value }))}
+                  list="ai-model-options"
+                />
+                <datalist id="ai-model-options">
+                  <option value="gpt-3.5-turbo" />
+                  <option value="gpt-4" />
+                  <option value="gpt-4o" />
+                  <option value="gpt-4o-mini" />
+                  <option value="claude-3-haiku" />
+                  <option value="claude-3-sonnet" />
+                  <option value="deepseek-chat" />
+                  <option value="qwen-turbo" />
+                  <option value="qwen-plus" />
+                </datalist>
+              </div>
+            </div>
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-label">使用代理</div>
+                <div className="setting-desc">AI 翻译是否走系统代理（国内访问 OpenAI 等需开启）</div>
+              </div>
+              <div className="setting-control">
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={settings.aiTranslateUseProxy || false}
+                    onChange={(e) => setSettings((p) => ({ ...p, aiTranslateUseProxy: e.target.checked }))}
+                  />
+                  <span className="settings-toggle-slider" />
+                </label>
+              </div>
+            </div>
+            <div className="setting-item">
+              <div className="setting-info">
+                <div className="setting-label">测试连接</div>
+                <div className="setting-desc">测试 API 配置是否正确</div>
+              </div>
+              <div className="setting-control">
+                <button
+                  className="settings-btn"
+                  onClick={handleTestAiTranslate}
+                  disabled={testAiStatus === 'testing'}
+                  style={{
+                    padding: '8px 16px',
+                    background: testAiStatus === 'success' ? 'var(--accent-gradient-soft)' : 
+                               testAiStatus === 'error' ? 'rgba(239, 68, 68, 0.1)' : 
+                               'var(--button-bg)',
+                    color: testAiStatus === 'success' ? 'var(--accent-primary)' :
+                           testAiStatus === 'error' ? '#ef4444' : 'var(--text-primary)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '8px',
+                    cursor: testAiStatus === 'testing' ? 'wait' : 'pointer',
+                    fontSize: '13px',
+                  }}
+                >
+                  {testAiStatus === 'testing' ? '测试中...' :
+                   testAiStatus === 'success' ? '✓ 连接成功' :
+                   testAiStatus === 'error' ? '✗ 连接失败' :
+                   '测试连接'}
+                </button>
+              </div>
+            </div>
+            {testAiError && (
+              <div style={{
+                padding: '10px 14px',
+                margin: '0 16px 12px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '8px',
+                color: '#ef4444',
+                fontSize: '12px',
+                lineHeight: '1.5',
+              }}>
+                {testAiError}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -565,29 +738,6 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
             </div>
           </div>
         )}
-      </div>
-
-      <div className="settings-section">
-        <div className="settings-section-title">图片超分</div>
-        <div className="setting-item">
-          <div className="setting-info">
-            <div className="setting-label">沉浸式封面质量</div>
-            <div className="setting-desc">选择沉浸式模式下封面图片的放大算法，越高清处理越慢</div>
-          </div>
-          <div className="setting-control">
-            <select
-              className="settings-select"
-              value={settings.upscalePreset || 'anime'}
-              onChange={(e) => setSettings((p) => ({ ...p, upscalePreset: e.target.value }))}
-            >
-              {getPresetList().map((preset) => (
-                <option key={preset.key} value={preset.key}>
-                  {preset.name} — {preset.description}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
       </div>
 
       <div className="settings-section">
@@ -1120,31 +1270,6 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
       />
     </div>
   );
-
-  const [dataStats, setDataStats] = useState(null);
-  const [exportKeys, setExportKeys] = useState([]);
-  const [importMode, setImportMode] = useState('merge');
-  const [importResult, setImportResult] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen && activeTab === 'data') {
-      loadDataStats();
-    }
-  }, [isOpen, activeTab]);
-
-  const loadDataStats = async () => {
-    try {
-      const stats = await window.electronAPI.backupGetStats();
-      setDataStats(stats);
-      if (stats?.exportableKeys) {
-        setExportKeys([...stats.exportableKeys]);
-      }
-    } catch (e) {
-      console.error('Failed to load data stats:', e);
-    }
-  };
 
   const handleToggleExportKey = (key) => {
     setExportKeys((prev) => {
