@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   dbGetAllWorks: () => ipcRenderer.invoke('db:getAllWorks'),
   dbAddWork: (work) => ipcRenderer.invoke('db:addWork', work),
   dbUpdateWork: (id, data) => ipcRenderer.invoke('db:updateWork', id, data),
+  dbSetWorksAudioFiles: (entries) => ipcRenderer.invoke('db:setWorksAudioFiles', entries),
   dbDeleteWork: (id) => ipcRenderer.invoke('db:deleteWork', id),
   dbGetProgress: (workId, audioFile) => ipcRenderer.invoke('db:getProgress', workId, audioFile),
   dbGetWorkProgress: (workId) => ipcRenderer.invoke('db:getWorkProgress', workId),

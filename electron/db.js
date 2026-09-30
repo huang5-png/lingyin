@@ -78,6 +78,31 @@ async function updateWork(id, data) {
   return null
 }
 
+// 批量写入作品音频索引（单次落盘，避免逐个作品各写一次全量 db.json）
+// entries: [{ workId, audioFiles, audioCount }]
+async function setWorksAudioFiles(entries) {
+  if (!Array.isArray(entries) || entries.length === 0) return 0
+
+  const now = Date.now()
+  let updated = 0
+
+  for (const entry of entries) {
+    if (!entry || !entry.workId) continue
+    const work = dbData.works.find((w) => w.id === entry.workId)
+    if (!work) continue
+
+    const audioFiles = Array.isArray(entry.audioFiles) ? entry.audioFiles : []
+    work.audioFiles = audioFiles
+    work.audioCount = typeof entry.audioCount === 'number' ? entry.audioCount : audioFiles.length
+    work.audioIndexUpdatedAt = now
+    work.updatedAt = now
+    updated++
+  }
+
+  if (updated > 0) saveDB()
+  return updated
+}
+
 async function deleteWork(id) {
   const index = dbData.works.findIndex((w) => w.id === id)
   if (index > -1) {
@@ -1687,6 +1712,7 @@ module.exports = {
   getAllWorks,
   addWork,
   updateWork,
+  setWorksAudioFiles,
   deleteWork,
   getProgress,
   getWorkProgress,

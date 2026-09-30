@@ -320,7 +320,7 @@ async function scanRecursive(dirPath, baseDir) {
   return result
 }
 
-function naturalCompare(a, b) {
+export function naturalCompare(a, b) {
   const ax = a.split(/(\d+)/)
   const bx = b.split(/(\d+)/)
   for (let i = 0; i < Math.max(ax.length, bx.length); i++) {

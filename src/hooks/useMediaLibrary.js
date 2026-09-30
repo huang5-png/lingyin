@@ -1,5 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { scanFolder, scanMediaLibrary, extractRJCode } from '../utils/scanner'
+import { normalizeAudioList, sortAudioEntries } from '../utils/audioIndex'
+
+// 构建作品记录的音频索引字段，供智能播放列表与曲目搜索使用
+function buildIndexFields(scanAudioFiles) {
+  const audioFiles = sortAudioEntries(normalizeAudioList(scanAudioFiles))
+  return {
+    audioFiles,
+    audioCount: audioFiles.length,
+    audioIndexUpdatedAt: Date.now(),
+  }
+}
 
 export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
   const [works, setWorks] = useState([])
@@ -126,7 +137,7 @@ export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
         folderName,
         rjCode,
         title: folderName,
-        audioCount: scanResult.audioFiles.length,
+        ...buildIndexFields(scanResult.audioFiles),
         cover: '',
         rating: 0,
         tags: [],
@@ -179,7 +190,7 @@ export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
           folderName,
           rjCode,
           title: folderName,
-          audioCount: result.audioFiles.length,
+          ...buildIndexFields(result.audioFiles),
           cover: '',
           rating: 0,
           tags: [],
@@ -237,7 +248,7 @@ export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
             folderName,
             rjCode,
             title: folderName,
-            audioCount: scanResult.audioFiles.length,
+            ...buildIndexFields(scanResult.audioFiles),
             cover: '',
             rating: 0,
             tags: [],
