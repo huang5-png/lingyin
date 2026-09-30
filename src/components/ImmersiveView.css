@@ -535,6 +535,19 @@
   background: rgba(201, 100, 66, 0.2);
 }
 
+/* A-B 片段循环按钮：已设 A 点等待 B 点时的待定态 */
+.immersive-ctrl-small.pending {
+  color: var(--accent-primary, #c96442);
+  background: rgba(201, 100, 66, 0.12);
+}
+
+.immersive-ab-text {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .immersive-badge {
   position: absolute;
   top: -2px;

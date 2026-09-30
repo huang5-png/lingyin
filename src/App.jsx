@@ -689,6 +689,7 @@ export default function App() {
             defaultVolume={settings.defaultVolume}
             skipSeconds={settings.skipSeconds || 5}
             onToggleImmersive={handlePlayerCoverClickWrapped}
+            onToast={showToast}
             queue={playQueue}
             queueIndex={queueIndex}
             loopMode={loopMode}

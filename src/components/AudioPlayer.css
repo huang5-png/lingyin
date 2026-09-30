@@ -648,6 +648,103 @@
   box-shadow: 0 0 0 1.5px var(--bg-primary, #262624);
 }
 
+/* ===== A-B 片段循环 ===== */
+.ab-loop-control {
+  position: relative;
+  margin-left: 8px;
+}
+
+.ctrl-btn.ab-loop-btn {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  gap: 4px;
+  position: relative;
+}
+
+.ab-loop-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ab-loop-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  white-space: nowrap;
+}
+
+.ctrl-btn.ab-loop-btn.pending {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+.ctrl-btn.ab-loop-btn.active {
+  color: var(--text-on-accent, #fff);
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.ctrl-btn.ab-loop-btn.active .ab-loop-badge {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 波形上的 A-B 区间高亮与 A/B 标记 */
+.waveform-ab-region {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 2;
+  border-left: 2px solid rgba(201, 100, 66, 0.85);
+  border-right: 2px solid rgba(201, 100, 66, 0.85);
+  background: rgba(201, 100, 66, 0.12);
+  transition: background var(--transition-fast);
+}
+
+.waveform-ab-region.active {
+  background: rgba(201, 100, 66, 0.22);
+  box-shadow: inset 0 0 12px rgba(201, 100, 66, 0.25);
+}
+
+.waveform-ab-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  pointer-events: none;
+  z-index: 4;
+  background: var(--accent-primary);
+}
+
+.waveform-ab-marker::after {
+  position: absolute;
+  top: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 12px;
+  color: #fff;
+  background: var(--accent-primary);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.waveform-ab-marker.a::after {
+  content: 'A';
+  left: 3px;
+}
+
+.waveform-ab-marker.b::after {
+  content: 'B';
+  right: 3px;
+}
+
 /* ===== 高 DPI 适配 ===== */
 @media (min-resolution: 1.5dppx) {
   .ctrl-btn.prev-next-btn {

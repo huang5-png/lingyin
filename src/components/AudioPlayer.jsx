@@ -29,7 +29,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   {
     audioPath, title, cover, onTimeUpdate, onReady, onFinish, workId,
     waveformHeight = 70, defaultVolume = 80, skipSeconds = 5,
-    onPrev, onNext, onToggleImmersive,
+    onPrev, onNext, onToggleImmersive, onToast,
     // 播放队列相关
     queue = [], queueIndex = -1, loopMode = 'none', shuffle = false, showQueuePanel = false,
     onToggleQueue, onToggleLoop, onToggleShuffle,
@@ -74,6 +74,22 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const [sleepTab, setSleepTab] = useState('countdown')
   const [customMinutes, setCustomMinutes] = useState('30')
   const [timePointInput, setTimePointInput] = useState('23:00')
+  // A-B 片段循环：a/b 为秒数，enabled 表示已开始循环；按曲目维度使用，换曲自动清空
+  const [abLoop, setAbLoop] = useState({ a: null, b: null, enabled: false })
+  const abLoopRef = useRef(abLoop)
+
+  useEffect(() => {
+    abLoopRef.current = abLoop
+  }, [abLoop])
+
+  // 切换音频时清空 A-B 循环（区间只对当前曲目有意义）
+  useEffect(() => {
+    setAbLoop((prev) => (
+      prev.a === null && prev.b === null && !prev.enabled
+        ? prev
+        : { a: null, b: null, enabled: false }
+    ))
+  }, [audioPath])
 
   // 过滤 wavesurfer.js 内部的 AbortError 未捕获 Promise rejection
   useEffect(() => {
@@ -142,6 +158,9 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     getPlaybackRate: () => playbackRate,
     isPlaying: () => isPlaying,
     getAudioElement: () => audioElementRef.current,
+    // A-B 循环：供沉浸模式等外部调用
+    cycleAbLoop: () => cycleAbLoop(),
+    getAbLoop: () => abLoopRef.current,
   }))
 
   const handlePlayPause = () => {
@@ -222,6 +241,72 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const [useSimpleMode, setUseSimpleMode] = useState(false)
   const simpleAudioRef = useRef(null)
 
+  // 读取播放器当前真实时间（优先从底层媒体元素取，避免依赖节流后的 state）
+  const getLiveTime = useCallback(() => {
+    if (useSimpleMode && simpleAudioRef.current) {
+      return simpleAudioRef.current.currentTime || 0
+    }
+    const ws = wavesurferRef.current
+    if (ws && typeof ws.getCurrentTime === 'function') {
+      return ws.getCurrentTime() || 0
+    }
+    return currentTime
+  }, [useSimpleMode, currentTime])
+
+  // A-B 循环三态切换：设置 A 点 → 设置 B 点并开启 → 关闭
+  const cycleAbLoop = useCallback(() => {
+    const cur = abLoopRef.current
+    const t = getLiveTime()
+
+    if (cur.enabled) {
+      const next = { a: null, b: null, enabled: false }
+      abLoopRef.current = next
+      setAbLoop(next)
+      onToast?.('A-B 循环已关闭', 'info')
+      return
+    }
+
+    if (cur.a == null) {
+      const next = { a: t, b: null, enabled: false }
+      abLoopRef.current = next
+      setAbLoop(next)
+      onToast?.(`已设置 A 点：${formatTime(t)}，再次点击设置 B 点`, 'success')
+      return
+    }
+
+    if (t <= cur.a + 0.3) {
+      onToast?.('B 点需在 A 点之后', 'warning')
+      return
+    }
+
+    const next = { a: cur.a, b: t, enabled: true }
+    abLoopRef.current = next
+    setAbLoop(next)
+    // 立即跳回 A 点开始循环
+    if (useSimpleMode && simpleAudioRef.current) {
+      simpleAudioRef.current.currentTime = cur.a
+    } else if (wavesurferRef.current && duration > 0) {
+      wavesurferRef.current.seekTo(cur.a / duration)
+    }
+    setCurrentTime(cur.a)
+    onToast?.(`A-B 循环已开启：${formatTime(cur.a)} - ${formatTime(t)}`, 'success')
+  }, [getLiveTime, onToast, useSimpleMode, duration])
+
+  const abLoopTitle = abLoop.enabled
+    ? `A-B 循环中：${formatTime(abLoop.a)} - ${formatTime(abLoop.b)}，点击关闭`
+    : abLoop.a != null
+      ? `A 点 ${formatTime(abLoop.a)}，点击设置 B 点`
+      : 'A-B 片段循环：点击设置 A 点'
+
+  // 波形上的 A-B 区间高亮（未设置 B 点时预览到当前播放位置）
+  const abRegion = (() => {
+    if (abLoop.a == null || duration <= 0) return null
+    const end = abLoop.b != null ? abLoop.b : Math.max(currentTime, abLoop.a)
+    const startPct = Math.max(0, Math.min(100, (abLoop.a / duration) * 100))
+    const widthPct = Math.max(0, Math.min(100 - startPct, ((end - abLoop.a) / duration) * 100))
+    return { startPct, widthPct, hasB: abLoop.b != null }
+  })()
+
   useEffect(() => {
     let cancelled = false
 
@@ -281,6 +366,11 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
         }
         const handleTimeUpdate = () => {
           if (cancelled) return
+          // A-B 循环：到达 B 点立即回到 A 点
+          const { a, b, enabled } = abLoopRef.current
+          if (enabled && a != null && b != null && b > a && audio.currentTime >= b) {
+            audio.currentTime = a
+          }
           setCurrentTime(audio.currentTime)
           if (onTimeUpdate) onTimeUpdate(audio.currentTime)
         }
@@ -453,6 +543,17 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           let lastProcessTime = 0
           ws.on('audioprocess', (time) => {
             if (cancelled) return
+            // A-B 循环：到达 B 点立即回到 A 点
+            const { a, b, enabled } = abLoopRef.current
+            if (enabled && a != null && b != null && b > a && time >= b) {
+              const dur = ws.getDuration()
+              if (dur > 0) {
+                ws.seekTo(a / dur)
+                setCurrentTime(a)
+                if (onTimeUpdate) onTimeUpdate(a)
+                return
+              }
+            }
             const now = performance.now()
             if (now - lastProcessTime < 66) return
             lastProcessTime = now
@@ -571,6 +672,21 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           >
             <div ref={waveformRef} className="waveform" />
             <div className="waveform-gradient-overlay" />
+            {abRegion && (
+              <>
+                <div
+                  className={`waveform-ab-region ${abLoop.enabled ? 'active' : ''}`}
+                  style={{ left: `${abRegion.startPct}%`, width: `${abRegion.widthPct}%` }}
+                />
+                <div className="waveform-ab-marker a" style={{ left: `${abRegion.startPct}%` }} />
+                {abRegion.hasB && (
+                  <div
+                    className="waveform-ab-marker b"
+                    style={{ left: `${abRegion.startPct + abRegion.widthPct}%` }}
+                  />
+                )}
+              </>
+            )}
             {useSimpleMode && (
               <>
                 <div className="simple-progress-bg" />
@@ -713,6 +829,20 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
             {bookmarkCount > 0 && <span className="bookmark-badge">{bookmarkCount}</span>}
+          </button>
+        </div>
+        <div className="ab-loop-control">
+          <button
+            className={`ctrl-btn ab-loop-btn ${abLoop.enabled ? 'active' : ''} ${!abLoop.enabled && abLoop.a != null ? 'pending' : ''}`}
+            onClick={cycleAbLoop}
+            title={abLoopTitle}
+          >
+            <span className="ab-loop-text">A-B</span>
+            {abLoop.a != null && (
+              <span className="ab-loop-badge">
+                {abLoop.enabled ? `${formatTime(abLoop.a)}-${formatTime(abLoop.b)}` : formatTime(abLoop.a)}
+              </span>
+            )}
           </button>
         </div>
         <div className="playback-rate-control">

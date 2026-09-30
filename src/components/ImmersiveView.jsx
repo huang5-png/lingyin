@@ -53,6 +53,7 @@ const ImmersiveView = memo(function ImmersiveView({
   const [showRateMenu, setShowRateMenu] = useState(false)
   const [volume, setVolume] = useState(0.8)
   const [audioElement, setAudioElement] = useState(null)
+  const [abState, setAbState] = useState({ a: null, b: null, enabled: false })
   const progressRef = useRef(null)
 
   if (!seekThrottleRef.current) {
@@ -123,6 +124,7 @@ const ImmersiveView = memo(function ImmersiveView({
   useEffect(() => {
     if (playerRef.current) {
       setVolume(playerRef.current.getVolume?.() || 0.8)
+      setAbState(playerRef.current.getAbLoop?.() || { a: null, b: null, enabled: false })
       const audio = playerRef.current.getAudioElement?.()
       if (audio) {
         setAudioElement(audio)
@@ -195,6 +197,19 @@ const ImmersiveView = memo(function ImmersiveView({
     }
     resetHideTimer()
   }, [onAddBookmark, resetHideTimer])
+
+  // A-B 循环：交由播放器统一实现，这里只负责触发与同步展示状态
+  const handleCycleAbLoop = useCallback(() => {
+    playerRef.current?.cycleAbLoop?.()
+    setAbState(playerRef.current?.getAbLoop?.() || { a: null, b: null, enabled: false })
+    resetHideTimer()
+  }, [playerRef, resetHideTimer])
+
+  const abLoopTitle = abState.enabled
+    ? `A-B 循环中：${formatTime(abState.a)} - ${formatTime(abState.b)}，点击关闭`
+    : abState.a != null
+      ? `A 点 ${formatTime(abState.a)}，点击设置 B 点`
+      : 'A-B 片段循环：点击设置 A 点'
 
   const styleSettings = subtitleStyleSettings || {
     fontSize: subtitleFontSize ? subtitleFontSize * 1.2 : 22,
@@ -475,6 +490,14 @@ const ImmersiveView = memo(function ImmersiveView({
                 {bookmarkCount > 0 && (
                   <span className="immersive-badge">{bookmarkCount}</span>
                 )}
+              </button>
+
+              <button
+                className={`immersive-ctrl-btn immersive-ctrl-small ${abState.enabled ? 'active' : ''} ${!abState.enabled && abState.a != null ? 'pending' : ''}`}
+                onClick={handleCycleAbLoop}
+                title={abLoopTitle}
+              >
+                <span className="immersive-ab-text">A-B</span>
               </button>
 
               <button
