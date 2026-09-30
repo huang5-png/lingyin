@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import './GlobalSearchModal.css'
 import StateView from './StateView'
+import { buildAudioFilesMap } from '../utils/audioIndex'
 
 const RESULT_TYPE = {
   WORK: 'work',
@@ -24,8 +25,9 @@ function highlightText(text, query) {
   if (!query || !text) return text
   const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi')
   const parts = text.split(regex)
+  const lowerQuery = query.toLowerCase()
   return parts.map((part, i) =>
-    regex.test(part) ? (
+    part.toLowerCase() === lowerQuery ? (
       <mark key={i} className="search-highlight">{part}</mark>
     ) : (
       <span key={i}>{part}</span>
@@ -37,7 +39,6 @@ const GlobalSearchModal = memo(function GlobalSearchModal({
   isOpen,
   onClose,
   works,
-  audioFilesMap,
   currentAudio,
   currentWork,
   favoriteIds,
@@ -93,6 +94,17 @@ const GlobalSearchModal = memo(function GlobalSearchModal({
     return works.filter(w => favoriteIds.has(w.id))
   }, [works, favoriteIds])
 
+  // 曲目索引直接从 works 派生（作品记录已持久化 audioFiles）
+  const audioFilesMap = useMemo(() => buildAudioFilesMap(works), [works])
+
+  const workById = useMemo(() => {
+    const map = new Map()
+    for (const work of works) {
+      map.set(work.id, work)
+    }
+    return map
+  }, [works])
+
   const localResults = useMemo(() => {
     if (!debouncedQuery.trim()) return []
     const q = debouncedQuery.toLowerCase().trim()
@@ -126,17 +138,18 @@ const GlobalSearchModal = memo(function GlobalSearchModal({
   }, [works, debouncedQuery])
 
   const trackResults = useMemo(() => {
-    if (!debouncedQuery.trim() || !audioFilesMap) return []
+    if (!debouncedQuery.trim()) return []
     const q = debouncedQuery.toLowerCase().trim()
     const results = []
 
     for (const [workId, audios] of Object.entries(audioFilesMap)) {
-      const work = works.find(w => w.id === workId)
+      const work = workById.get(workId)
       if (!work || !audios) continue
 
       for (const audio of audios) {
-        const audioName = (audio.name || '').toLowerCase()
-        if (audioName.includes(q)) {
+        const name = (audio.name || '').toLowerCase()
+        const displayName = (audio.displayName || '').toLowerCase()
+        if (name.includes(q) || displayName.includes(q)) {
           results.push({
             type: RESULT_TYPE.TRACK,
             audio,
@@ -151,7 +164,7 @@ const GlobalSearchModal = memo(function GlobalSearchModal({
     }
 
     return results
-  }, [audioFilesMap, works, debouncedQuery])
+  }, [audioFilesMap, workById, debouncedQuery])
 
   const favoriteResults = useMemo(() => {
     if (!debouncedQuery.trim()) return []
