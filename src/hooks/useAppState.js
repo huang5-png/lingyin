@@ -43,6 +43,7 @@ export function useAppState() {
     showLyric,
     setShowLyric,
     handleSaveSettings,
+    updateSettings,
     handleViewModeChange,
     handlePlaybackRateChange,
     handleLibrarySortChange,
@@ -271,9 +272,7 @@ export function useAppState() {
     queueIndex,
     setQueueIndex,
     loopMode,
-    setLoopMode,
     shuffle,
-    setShuffle,
     showQueuePanel,
     setShowQueuePanel,
     pendingQueuePlayRef,
@@ -297,6 +296,7 @@ export function useAppState() {
     handleSelectAudioRef,
     setCurrentView,
     setSelectedWork,
+    updateSettings,
   })
 
   // ===== 睡眠定时器 Hook =====

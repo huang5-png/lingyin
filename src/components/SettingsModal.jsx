@@ -1,7 +1,8 @@
 import { useState, useEffect, memo, useCallback } from 'react';
 import './SettingsModal.css';
-import KeyboardShortcutsPanel, { DEFAULT_SHORTCUTS } from './KeyboardShortcutsPanel';
+import KeyboardShortcutsPanel from './KeyboardShortcutsPanel';
 import { THEME_PRESETS } from '../utils/themePresets';
+import { DEFAULT_SETTINGS as BASE_SETTINGS } from '../hooks/useAppSettings';
 
 const SUBTITLE_STYLE_PRESETS = {
   default: {
@@ -70,55 +71,13 @@ const SUBTITLE_STYLE_PRESETS = {
   },
 };
 
+// 设置默认值统一由 useAppSettings 提供，这里只补充设置面板独有的项
 const DEFAULT_SETTINGS = {
-  autoPlayNext: true,
-  rememberProgress: true,
-  autoPlayOnStart: false,
-  defaultVolume: 80,
-  sidebarWidth: 280,
-  lyricWidth: 360,
-  playerHeight: 96,
-  showRatingStars: true,
-  waveformHeight: 56,
-  showLyric: true,
-  autoScrollLyric: true,
-  skipSeconds: 5,
-  theme: 'light',
-  accentPreset: 'warm-orange',
-  customAccentColor: '#c96442',
-  viewMode: 'grid',
-  loopMode: 'none',
-  shuffle: false,
-  autoHideSidebar: true,
-  shortcuts: { ...DEFAULT_SHORTCUTS },
+  ...BASE_SETTINGS,
+  shortcuts: { ...BASE_SETTINGS.shortcuts },
   downloadConcurrency: 3,
   autoImportDownloaded: false,
   downloadNotify: true,
-  subtitleStylePreset: 'default',
-  subtitleLyricFontSize: 14,
-  subtitleLyricColor: '#e8e6e3',
-  subtitleLyricActiveColor: '#c96442',
-  subtitleLyricFontWeight: 400,
-  subtitleLyricShadow: true,
-  subtitleLyricShadowBlur: 2,
-  subtitleImmersiveFontSize: 22,
-  subtitleImmersiveActiveFontSize: 34,
-  subtitleImmersiveColor: '#ffffff',
-  subtitleImmersiveActiveColor: '#ffffff',
-  subtitleImmersiveFontWeight: 500,
-  subtitleImmersiveShadow: true,
-  subtitleImmersiveShadowBlur: 4,
-  globalMediaKeys: true,
-  trackChangeNotification: true,
-  enableMediaSession: true,
-  continuousPlay: false,
-  restorePlayOnStart: false,
-  persistPlayQueue: true,
-  translateEngine: 'google',
-  aiTranslateBaseUrl: 'https://api.openai.com/v1',
-  aiTranslateApiKey: '',
-  aiTranslateModel: 'gpt-3.5-turbo',
-  aiTranslateUseProxy: false,
 };
 
 const TABS = [

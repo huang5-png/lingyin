@@ -13,11 +13,13 @@ export function usePlayQueue({
   handleSelectAudioRef,
   setCurrentView,
   setSelectedWork,
+  updateSettings,
 }) {
   const [playQueue, setPlayQueue] = useState([])
   const [queueIndex, setQueueIndex] = useState(-1)
-  const [loopMode, setLoopMode] = useState(settings?.loopMode || 'none')
-  const [shuffle, setShuffle] = useState(!!settings?.shuffle)
+  // 循环模式与随机播放以 settings 为单一数据源，避免与设置面板出现双份状态
+  const loopMode = settings?.loopMode || 'none'
+  const shuffle = !!settings?.shuffle
   const [showQueuePanel, setShowQueuePanel] = useState(false)
   const pendingQueuePlayRef = useRef(null)
   const saveQueueTimeoutRef = useRef(null)
@@ -227,28 +229,13 @@ export function usePlayQueue({
   }, [])
 
   const toggleLoopMode = useCallback(() => {
-    setLoopMode((prev) => {
-      const next = prev === 'none' ? 'one' : prev === 'one' ? 'list' : 'none'
-      try {
-        const s = { ...settings, loopMode: next }
-        localStorage.setItem('appSettings', JSON.stringify(s))
-        window.electronAPI?.dbSaveSettings?.(s)
-      } catch (e) {}
-      return next
-    })
-  }, [settings])
+    const next = loopMode === 'none' ? 'one' : loopMode === 'one' ? 'list' : 'none'
+    updateSettings?.({ loopMode: next })
+  }, [loopMode, updateSettings])
 
   const toggleShuffle = useCallback(() => {
-    setShuffle((prev) => {
-      const next = !prev
-      try {
-        const s = { ...settings, shuffle: next }
-        localStorage.setItem('appSettings', JSON.stringify(s))
-        window.electronAPI?.dbSaveSettings?.(s)
-      } catch (e) {}
-      return next
-    })
-  }, [settings])
+    updateSettings?.({ shuffle: !shuffle })
+  }, [shuffle, updateSettings])
 
   const toggleQueuePanel = useCallback(() => {
     setShowQueuePanel((prev) => !prev)
@@ -260,9 +247,7 @@ export function usePlayQueue({
     queueIndex,
     setQueueIndex,
     loopMode,
-    setLoopMode,
     shuffle,
-    setShuffle,
     showQueuePanel,
     setShowQueuePanel,
     pendingQueuePlayRef,

@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { DEFAULT_SHORTCUTS } from '../components/KeyboardShortcutsPanel'
 
-const DEFAULT_SETTINGS = {
+export const DEFAULT_SETTINGS = {
   autoPlayNext: true,
   rememberProgress: true,
   autoPlayOnStart: false,
@@ -82,66 +82,71 @@ export function useAppSettings({ playerRef, setShowLyric, showToast }) {
   const [viewMode, setViewMode] = useState(settings.viewMode || 'grid')
   const [showLyric, setLocalShowLyric] = useState(settings.showLyric)
 
-  const handleSaveSettings = useCallback(
-    (newSettings) => {
-      setSettings(newSettings)
-      localStorage.setItem('appSettings', JSON.stringify(newSettings))
+  // 始终指向最新的设置对象，保证增量更新不会合并到过期快照
+  const settingsRef = useRef(settings)
+  useEffect(() => {
+    settingsRef.current = settings
+  }, [settings])
+
+  // 设置的唯一写入点：同步内存状态、localStorage、数据库，并触发相关副作用
+  const commitSettings = useCallback(
+    (next) => {
+      settingsRef.current = next
+      setSettings(next)
+      localStorage.setItem('appSettings', JSON.stringify(next))
       try {
-        window.electronAPI.dbSaveSettings(newSettings)
+        window.electronAPI?.dbSaveSettings?.(next)?.catch?.(() => {})
       } catch (e) {
         console.error('Failed to save settings to db:', e)
       }
-      if (newSettings.showLyric !== undefined) {
-        setLocalShowLyric(newSettings.showLyric)
+      if (next.showLyric !== undefined) {
+        setLocalShowLyric(next.showLyric)
         if (setShowLyric) {
-          setShowLyric(newSettings.showLyric)
+          setShowLyric(next.showLyric)
         }
       }
-      if (newSettings.defaultVolume !== undefined && playerRef?.current) {
-        playerRef.current.setVolume?.(newSettings.defaultVolume / 100)
+      if (next.defaultVolume !== undefined && playerRef?.current) {
+        playerRef.current.setVolume?.(next.defaultVolume / 100)
       }
     },
     [playerRef, setShowLyric],
   )
 
+  // 整份替换（设置面板保存时使用）
+  const handleSaveSettings = useCallback((newSettings) => commitSettings(newSettings), [commitSettings])
+
+  // 增量更新：把 patch 合并到最新设置上，不会覆盖其他被改动过的字段
+  const updateSettings = useCallback(
+    (patch) => {
+      const prev = settingsRef.current
+      commitSettings(typeof patch === 'function' ? patch(prev) : { ...prev, ...patch })
+    },
+    [commitSettings],
+  )
+
   const handleViewModeChange = useCallback(
     (mode) => {
       setViewMode(mode)
-      setSettings((prev) => {
-        const newSettings = { ...prev, viewMode: mode }
-        window.electronAPI?.dbSaveSettings(newSettings).catch(() => {})
-        return newSettings
-      })
+      updateSettings({ viewMode: mode })
     },
-    [],
+    [updateSettings],
   )
 
   const handlePlaybackRateChange = useCallback(
     (rate) => {
-      setSettings((prev) => {
-        const newSettings = { ...prev, playbackRate: rate }
-        localStorage.setItem('appSettings', JSON.stringify(newSettings))
-        window.electronAPI?.dbSaveSettings(newSettings).catch(() => {})
-        return newSettings
-      })
+      updateSettings({ playbackRate: rate })
     },
-    [],
+    [updateSettings],
   )
 
   const handleLibrarySortChange = useCallback(
     (sortBy, sortOrder) => {
-      setSettings((prev) => {
-        const newSettings = {
-          ...prev,
-          librarySortBy: sortBy !== undefined ? sortBy : prev.librarySortBy,
-          librarySortOrder: sortOrder !== undefined ? sortOrder : prev.librarySortOrder,
-        }
-        localStorage.setItem('appSettings', JSON.stringify(newSettings))
-        window.electronAPI?.dbSaveSettings(newSettings).catch(() => {})
-        return newSettings
-      })
+      const patch = {}
+      if (sortBy !== undefined) patch.librarySortBy = sortBy
+      if (sortOrder !== undefined) patch.librarySortOrder = sortOrder
+      updateSettings(patch)
     },
-    [],
+    [updateSettings],
   )
 
   return {
@@ -152,6 +157,7 @@ export function useAppSettings({ playerRef, setShowLyric, showToast }) {
     showLyric,
     setShowLyric: setLocalShowLyric,
     handleSaveSettings,
+    updateSettings,
     handleViewModeChange,
     handlePlaybackRateChange,
     handleLibrarySortChange,
