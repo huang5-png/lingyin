@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, memo } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import { formatTime } from '../utils/subtitleParser'
+import { PLAYBACK_RATES } from '../utils/playback'
 import QueuePanel from './QueuePanel'
 import SpectrumVisualizer from './SpectrumVisualizer'
 import './AudioPlayer.css'
@@ -62,6 +63,9 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(defaultVolume / 100)
+  // 静音只影响实际输出音量，volume 始终保留静音前的记忆值，取消静音即可还原
+  const [muted, setMuted] = useState(false)
+  const effectiveVolume = muted ? 0 : volume
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -138,6 +142,8 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     setVolume: (v) => {
       const clamped = Math.max(0, Math.min(1, v))
       setVolume(clamped)
+      // 调到非零音量时自动解除静音，让快捷键/睡眠定时器恢复音量即可出声
+      if (clamped > 0) setMuted(false)
       if (useSimpleMode && simpleAudioRef.current) {
         simpleAudioRef.current.volume = clamped
       } else if (wavesurferRef.current) {
@@ -145,6 +151,9 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
       }
     },
     getVolume: () => volume,
+    toggleMute: () => setMuted((prev) => !prev),
+    setMuted: (v) => setMuted(!!v),
+    getMuted: () => muted,
     skipBackward: (seconds) => {
       if (useSimpleMode && simpleAudioRef.current && currentTime > 0) {
         simpleAudioRef.current.currentTime = Math.max(0, simpleAudioRef.current.currentTime - (seconds || skipSeconds))
@@ -189,6 +198,8 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const handleVolumeChange = (e) => {
     const v = parseFloat(e.target.value)
     setVolume(v)
+    // 拖动音量条到非零值即视为解除静音
+    if (v > 0) setMuted(false)
     if (useSimpleMode && simpleAudioRef.current) {
       simpleAudioRef.current.volume = v
     } else if (wavesurferRef.current) {
@@ -359,7 +370,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
 
         const audio = new Audio()
         audio.preload = 'auto'
-        audio.volume = volume
+        audio.volume = effectiveVolume
 
         const handleLoadedMetadata = () => {
           if (cancelled) return
@@ -516,7 +527,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           wavesurferRef.current = ws
 
           ws.load(fileUrl)
-          ws.setVolume(volume)
+          ws.setVolume(effectiveVolume)
 
           ws.on('ready', () => {
             if (cancelled) return
@@ -619,14 +630,14 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
 
   useEffect(() => {
     if (useSimpleMode && simpleAudioRef.current) {
-      simpleAudioRef.current.volume = volume
+      simpleAudioRef.current.volume = effectiveVolume
     } else if (wavesurferRef.current) {
-      wavesurferRef.current.setVolume(volume)
+      wavesurferRef.current.setVolume(effectiveVolume)
     }
     if (volumeSliderRef.current) {
       volumeSliderRef.current.style.backgroundSize = `${volume * 100}% 100%`
     }
-  }, [volume, useSimpleMode])
+  }, [effectiveVolume, volume, useSimpleMode])
 
   useEffect(() => {
     if (useSimpleMode && simpleAudioRef.current && isReady) {
@@ -768,12 +779,23 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
 
       <div className="player-right">
         <div className="volume-control">
-          <span className="volume-icon">
+          <button
+            className={`volume-icon ${muted ? 'muted' : ''}`}
+            onClick={() => setMuted((prev) => !prev)}
+            title={muted ? '取消静音' : '静音'}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              {muted ? (
+                <>
+                  <line x1="23" y1="9" x2="17" y2="15"/>
+                  <line x1="17" y1="9" x2="23" y2="15"/>
+                </>
+              ) : (
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              )}
             </svg>
-          </span>
+          </button>
           <input
             ref={volumeSliderRef}
             type="range"
@@ -868,7 +890,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             <div className="playback-rate-dropdown">
               <div className="playback-rate-header">播放速度</div>
               <div className="playback-rate-options">
-                {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
+                {PLAYBACK_RATES.map((rate) => (
                   <button
                     key={rate}
                     className={`playback-rate-option ${playbackRate === rate ? 'active' : ''}`}

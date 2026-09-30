@@ -10,10 +10,81 @@
   line-height: 1.5;
 }
 
+.shortcuts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.shortcuts-search {
+  flex: 1;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.shortcuts-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.shortcuts-search:focus {
+  border-color: var(--accent-primary);
+}
+
+.shortcuts-search-clear {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shortcuts-search-clear:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.shortcuts-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
 .shortcuts-list {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.shortcuts-group {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.shortcuts-group-title {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  padding: 0 4px;
 }
 
 .shortcut-item {

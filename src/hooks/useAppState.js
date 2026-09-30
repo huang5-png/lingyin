@@ -697,6 +697,7 @@ export function useAppState() {
     currentAudio,
     handlePrevAudio,
     handleNextAudio,
+    onPlaybackRateChange: handlePlaybackRateChange,
   })
 
   // ===== 字幕刷新 Hook =====

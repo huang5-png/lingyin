@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useRef, useCallback, memo, useState } from 'react'
 import { findCurrentCue, formatTime } from '../utils/subtitleParser'
+import { PLAYBACK_RATES } from '../utils/playback'
 import SpectrumVisualizer from './SpectrumVisualizer'
 import './ImmersiveView.css'
 
@@ -13,8 +14,6 @@ function throttle(fn, delay) {
     }
   }
 }
-
-const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 
 const ImmersiveView = memo(function ImmersiveView({
   work,

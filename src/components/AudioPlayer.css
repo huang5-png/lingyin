@@ -387,6 +387,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.volume-icon:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.volume-icon.muted {
+  opacity: 1;
+  color: var(--error-color, #e53e3e);
 }
 
 .volume-slider {

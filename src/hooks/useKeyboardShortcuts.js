@@ -1,27 +1,6 @@
 import { useEffect, useCallback } from 'react'
-import { DEFAULT_SHORTCUTS } from '../components/KeyboardShortcutsPanel'
-
-function parseShortcut(shortcutStr) {
-  if (!shortcutStr) return null
-  const parts = shortcutStr.split('+')
-  return {
-    ctrl: parts.includes('Ctrl'),
-    shift: parts.includes('Shift'),
-    alt: parts.includes('Alt'),
-    key: parts[parts.length - 1],
-  }
-}
-
-function matchShortcut(e, shortcutStr) {
-  if (!shortcutStr) return false
-  const expected = parseShortcut(shortcutStr)
-  if (!expected) return false
-  const key = e.key === ' ' ? 'Space' : e.key
-  return e.ctrlKey === expected.ctrl &&
-         e.shiftKey === expected.shift &&
-         e.altKey === expected.alt &&
-         key === expected.key
-}
+import { DEFAULT_SHORTCUTS, matchShortcut, parseShortcut } from '../utils/shortcuts'
+import { stepPlaybackRate } from '../utils/playback'
 
 export function useKeyboardShortcuts({
   settings,
@@ -39,6 +18,7 @@ export function useKeyboardShortcuts({
   currentAudio,
   handlePrevAudio,
   handleNextAudio,
+  onPlaybackRateChange,
 }) {
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
@@ -130,6 +110,12 @@ export function useKeyboardShortcuts({
       return
     }
 
+    if (matchShortcut(e, shortcuts.toggleMute)) {
+      e.preventDefault()
+      playerRef?.current?.toggleMute?.()
+      return
+    }
+
     if (matchShortcut(e, shortcuts.seekBackward)) {
       e.preventDefault()
       if (playerRef?.current) {
@@ -143,6 +129,26 @@ export function useKeyboardShortcuts({
       if (playerRef?.current) {
         playerRef.current.skipForward?.(settings?.skipSeconds || 5)
       }
+      return
+    }
+
+    if (matchShortcut(e, shortcuts.toggleAbLoop)) {
+      e.preventDefault()
+      if (currentAudio) {
+        playerRef?.current?.cycleAbLoop?.()
+      }
+      return
+    }
+
+    if (matchShortcut(e, shortcuts.speedUp)) {
+      e.preventDefault()
+      onPlaybackRateChange?.(stepPlaybackRate(settings?.playbackRate ?? 1, 'up'))
+      return
+    }
+
+    if (matchShortcut(e, shortcuts.speedDown)) {
+      e.preventDefault()
+      onPlaybackRateChange?.(stepPlaybackRate(settings?.playbackRate ?? 1, 'down'))
       return
     }
 
@@ -187,6 +193,7 @@ export function useKeyboardShortcuts({
     currentAudio,
     handlePrevAudio,
     handleNextAudio,
+    onPlaybackRateChange,
   ])
 
   useEffect(() => {
