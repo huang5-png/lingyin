@@ -1,4 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import {
+  DEFAULT_FADE_SECONDS,
+  formatSleepRemaining,
+  remainingSecondsUntil,
+  resolveTimePointTarget,
+} from '../utils/sleepTimer'
 
 export const SLEEP_TIMER_OPTIONS = [
   { label: '关闭', value: 0 },
@@ -19,91 +25,154 @@ export const SLEEP_TIMER_MODES = {
   TIME_POINT: 'timePoint',
 }
 
-const FADE_DURATION = 30
+export const SLEEP_TIMER_FADE_OPTIONS = [
+  { label: '10 秒', value: 10 },
+  { label: '30 秒', value: 30 },
+  { label: '60 秒', value: 60 },
+]
 
-export function useSleepTimer({ playerRef, showToast, isPlaying, onFinish }) {
+const FADE_TICK_MS = 100
+const TIMER_TICK_MS = 500
+
+/**
+ * 睡眠定时器：倒计时 / 曲目结束 / 指定时间点三种模式，支持渐弱淡出后暂停。
+ *
+ * 关键约定：
+ * - 定时以「截止时间戳 deadline」为唯一依据，避免逐秒累加造成的漂移；
+ * - 渐弱开关与时长来自 settings，通过 updateSettings 持久化（单一数据源）；
+ * - 到点后调用播放器的 pause() 显式暂停，不使用 playPause() 切换（避免暂停态被反向播放）；
+ * - 仅在真正发生过渐弱时才恢复音量，未渐弱时不会篡改用户音量。
+ */
+export function useSleepTimer({ playerRef, showToast, settings, updateSettings }) {
   const [mode, setMode] = useState(SLEEP_TIMER_MODES.COUNTDOWN)
   const [isActive, setIsActive] = useState(false)
-  const [countdownMinutes, setCountdownMinutes] = useState(0)
-  const [remainingSeconds, setRemainingSeconds] = useState(0)
-  const [targetTime, setTargetTime] = useState(null)
-  const [fadeEnabled, setFadeEnabled] = useState(true)
   const [isFading, setIsFading] = useState(false)
+  const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [deadline, setDeadline] = useState(null)
 
-  const fadeStartVolumeRef = useRef(1)
+  const configuredFadeEnabled = settings?.sleepTimerFadeEnabled
+  const fadeEnabled = configuredFadeEnabled !== false
+  const configuredFadeSeconds = Number(settings?.sleepTimerFadeSeconds)
+  const fadeSeconds = Number.isFinite(configuredFadeSeconds) && configuredFadeSeconds > 0
+    ? configuredFadeSeconds
+    : DEFAULT_FADE_SECONDS
+
   const fadeIntervalRef = useRef(null)
+  const fadeStartVolumeRef = useRef(null)
+  const isActiveRef = useRef(false)
 
-  const stopPlayback = useCallback(() => {
+  useEffect(() => {
+    isActiveRef.current = isActive
+  }, [isActive])
+
+  const clearFadeInterval = useCallback(() => {
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current)
       fadeIntervalRef.current = null
     }
-    if (playerRef?.current) {
-      playerRef.current.setVolume?.(fadeStartVolumeRef.current)
-      playerRef.current.playPause?.()
+  }, [])
+
+  // 结束渐弱并把音量恢复到渐弱前的值；未渐弱过则不动音量
+  const restoreVolume = useCallback(() => {
+    const startVolume = fadeStartVolumeRef.current
+    fadeStartVolumeRef.current = null
+    if (startVolume != null) {
+      playerRef?.current?.setVolume?.(startVolume)
     }
+  }, [playerRef])
+
+  const resetTimerState = useCallback(() => {
+    clearFadeInterval()
+    restoreVolume()
     setIsFading(false)
     setIsActive(false)
-    setCountdownMinutes(0)
+    setDeadline(null)
     setRemainingSeconds(0)
-    setTargetTime(null)
-    showToast?.('睡眠定时器到时，播放已停止', 'info')
-  }, [playerRef, showToast])
+  }, [clearFadeInterval, restoreVolume])
+
+  const stopPlayback = useCallback((message = '睡眠定时器到时，播放已暂停') => {
+    clearFadeInterval()
+    restoreVolume()
+    setIsFading(false)
+    setIsActive(false)
+    setDeadline(null)
+    setRemainingSeconds(0)
+
+    const player = playerRef?.current
+    if (player?.pause) {
+      player.pause()
+    } else {
+      player?.playPause?.()
+    }
+    showToast?.(message, 'info')
+  }, [clearFadeInterval, restoreVolume, playerRef, showToast])
 
   const startFadeOut = useCallback(() => {
-    if (!fadeEnabled || !playerRef?.current) {
+    if (fadeStartVolumeRef.current != null) return
+    if (!fadeEnabled || fadeSeconds <= 0 || !playerRef?.current?.setVolume) {
       stopPlayback()
       return
     }
 
-    const currentVol = playerRef.current.getVolume?.() ?? 1
-    fadeStartVolumeRef.current = currentVol
+    const startVolume = playerRef.current.getVolume?.() ?? 1
+    fadeStartVolumeRef.current = startVolume
     setIsFading(true)
 
-    const fadeSteps = FADE_DURATION * 10
-    const stepDuration = 100
-    const volumeStep = currentVol / fadeSteps
+    const ticks = Math.max(1, Math.round(fadeSeconds * 1000 / FADE_TICK_MS))
+    const volumeStep = startVolume / ticks
     let step = 0
 
     fadeIntervalRef.current = setInterval(() => {
       step++
-      const newVolume = Math.max(0, currentVol - volumeStep * step)
-      playerRef.current?.setVolume?.(newVolume)
-      if (step >= fadeSteps) {
-        clearInterval(fadeIntervalRef.current)
-        fadeIntervalRef.current = null
+      const nextVolume = Math.max(0, startVolume - volumeStep * step)
+      playerRef.current?.setVolume?.(nextVolume)
+      if (step >= ticks) {
+        clearFadeInterval()
         stopPlayback()
       }
-    }, stepDuration)
-  }, [fadeEnabled, playerRef, stopPlayback])
+    }, FADE_TICK_MS)
+  }, [fadeEnabled, fadeSeconds, playerRef, clearFadeInterval, stopPlayback])
 
-  const cancelSleepTimer = useCallback(() => {
-    if (fadeIntervalRef.current) {
-      clearInterval(fadeIntervalRef.current)
-      fadeIntervalRef.current = null
-      if (playerRef?.current) {
-        playerRef.current.setVolume?.(fadeStartVolumeRef.current)
+  // 统一计时：倒计时与指定时间点都基于 deadline
+  useEffect(() => {
+    if (!isActive || deadline == null || isFading) return
+
+    const tick = () => {
+      const seconds = remainingSecondsUntil(deadline)
+      setRemainingSeconds(seconds)
+      if (seconds <= 0) {
+        stopPlayback()
+        return
+      }
+      if (fadeEnabled && fadeSeconds > 0 && seconds <= fadeSeconds) {
+        startFadeOut()
       }
     }
-    setIsActive(false)
-    setCountdownMinutes(0)
-    setRemainingSeconds(0)
-    setTargetTime(null)
-    setIsFading(false)
-    trackEndRegisteredRef.current = false
-  }, [playerRef])
+
+    tick()
+    const timer = setInterval(tick, TIMER_TICK_MS)
+    return () => clearInterval(timer)
+  }, [isActive, deadline, isFading, fadeEnabled, fadeSeconds, startFadeOut, stopPlayback])
+
+  const cancelSleepTimer = useCallback(({ notify = false } = {}) => {
+    resetTimerState()
+    if (notify) {
+      showToast?.('睡眠定时器已取消', 'info')
+    }
+  }, [resetTimerState, showToast])
 
   const setCountdownTimer = useCallback((minutes) => {
     cancelSleepTimer()
-    if (minutes <= 0) {
+    const mins = Number(minutes)
+    if (!Number.isFinite(mins) || mins <= 0) {
       showToast?.('睡眠定时器已取消', 'info')
       return
     }
     setMode(SLEEP_TIMER_MODES.COUNTDOWN)
-    setCountdownMinutes(minutes)
-    setRemainingSeconds(minutes * 60)
+    setDeadline(Date.now() + mins * 60 * 1000)
+    setRemainingSeconds(mins * 60)
     setIsActive(true)
-    showToast?.(`睡眠定时器已设置：${minutes} 分钟后停止播放`, 'info')
+    showToast?.(`睡眠定时器已设置：${mins} 分钟后暂停播放`, 'info')
   }, [cancelSleepTimer, showToast])
 
   const setTrackEndTimer = useCallback((enabled) => {
@@ -114,131 +183,66 @@ export function useSleepTimer({ playerRef, showToast, isPlaying, onFinish }) {
     }
     setMode(SLEEP_TIMER_MODES.TRACK_END)
     setIsActive(true)
-    showToast?.('睡眠定时器已设置：当前曲目播放完毕后停止', 'info')
+    showToast?.('睡眠定时器已设置：当前曲目播放完毕后暂停', 'info')
   }, [cancelSleepTimer, showToast])
 
   const setTimePointTimer = useCallback((timeStr) => {
     cancelSleepTimer()
-    if (!timeStr) {
+    const target = resolveTimePointTarget(timeStr)
+    if (target == null) {
       showToast?.('睡眠定时器已取消', 'info')
       return
     }
-
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    if (isNaN(hours) || isNaN(minutes)) return
-
-    const now = new Date()
-    const target = new Date()
-    target.setHours(hours, minutes, 0, 0)
-
-    if (target <= now) {
-      target.setDate(target.getDate() + 1)
-    }
-
-    const diffSeconds = Math.floor((target - now) / 1000)
     setMode(SLEEP_TIMER_MODES.TIME_POINT)
-    setTargetTime(timeStr)
-    setRemainingSeconds(diffSeconds)
+    setDeadline(target)
+    setRemainingSeconds(remainingSecondsUntil(target))
     setIsActive(true)
-
-    const h = hours.toString().padStart(2, '0')
-    const m = minutes.toString().padStart(2, '0')
-    showToast?.(`睡眠定时器已设置：${h}:${m} 停止播放`, 'info')
+    showToast?.(`睡眠定时器已设置：${timeStr} 暂停播放`, 'info')
   }, [cancelSleepTimer, showToast])
 
-  useEffect(() => {
-    if (!isActive || mode !== SLEEP_TIMER_MODES.COUNTDOWN || remainingSeconds <= 0) return
-    if (isFading) return
+  const setFadeEnabled = useCallback((enabled) => {
+    updateSettings?.({ sleepTimerFadeEnabled: !!enabled })
+  }, [updateSettings])
 
-    const timer = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= FADE_DURATION && fadeEnabled && !isFading) {
-          startFadeOut()
-          return prev
-        }
-        if (prev <= 1) {
-          if (!fadeEnabled) {
-            stopPlayback()
-          }
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [isActive, mode, remainingSeconds, fadeEnabled, isFading, startFadeOut, stopPlayback])
-
-  useEffect(() => {
-    if (!isActive || mode !== SLEEP_TIMER_MODES.TIME_POINT || !targetTime) return
-    if (isFading) return
-
-    const timer = setInterval(() => {
-      const [hours, minutes] = targetTime.split(':').map(Number)
-      const now = new Date()
-      const target = new Date()
-      target.setHours(hours, minutes, 0, 0)
-      if (target <= now) {
-        target.setDate(target.getDate() + 1)
-      }
-      const diff = Math.floor((target - now) / 1000)
-      setRemainingSeconds(diff)
-
-      if (diff <= FADE_DURATION && fadeEnabled && !isFading) {
-        startFadeOut()
-      } else if (diff <= 0 && !fadeEnabled) {
-        stopPlayback()
-      }
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [isActive, mode, targetTime, fadeEnabled, isFading, startFadeOut, stopPlayback])
+  const setFadeSeconds = useCallback((seconds) => {
+    const value = Number(seconds)
+    if (!Number.isFinite(value) || value <= 0) return
+    updateSettings?.({ sleepTimerFadeSeconds: value })
+  }, [updateSettings])
 
   const handleTrackFinish = useCallback(() => {
-    if (isActive && mode === SLEEP_TIMER_MODES.TRACK_END) {
-      stopPlayback()
+    if (isActiveRef.current && mode === SLEEP_TIMER_MODES.TRACK_END) {
+      stopPlayback('当前曲目已播放完毕，睡眠定时器已暂停播放')
       return true
     }
     return false
-  }, [isActive, mode, stopPlayback])
-
-  const formatRemaining = useCallback((seconds) => {
-    if (!seconds || seconds <= 0) return ''
-    if (seconds < 3600) {
-      const m = Math.floor(seconds / 60)
-      const s = seconds % 60
-      return `${m}:${s.toString().padStart(2, '0')}`
-    }
-    const h = Math.floor(seconds / 3600)
-    const m = Math.floor((seconds % 3600) / 60)
-    const s = seconds % 60
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }, [])
+  }, [mode, stopPlayback])
 
   const getStatusText = useCallback(() => {
     if (!isActive) return ''
     if (isFading) return '渐弱中...'
     if (mode === SLEEP_TIMER_MODES.TRACK_END) return '曲目结束'
-    return formatRemaining(remainingSeconds)
-  }, [isActive, isFading, mode, remainingSeconds, formatRemaining])
+    return formatSleepRemaining(remainingSeconds)
+  }, [isActive, isFading, mode, remainingSeconds])
 
   return {
     mode,
     isActive,
     isFading,
-    countdownMinutes,
     remainingSeconds,
-    targetTime,
     fadeEnabled,
+    fadeSeconds,
     setFadeEnabled,
+    setFadeSeconds,
     setCountdownTimer,
     setTrackEndTimer,
     setTimePointTimer,
     cancelSleepTimer,
     handleTrackFinish,
-    formatRemaining,
+    formatRemaining: formatSleepRemaining,
     getStatusText,
     SLEEP_TIMER_PRESETS,
     SLEEP_TIMER_MODES,
+    SLEEP_TIMER_FADE_OPTIONS,
   }
 }
