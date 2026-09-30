@@ -130,7 +130,7 @@
 | `hooks/useSplitter.js` | 可拖拽分割线 Hook：分割线拖拽 state 和逻辑，支持宽度约束 |
 | `hooks/useAppSettings.js` | 设置管理 Hook：设置加载/保存、默认值、视图模式切换、showLyric 同步 |
 | `hooks/useViewNavigation.js` | 视图导航 Hook：视图切换、作品选择、模态框状态管理、最近播放自动播放 |
-| `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：播放列表曲目播放、跳转到作品、加入播放列表弹窗 |
+| `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：单曲播放、跳转到作品、并整张列表入队播放（`handlePlayPlaylist` / `handleAddPlaylistToQueue`）、加入播放列表弹窗 |
 | `hooks/useSubtitleRefresh.js` | 字幕刷新 Hook：重新扫描文件夹、更新音频和字幕列表、保持当前字幕选择 |
 | `hooks/useFavorites.js` | 收藏功能 Hook：收藏状态管理、收藏筛选、切换收藏、本地持久化 |
 | `hooks/useBookmarks.js` | 书签功能 Hook：书签状态管理、按作品/音频筛选、增删改查、本地持久化 |
@@ -1206,6 +1206,9 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
   - 双击曲目行触发 `onPlayItem`
   - 「跳转到作品」按钮触发 `onNavigateToWork`
   - 智能列表详情显示「刷新」按钮替代「清空」按钮
+  - 详情区顶部操作区按钮：普通列表「清空」/ 智能列表「刷新」+「加入队列」+「播放全部」
+      - 「加入队列」→ `onAddAllToQueue(playlist)`：整张列表追加到当前播放队列，不打断当前播放
+      - 「播放全部」→ `onPlayAll(playlist)`：以整张列表重建播放队列并从第 1 首开始播放
 - `WorkDetail.jsx`：曲目列表项 hover 时显示 `audio-action-btns` 按钮组，包含「下一首播放」「加入队列」「加入播放列表」三个按钮（详见第 18 节「播放队列」）
 - `AddToPlaylistModal`（App.jsx 内联）：列出全部播放列表 + 一键新建并加入，提交后调用 `playlistAddItem`
 
@@ -1216,6 +1219,17 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 #### 播放联动
 - 从播放列表播放本地曲目时：根据 `workId` 在 `works` 中查找作品 → 切换到 library 视图 → 选中作品 → 轮询 `latestAudioFilesRef` 直到曲目加载完成 → 调用 `handleSelectAudio`
 - 在线曲目：提示用户回到「发现」视图重新打开作品
+
+#### 播放列表队列播放
+- 实现位置：`src/hooks/usePlaylistPlayback.js`
+- `buildQueueItemsFromPlaylist(playlist)` — 把播放列表项转换为播放队列项：
+  - 跳过在线曲目（`item.isOnline`）与已失效作品（在 `works` 中找不到）
+  - 通过 `workId`（回退 `folderPath`）在 `works` 中取**原始作品对象**并交给 `buildQueueItem`，确保队列项携带 `folderPath`，跨作品切换时可正常扫描音频
+- `handlePlayPlaylist(playlist)` — 「播放全部」：用整张列表调用 `setPlayQueue` 重建队列 → `playFromQueue(items[0], 0)` 从第 1 首开始（复用队列的跨作品切换与调度逻辑）
+- `handleAddPlaylistToQueue(playlist)` — 「加入队列」：按 `audio.path` 去重后追加到当前队列末尾，不打断当前播放
+- 两者都会通过 Toast 报告已加入数量，以及跳过的在线/重复/失效曲目数量
+- 入队后由「播放队列」（见第 19 节）接管上一曲/下一曲/自动播完的调度，因此播放列表的循环/随机行为与队列一致
+- App 层透传：`App.jsx` 的 `<PlaylistView onPlayAll onAddAllToQueue />` 对应 `useAppState` 暴露的 `handlePlayPlaylist` / `handleAddPlaylistToQueue`
 
 ### 19. 播放队列
 
