@@ -1,0 +1,17 @@
+.spectrum-visualizer {
+  width: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.spectrum-visualizer.spectrum-bars {
+  object-fit: cover;
+}
+
+.spectrum-visualizer.spectrum-wave {
+  object-fit: contain;
+}
+
+.spectrum-visualizer.spectrum-circle {
+  object-fit: contain;
+}

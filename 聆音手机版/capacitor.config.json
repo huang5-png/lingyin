@@ -1,0 +1,14 @@
+{
+  "appId": "com.lingyin.app",
+  "appName": "聆音手机版",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

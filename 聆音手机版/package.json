@@ -1,0 +1,34 @@
+{
+  "name": "lingyin-mobile",
+  "version": "1.42.0",
+  "description": "聆音手机版 - 沉浸式 ASMR 音声播放器",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "cap sync",
+    "cap:add:android": "cap add android",
+    "cap:copy": "cap copy"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/device": "^6.0.0",
+    "@capacitor/dialog": "^6.0.0",
+    "@capacitor/filesystem": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
+    "axios": "^1.18.1",
+    "cheerio": "^1.0.0-rc.12",
+    "music-metadata": "^11.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "wavesurfer.js": "^7.8.11"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

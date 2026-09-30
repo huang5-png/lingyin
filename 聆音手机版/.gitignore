@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+release/
+release-*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# TRAE IDE
+.trae/
+
+# WorkBuddy workspace (assistant working data, not project source)
+.workbuddy/
+
+# Database (user data)
+db.json
+
+# Misc
+*.bat
+upload-release.js
+
+# Build outputs
+dist-release/
+release-build/

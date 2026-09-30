@@ -1,0 +1,1253 @@
+.audio-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+  background: transparent;
+}
+
+.audio-player::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: none;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.player-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.player-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-soft);
+}
+
+.player-cover:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-glow);
+}
+
+.player-cover-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  font-size: 18px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border-color);
+}
+
+.player-cover-placeholder:hover {
+  transform: scale(1.05);
+  border-color: var(--accent-glow);
+  box-shadow: var(--shadow-glow);
+}
+
+.player-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.player-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.player-title {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.player-title.loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.player-title.error {
+  color: var(--error-color);
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.time-display span:first-child {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.waveform-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.waveform-container {
+  width: 100%;
+  height: 44px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.waveform-container:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 0 1px rgba(201, 100, 66, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.waveform-container:hover .waveform {
+  filter: brightness(1.05);
+}
+
+.waveform-container.loading .waveform {
+  animation: waveformFadeIn 0.6s ease-out forwards;
+}
+
+@keyframes waveformFadeIn {
+  from {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.waveform {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  transition: filter var(--transition-fast);
+}
+
+/* 播放时波形发光效果 */
+.waveform-container.playing .waveform {
+  filter: drop-shadow(0 0 3px rgba(201, 100, 66, 0.25));
+}
+
+.waveform-gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.25;
+  background: linear-gradient(180deg, rgba(201, 100, 66, 0.15) 0%, transparent 50%, rgba(176, 86, 47, 0.1) 100%);
+}
+
+.spectrum-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0.8;
+  mask-image: linear-gradient(to top, rgba(0,0,0,1) 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 30%, transparent 100%);
+}
+
+.simple-progress-container {
+  width: 100%;
+  height: 44px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.simple-progress-container:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 0 1px rgba(201, 100, 66, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.simple-progress-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  background: rgba(201, 100, 66, 0.2);
+  border-radius: 2px;
+}
+
+.simple-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, #c96442, #e07b53);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.simple-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.simple-progress-container:hover .simple-progress-thumb {
+  opacity: 1;
+}
+
+.spectrum-container canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.ctrl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--tag-bg);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--tag-border);
+  cursor: pointer;
+  color: var(--tag-text);
+  letter-spacing: 0.01em;
+  padding: 0 12px;
+  min-width: 48px;
+  font-family: var(--font-mono);
+}
+
+.ctrl-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.ctrl-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.skip-btn {
+  font-weight: 500;
+}
+
+.play-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 14px;
+  background: var(--accent-gradient);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.play-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--radius-full);
+  background: var(--accent-gradient);
+  opacity: 0;
+  filter: blur(8px);
+  transition: opacity var(--transition-fast);
+  z-index: -1;
+}
+
+.play-btn:hover:not(:disabled) {
+  transform: scale(1.08);
+  background: var(--accent-gradient);
+  box-shadow: var(--shadow-glow-strong);
+  border: none;
+}
+
+.play-btn:hover:not(:disabled)::after {
+  opacity: 0.35;
+}
+
+.play-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.play-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.player-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 130px;
+  justify-content: flex-end;
+}
+
+.volume-icon {
+  font-size: 14px;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.volume-slider {
+  width: 100px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  outline: none;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  background-image: var(--accent-gradient);
+  background-repeat: no-repeat;
+  background-size: 80% 100%;
+  transition: all var(--transition-fast);
+}
+
+.volume-slider:hover {
+  border-color: var(--border-hover);
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  border: 2px solid var(--accent-primary);
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: var(--shadow-glow);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  border: 2px solid var(--accent-primary);
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: var(--shadow-glow);
+}
+
+.volume-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.waveform-tooltip {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  /* 防止 tooltip 超出波形两端 */
+  max-width: none;
+}
+
+.waveform-tooltip.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.waveform-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="light"] .ctrl-btn {
+  color: #374151;
+  font-weight: 600;
+  border-color: #d1d5db;
+}
+
+[data-theme="light"] .ctrl-btn:hover:not(:disabled) {
+  color: #111827;
+  border-color: #9ca3af;
+}
+
+/* ===== 上一曲/下一曲按钮 ===== */
+.ctrl-btn.prev-next-btn {
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 13px;
+}
+
+.ctrl-btn.prev-next-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ===== 队列控制区 ===== */
+.queue-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  position: relative;
+}
+
+.ctrl-btn.loop-btn,
+.ctrl-btn.shuffle-btn,
+.ctrl-btn.queue-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 13px;
+  position: relative;
+}
+
+.ctrl-btn.loop-btn svg,
+.ctrl-btn.shuffle-btn svg,
+.ctrl-btn.queue-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 激活态：暖橙高亮 */
+.ctrl-btn.active,
+.ctrl-btn.loop-btn.active,
+.ctrl-btn.shuffle-btn.active,
+.ctrl-btn.queue-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.active,
+[data-theme="dark"] .ctrl-btn.loop-btn.active,
+[data-theme="dark"] .ctrl-btn.shuffle-btn.active,
+[data-theme="dark"] .ctrl-btn.queue-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+.ctrl-btn.loop-btn.active,
+.ctrl-btn.shuffle-btn.active {
+  box-shadow: 0 0 0 1px rgba(201, 100, 66, 0.2);
+}
+
+/* 队列数量徽标 */
+.queue-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #faf9f5);
+}
+
+[data-theme="dark"] .queue-badge {
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #262624);
+}
+
+/* ===== 书签控制 ===== */
+.bookmark-control {
+  position: relative;
+  margin-left: 4px;
+}
+
+.ctrl-btn.bookmark-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 13px;
+  position: relative;
+}
+
+.ctrl-btn.bookmark-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ctrl-btn.bookmark-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.bookmark-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+.bookmark-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #faf9f5);
+}
+
+[data-theme="dark"] .bookmark-badge {
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #262624);
+}
+
+/* ===== 高 DPI 适配 ===== */
+@media (min-resolution: 1.5dppx) {
+  .ctrl-btn.prev-next-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+  .ctrl-btn.loop-btn,
+  .ctrl-btn.shuffle-btn,
+  .ctrl-btn.queue-btn,
+  .ctrl-btn.bookmark-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+}
+
+/* ===== 睡眠定时器 ===== */
+.sleep-timer-control {
+  position: relative;
+  margin-left: 8px;
+}
+
+.ctrl-btn.sleep-timer-btn {
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 13px;
+  position: relative;
+}
+
+.ctrl-btn.sleep-timer-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 定时器激活态 */
+.ctrl-btn.sleep-timer-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.sleep-timer-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+/* 定时器剩余时间徽标 */
+.sleep-timer-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 28px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: #fff;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #faf9f5);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .sleep-timer-badge {
+  box-shadow: 0 0 0 1.5px var(--bg-primary, #262624);
+}
+
+/* 定时器下拉菜单 */
+.sleep-timer-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 140px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-index-popover, 1000);
+  overflow: hidden;
+}
+
+.sleep-timer-header {
+  padding: 10px 12px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.02em;
+}
+
+.sleep-timer-options {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sleep-timer-option {
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.01em;
+}
+
+.sleep-timer-option:hover {
+  background: var(--bg-hover);
+}
+
+.sleep-timer-option.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .sleep-timer-option.active {
+  background: rgba(217, 119, 87, 0.12);
+}
+
+/* 渐弱状态动画 */
+.ctrl-btn.sleep-timer-btn.fading {
+  animation: sleepFadePulse 2s ease-in-out infinite;
+}
+
+@keyframes sleepFadePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ===== 增强版睡眠定时器面板 ===== */
+.sleep-timer-dropdown-enhanced {
+  width: 280px;
+  padding-bottom: 0;
+}
+
+.sleep-timer-dropdown-enhanced .sleep-timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px 10px;
+}
+
+.sleep-timer-cancel-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.sleep-timer-cancel-btn:hover {
+  background: rgba(201, 100, 66, 0.1);
+}
+
+/* Tab 切换 */
+.sleep-timer-tabs {
+  display: flex;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 2px;
+}
+
+.sleep-timer-tab {
+  flex: 1;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.sleep-timer-tab:hover {
+  color: var(--text-primary);
+}
+
+.sleep-timer-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* 预设网格 */
+.sleep-timer-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 12px 12px 8px;
+}
+
+.sleep-timer-preset {
+  padding: 8px 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.sleep-timer-preset:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.sleep-timer-preset.active {
+  background: rgba(201, 100, 66, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .sleep-timer-preset.active {
+  background: rgba(217, 119, 87, 0.15);
+}
+
+/* 自定义输入 */
+.sleep-timer-custom {
+  display: flex;
+  gap: 6px;
+  padding: 4px 12px 12px;
+}
+
+.sleep-timer-custom-input {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.sleep-timer-custom-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.15);
+}
+
+.sleep-timer-custom-btn {
+  padding: 7px 14px;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+  white-space: nowrap;
+}
+
+.sleep-timer-custom-btn:hover {
+  background: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+}
+
+/* 曲目结束模式 */
+.sleep-timer-track-end {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sleep-timer-track-end-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.sleep-timer-track-end-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+}
+
+.sleep-timer-track-end-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.sleep-timer-track-end-btn.active {
+  background: rgba(201, 100, 66, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+[data-theme="dark"] .sleep-timer-track-end-btn.active {
+  background: rgba(217, 119, 87, 0.15);
+}
+
+/* 指定时间模式 */
+.sleep-timer-time-point {
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sleep-timer-time-point-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sleep-timer-time-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  outline: none;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.sleep-timer-time-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(201, 100, 66, 0.15);
+}
+
+.sleep-timer-time-set-btn {
+  padding: 8px 18px;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-heading);
+  white-space: nowrap;
+}
+
+.sleep-timer-time-set-btn:hover {
+  background: var(--accent-secondary);
+  border-color: var(--accent-secondary);
+}
+
+.sleep-timer-time-point-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* 渐弱开关 */
+.sleep-timer-fade-toggle {
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.sleep-timer-fade-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sleep-timer-fade-label input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.sleep-timer-fade-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sleep-timer-fade-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* ===== 播放速度控制 ===== */
+.playback-rate-control {
+  position: relative;
+  margin-left: 8px;
+}
+
+.ctrl-btn.playback-rate-btn {
+  min-width: 44px;
+  width: auto;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 11px;
+  position: relative;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.playback-rate-text {
+  line-height: 1;
+}
+
+/* 倍速激活态 */
+.ctrl-btn.playback-rate-btn.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.12);
+  border-color: rgba(201, 100, 66, 0.3);
+}
+
+[data-theme="dark"] .ctrl-btn.playback-rate-btn.active {
+  color: var(--accent-primary);
+  background: rgba(217, 119, 87, 0.15);
+  border-color: rgba(217, 119, 87, 0.35);
+}
+
+/* 倍速下拉菜单 */
+.playback-rate-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 100px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-index-popover, 1000);
+  overflow: hidden;
+}
+
+.playback-rate-header {
+  padding: 10px 12px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.02em;
+}
+
+.playback-rate-options {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playback-rate-option {
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.playback-rate-option:hover {
+  background: var(--bg-hover);
+}
+
+.playback-rate-option.active {
+  color: var(--accent-primary);
+  background: rgba(201, 100, 66, 0.1);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .playback-rate-option.active {
+  background: rgba(217, 119, 87, 0.12);
+}
+
+/* ===== 高 DPI 适配 ===== */
+@media (min-resolution: 1.5dppx) {
+  .ctrl-btn.playback-rate-btn {
+    height: 32px;
+    min-width: 48px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .audio-player {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .player-left {
+    display: none; /* 手机端隐藏左侧封面，空间有限 */
+  }
+
+  .player-center {
+    gap: 4px;
+  }
+
+  .player-info-bar {
+    margin-bottom: 2px;
+  }
+
+  .player-controls {
+    gap: 16px; /* 增加间距防止误触 */
+  }
+
+  .ctrl-btn {
+    height: 40px; /* 更大的点击区域 */
+    min-width: 54px;
+  }
+
+  .play-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+  }
+
+  .play-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ctrl-btn.prev-next-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+
+  .ctrl-btn.prev-next-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .volume-control {
+    display: none; /* 手机端使用系统音量 */
+  }
+
+  .player-right {
+    gap: 4px;
+  }
+
+  .ctrl-btn.loop-btn,
+  .ctrl-btn.shuffle-btn,
+  .ctrl-btn.queue-btn,
+  .ctrl-btn.bookmark-btn,
+  .ctrl-btn.sleep-timer-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .playback-rate-control {
+    display: none; /* 手机端隐藏倍速，或放入更多菜单（暂未实现） */
+  }
+}
