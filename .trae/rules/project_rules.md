@@ -114,7 +114,7 @@
 | `App.jsx` | 根组件，使用 `useAppState` 组合 Hook，专注于 UI 渲染 |
 | `hooks/useAppState.js` | 应用状态组合 Hook：集成所有底层 Hooks，提供统一的状态与方法接口，封装组合逻辑与副作用 |
 | `hooks/useTranslate.js` | 翻译功能 Hook：翻译缓存、批量翻译、字幕翻译切换、自动翻译 |
-| `hooks/usePlayQueue.js` | 播放队列 Hook：队列管理、循环模式、随机播放、跨作品播放、队列操作 |
+| `hooks/usePlayQueue.js` | 播放队列 Hook：队列管理、循环模式/随机播放（由 `settings` 派生）、跨作品播放、队列操作 |
 | `hooks/useKeyboardShortcuts.js` | 全局快捷键 Hook：快捷键解析匹配、按键事件处理、ESC 弹窗优先级 |
 | `hooks/useSleepTimer.js` | 睡眠定时器 Hook：倒计时管理、自动暂停播放、剩余时间格式化 |
 | `hooks/usePlaybackHistory.js` | 播放历史记录 Hook：定时记录播放历史（每 60 秒），用于使用统计 |
@@ -128,7 +128,7 @@
 | `hooks/useToast.js` | Toast 通知 Hook：Toast 状态（toasts/showToast/removeToast） |
 | `hooks/useImmersive.js` | 沉浸式模式 Hook：沉浸式 state、开关控制、refs 管理 |
 | `hooks/useSplitter.js` | 可拖拽分割线 Hook：分割线拖拽 state 和逻辑，支持宽度约束 |
-| `hooks/useAppSettings.js` | 设置管理 Hook：设置加载/保存、默认值、视图模式切换、showLyric 同步 |
+| `hooks/useAppSettings.js` | 设置管理 Hook：设置的唯一数据源与写入点（`updateSettings` / `handleSaveSettings`）、默认值导出、视图模式/播放速度/库排序切换、showLyric 同步 |
 | `hooks/useViewNavigation.js` | 视图导航 Hook：视图切换、作品选择、模态框状态管理、最近播放自动播放 |
 | `hooks/usePlaylistPlayback.js` | 播放列表播放 Hook：单曲播放、跳转到作品、并整张列表入队播放（`handlePlayPlaylist` / `handleAddPlaylistToQueue`）、加入播放列表弹窗 |
 | `hooks/useSubtitleRefresh.js` | 字幕刷新 Hook：重新扫描文件夹、更新音频和字幕列表、保持当前字幕选择 |
@@ -1241,8 +1241,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 #### 核心状态（App.jsx）
 - `playQueue: QueueItem[]` — 队列项数组
 - `queueIndex: number` — 当前播放到队列的位置，`-1` 表示未在队列中播放
-- `loopMode: 'none' | 'one' | 'list'` — 循环模式（顺序/单曲/列表），与 `settings.loopMode` 双向同步
-- `shuffle: boolean` — 随机播放，与 `settings.shuffle` 双向同步
+- `loopMode: 'none' | 'one' | 'list'` — 循环模式（顺序/单曲/列表），**直接从 `settings.loopMode` 派生**（无本地 state）
+- `shuffle: boolean` — 随机播放，**直接从 `settings.shuffle` 派生**（无本地 state）
 - `showQueuePanel: boolean` — 队列浮层开关
 - `pendingQueuePlayRef` — 跨作品播放时的待播放项 `{ item, startedAt }`，配合 useEffect 等待 audioFiles 加载
 
@@ -1312,9 +1312,9 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
    - 本地作品 → 等待 `audioFiles.length > 0` 后 `handleSelectAudio(item.audio)`
 
 #### 设置同步
-- `loopMode` 和 `shuffle` 同时存储在 `localStorage.appSettings` 和 `db.json.settings`
-- 启动时从 `settings.loopMode / settings.shuffle` 初始化 state
-- 切换时同步写入两处（参考其他设置的持久化模式）
+- `loopMode` 和 `shuffle` 的唯一数据源是 `settings`（由 `useAppSettings` 持有），`usePlayQueue` 不再维护本地 state
+- 切换时调用 `updateSettings({ loopMode })` / `updateSettings({ shuffle })`，由 `commitSettings` 统一写 `localStorage.appSettings` 与 `db.json.settings`
+- 详见「26. 设置状态与持久化规范」
 
 #### 队列持久化
 - **开关**：`settings.persistPlayQueue`（默认 true）
@@ -1514,7 +1514,7 @@ function getStatusText() {
 
 #### 核心状态
 - `settings.playbackRate` — 当前播放速度，默认值 1
-- `playbackRate` 通过 `useAppSettings` Hook 管理
+- `playbackRate` 通过 `useAppSettings` 的 `handlePlaybackRateChange`（内部走 `updateSettings`）管理
 
 #### 实现方式
 - AudioPlayer 组件接收 `playbackRate` 和 `onPlaybackRateChange` props
@@ -1686,6 +1686,29 @@ function getStatusText() {
 
 #### 历史说明
 - 原「图片超分」功能（`components/UpscaledImage.jsx`、`utils/upscaleShaders.js`、`settings.upscalePreset`）已于 v1.43.0 整体下线，超分相关设置与依赖均已移除
+
+### 26. 设置状态与持久化规范
+
+设置（`settings`）是全局单一数据源，位于 `src/hooks/useAppSettings.js`，**禁止**在其他模块直接读写 `localStorage` / `dbSaveSettings`。
+
+#### 唯一写入点
+- `commitSettings(next)`（hook 内部）— 所有写入的最终出口，依次完成：更新内存状态 → 写 `localStorage.appSettings` → 调用 `ipcRenderer` 的 `dbSaveSettings` → 触发副作用（同步 `showLyric`、应用 `defaultVolume`）
+- `handleSaveSettings(fullSettings)` — 整份替换，仅供设置面板保存时使用
+- `updateSettings(patch)` — **增量更新（推荐）**，把 patch 合并到最新设置上
+  - 依据 `settingsRef` 取最新值，避免闭包中的过期快照覆盖其他字段
+  - 支持传函数：`updateSettings(prev => ({ ...prev, loopMode: next }))`
+- `handleViewModeChange` / `handlePlaybackRateChange` / `handleLibrarySortChange` 均为 `updateSettings` 的薄封装
+
+#### 使用约定
+- 修改任意设置项时，调用 `updateSettings({ key: value })`，不要自行拼 `{ ...settings, key }` 再写库（旧写法会用过期快照覆盖其他字段）
+- 需要读取最新设置做判断时，使用组件/hook 传入的 `settings`（它在状态更新后会重新下发），不要缓存到 ref 之外
+- 默认值只在 `useAppSettings.js` 的 `DEFAULT_SETTINGS` 中定义并具名导出；设置面板等消费方通过 `import { DEFAULT_SETTINGS } from '../hooks/useAppSettings'` 复用，仅补充自己独有的键
+- 跨模块共享的运行时开关（如播放队列的 `loopMode` / `shuffle`）**必须**直接由 `settings` 派生，不得再维护一份本地 `useState`，否则会出现双份状态互相覆盖
+
+#### 持久化位置
+- `localStorage.appSettings` — 启动时优先读取（`loadSettings()`）
+- `db.json.settings` — 通过 `dbSaveSettings` 落盘，由 `useTheme` 在启动时异步回填（内存值优先）
+- 两者在 `commitSettings` 中同步写入，保持内容一致
 
 ## 已知约定
 
