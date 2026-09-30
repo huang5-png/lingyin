@@ -181,6 +181,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   backupSaveFile: (jsonString, defaultName) => ipcRenderer.invoke('backup:saveFile', jsonString, defaultName),
   backupOpenFile: () => ipcRenderer.invoke('backup:openFile'),
 
+  // 通用文本文件读写（播放列表导出/导入等）
+  saveTextFile: (content, defaultName, filterName, extensions) => ipcRenderer.invoke('file:saveText', content, defaultName, filterName, extensions),
+  openTextFile: (filterName, extensions) => ipcRenderer.invoke('file:openText', filterName, extensions),
+
   // 迷你播放器
   miniPlayerOpen: () => ipcRenderer.invoke('miniPlayer:open'),
   miniPlayerClose: () => ipcRenderer.invoke('miniPlayer:close'),

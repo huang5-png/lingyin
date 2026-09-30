@@ -79,6 +79,30 @@
   height: 16px;
 }
 
+.playlist-sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playlist-new-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.playlist-new-btn.ghost:hover:not(:disabled) {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: none;
+}
+
+.playlist-new-btn.ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .playlist-create-input-row {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
@@ -336,6 +360,46 @@
 
 .playlist-action-btn.primary:hover:not(:disabled) {
   box-shadow: var(--shadow-glow);
+}
+
+/* ===== 导出下拉 ===== */
+.playlist-export-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.playlist-export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 150px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-index-dropdown);
+}
+
+.playlist-export-menu button {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.playlist-export-menu button:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
 }
 
 /* ===== 曲目列表 ===== */

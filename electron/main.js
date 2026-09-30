@@ -919,6 +919,29 @@ ipcMain.handle('backup:openFile', async () => {
   return { filePath: filePaths[0], content }
 })
 
+// 通用文本文件读写（播放列表导出/导入等）
+ipcMain.handle('file:saveText', async (_, content, defaultName, filterName, extensions) => {
+  const { filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: '导出文件',
+    defaultPath: defaultName,
+    filters: [{ name: filterName || '文本文件', extensions: extensions || ['txt'] }],
+  })
+  if (!filePath) return null
+  fs.writeFileSync(filePath, content, 'utf-8')
+  return filePath
+})
+
+ipcMain.handle('file:openText', async (_, filterName, extensions) => {
+  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: '选择文件',
+    filters: [{ name: filterName || '文本文件', extensions: extensions || ['txt'] }],
+    properties: ['openFile'],
+  })
+  if (!filePaths || filePaths.length === 0) return null
+  const content = fs.readFileSync(filePaths[0], 'utf-8')
+  return { filePath: filePaths[0], content }
+})
+
 ipcMain.handle('log:info', async (_, message, ...args) => {
   logger.info('[Renderer] ' + message, ...args)
 })

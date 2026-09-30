@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import './PlaylistView.css'
 import StateView from './StateView'
 
+// 文件名安全化（去除 Windows 非法字符）
+function sanitizeFileName(name) {
+  const cleaned = (name || '播放列表').replace(/[\\/:*?"<>|]/g, '_').trim()
+  return cleaned || '播放列表'
+}
+
 // 智能播放列表图标映射
 const SMART_ICONS = {
   clock: (
@@ -96,6 +102,8 @@ const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, 
   const [renameValue, setRenameValue] = useState('')
   const [draggingItemId, setDraggingItemId] = useState(null)
   const [dragOverItemId, setDragOverItemId] = useState(null)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [importing, setImporting] = useState(false)
   const createInputRef = useRef(null)
   const renameInputRef = useRef(null)
 
@@ -299,6 +307,134 @@ const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, 
     onAddAllToQueue?.(selectedPlaylist)
   }, [selectedPlaylist, onAddAllToQueue])
 
+  // 导出下拉：点击页面其他区域时关闭
+  useEffect(() => {
+    if (!showExportMenu) return
+    const close = () => setShowExportMenu(false)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [showExportMenu])
+
+  // 导出为 M3U（仅包含有本地路径的曲目）
+  const handleExportM3U = useCallback(async () => {
+    if (!selectedPlaylist) return
+    const items = selectedPlaylist.items || []
+    const localItems = items.filter((it) => !it.isOnline && it.audioPath)
+    if (localItems.length === 0) {
+      onToast?.('该列表不含可导出的本地曲目（在线曲目无法写入 M3U）', 'warning')
+      return
+    }
+    const lines = ['#EXTM3U', `#PLAYLIST:${selectedPlaylist.name}`]
+    for (const it of localItems) {
+      lines.push(`#EXTINF:-1,${it.workTitle || '未知作品'} - ${it.audioName || '未知曲目'}`)
+      lines.push(it.audioPath)
+    }
+    try {
+      const savedPath = await window.electronAPI.saveTextFile(
+        lines.join('\r\n') + '\r\n',
+        `${sanitizeFileName(selectedPlaylist.name)}.m3u`,
+        'M3U 播放列表',
+        ['m3u']
+      )
+      if (savedPath) {
+        const skipped = items.length - localItems.length
+        onToast?.(`已导出 ${localItems.length} 首到 M3U${skipped > 0 ? `，跳过 ${skipped} 首在线曲目` : ''}`, 'success')
+      }
+    } catch (e) {
+      onToast?.('导出失败：' + (e.message || ''), 'error')
+    }
+  }, [selectedPlaylist, onToast])
+
+  // 导出为 JSON（保留完整曲目信息，可再次导入）
+  const handleExportJSON = useCallback(async () => {
+    if (!selectedPlaylist) return
+    const items = selectedPlaylist.items || []
+    if (items.length === 0) {
+      onToast?.('列表为空，没有可导出的曲目', 'warning')
+      return
+    }
+    const payload = {
+      type: 'lingyin-playlist',
+      version: 1,
+      name: selectedPlaylist.name,
+      exportedAt: Date.now(),
+      items: items.map((it) => ({
+        workId: it.workId || '',
+        workTitle: it.workTitle || '',
+        workCover: it.workCover || '',
+        audioPath: it.audioPath || '',
+        audioName: it.audioName || '',
+        isOnline: !!it.isOnline,
+      })),
+    }
+    try {
+      const savedPath = await window.electronAPI.saveTextFile(
+        JSON.stringify(payload, null, 2),
+        `${sanitizeFileName(selectedPlaylist.name)}.json`,
+        'JSON 文件',
+        ['json']
+      )
+      if (savedPath) onToast?.(`已导出 ${items.length} 首到 JSON`, 'success')
+    } catch (e) {
+      onToast?.('导出失败：' + (e.message || ''), 'error')
+    }
+  }, [selectedPlaylist, onToast])
+
+  // 从 JSON 文件导入为一个新的播放列表
+  const handleImport = useCallback(async () => {
+    if (importing) return
+    try {
+      const file = await window.electronAPI.openTextFile('JSON 播放列表', ['json'])
+      if (!file || !file.content) return
+      let data
+      try {
+        data = JSON.parse(file.content)
+      } catch (err) {
+        onToast?.('导入失败：文件不是有效的 JSON', 'error')
+        return
+      }
+      const rawItems = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : null)
+      if (!rawItems) {
+        onToast?.('导入失败：未找到曲目列表', 'error')
+        return
+      }
+      const validItems = rawItems.filter((it) => it && it.audioPath)
+      if (validItems.length === 0) {
+        onToast?.('导入失败：没有有效的曲目', 'error')
+        return
+      }
+      setImporting(true)
+      const baseName = (!Array.isArray(data) && data.name) ? String(data.name).trim() : '导入的播放列表'
+      const created = await window.electronAPI.playlistCreate(baseName || '导入的播放列表')
+      let added = 0
+      for (const it of validItems) {
+        try {
+          await window.electronAPI.playlistAddItem(created.id, {
+            workId: it.workId || '',
+            workTitle: it.workTitle || '',
+            workCover: it.workCover || '',
+            audioPath: it.audioPath,
+            audioName: it.audioName || '',
+            isOnline: !!it.isOnline,
+          })
+          added++
+        } catch (err) {
+          console.error('Failed to import playlist item:', err)
+        }
+      }
+      const fresh = await window.electronAPI.playlistGetAll()
+      setPlaylists(fresh || [])
+      setSelectedId(created.id)
+      setSelectedSmartId(null)
+      const skipped = validItems.length - added
+      onToast?.(`已导入「${created.name}」，共 ${added} 首${skipped > 0 ? `，跳过 ${skipped} 首重复项` : ''}`, 'success')
+    } catch (e) {
+      onToast?.('导入失败：' + (e.message || ''), 'error')
+    } finally {
+      setImporting(false)
+    }
+  }, [importing, onToast])
+
   // ===== 拖拽排序 =====
   const handleDragStart = useCallback((e, itemId) => {
     setDraggingItemId(itemId)
@@ -370,16 +506,30 @@ const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, 
             </svg>
             <h2>播放列表</h2>
           </div>
-          <button
-            className="playlist-new-btn"
-            onClick={() => setShowCreateInput(true)}
-            title="新建播放列表"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
+          <div className="playlist-sidebar-header-actions">
+            <button
+              className="playlist-new-btn ghost"
+              onClick={handleImport}
+              disabled={importing}
+              title="从 JSON 文件导入播放列表"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+            <button
+              className="playlist-new-btn"
+              onClick={() => setShowCreateInput(true)}
+              title="新建播放列表"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {showCreateInput && (
@@ -565,6 +715,22 @@ const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, 
                     清空
                   </button>
                 )}
+                <div className="playlist-export-dropdown">
+                  <button
+                    className="playlist-action-btn"
+                    onClick={(e) => { e.stopPropagation(); setShowExportMenu((v) => !v) }}
+                    disabled={!selectedPlaylist.items || selectedPlaylist.items.length === 0 || loadingSmart}
+                    title="导出当前列表"
+                  >
+                    导出
+                  </button>
+                  {showExportMenu && (
+                    <div className="playlist-export-menu">
+                      <button onClick={() => { setShowExportMenu(false); handleExportM3U() }}>导出为 M3U</button>
+                      <button onClick={() => { setShowExportMenu(false); handleExportJSON() }}>导出为 JSON</button>
+                    </div>
+                  )}
+                </div>
                 <button
                   className="playlist-action-btn"
                   onClick={handleAddAllToQueue}
