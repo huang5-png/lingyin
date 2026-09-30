@@ -157,7 +157,7 @@
 | `components/QueuePanel.jsx` | 播放队列浮层（拖拽排序、循环/随机切换、当前项高亮、ESC 关闭） |
 | `components/SubtitleSelector.jsx` | 字幕切换、外部字幕导入、语言标签、翻译切换 |
 | `components/SettingsModal.jsx` | 设置弹窗（基本/外观/主界面/播放界面/快捷键/数据管理/关于，七个 Tab） |
-| `components/KeyboardShortcutsPanel.jsx` | 快捷键配置面板（自定义快捷键、冲突检测） |
+| `components/KeyboardShortcutsPanel.jsx` | 快捷键配置面板（分组展示、搜索、实时冲突检测、自定义绑定） |
 | `components/GlobalSearchModal.jsx` | 全局搜索弹窗（搜索历史、作品、收藏、播放列表分类展示，关键词高亮，快捷键唤起，方向键选择+回车跳转） |
 | `components/TagManagerModal.jsx` | 标签管理弹窗（标签列表、搜索、颜色设置、重命名、合并、删除、批量操作） |
 | `components/ErrorBoundary.jsx` | React 错误边界 |
@@ -171,6 +171,8 @@
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `utils/sfw.js` | 全年龄（SFW）模式开关（`isSfwMode`）与「健全」标签常量（`SFW_TAG`） |
+| `utils/shortcuts.js` | 快捷键纯函数模块（动作定义/分组、按键解析匹配、冲突检测、默认值合并与历史迁移） |
+| `utils/playback.js` | 播放速度纯函数模块（`PLAYBACK_RATES` 档位表、`stepPlaybackRate` 档位切换） |
 | `utils/themePresets.js` | 主题配色工具（8 套预设主题、颜色处理函数、动态 CSS 变量生成） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
 
@@ -895,7 +897,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 - **外观** — 主题、是否显示评分、波形高度、视图模式（网格/列表）
 - **主界面** — 侧边栏宽度、歌词宽度、播放器高度
 - **播放界面** — 显示歌词、自动滚动歌词、字幕语言优先级、字幕字体大小、自动翻译字幕
-- **快捷键** — 自定义快捷键配置，支持组合键
+- **快捷键** — 自定义快捷键配置，支持组合键；按动作分组展示并支持搜索，实时标红冲突绑定
 - **数据管理** — 数据统计、导出备份、导入备份（合并/覆盖模式）
 - **关于** — 版本信息、应用图标
 
@@ -966,42 +968,53 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 | 快捷键 | 功能 | 作用域 |
 |--------|------|--------|
 | 空格 | 播放/暂停 | 全局（非输入框） |
-| ← | 上一曲 | 全局（非输入框） |
-| → | 下一曲 | 全局（非输入框） |
-| ↑ | 音量增加（+5%） | 全局（非输入框） |
-| ↓ | 音量减少（-5%） | 全局（非输入框） |
+| ← / → | 快退 / 快进 | 全局（非输入框） |
+| ↑ / ↓ | 音量 +5% / -5% | 全局（非输入框） |
+| M | 静音 / 取消静音 | 全局（非输入框） |
 | ESC | 关闭弹窗/退出沉浸式 | 全局（弹窗优先级高于沉浸式） |
 | Ctrl+K | 全局搜索 | 全局（非输入框） |
 
 #### 快捷键配置
 - 用户可在「设置 → 快捷键」中自定义快捷键
+- 面板按「播放控制 / 音量与速度 / 界面与窗口 / 导航」分组展示，并支持按动作名、说明或已绑按键搜索
 - 支持组合键（如 Ctrl+Shift+P）
-- 支持清除单个快捷键绑定（点击「×」按钮）
-- 支持按 ESC 取消录制
-- 可配置的快捷键：
-  - `playPause` — 播放/暂停
-  - `prevTrack` — 上一曲
-  - `nextTrack` — 下一曲
+- 支持清除单个绑定（「×」）、单个恢复默认、一键恢复全部默认
+- 支持按 ESC 取消录制；只按修饰键（Ctrl/Shift/Alt）不会被记录
+- 可配置的快捷键（16 项）：
+  - `playPause` — 播放/暂停（默认 Space）
+  - `prevTrack` — 上一曲（默认未设置）
+  - `nextTrack` — 下一曲（默认未设置）
+  - `seekBackward` — 快退（默认 ←）
+  - `seekForward` — 快进（默认 →）
+  - `toggleAbLoop` — A-B 循环（默认未设置）
   - `volumeUp` — 音量增加（默认 ↑）
   - `volumeDown` — 音量减少（默认 ↓）
-  - `seekBackward` — 快退（默认未设置）
-  - `seekForward` — 快进（默认未设置）
+  - `toggleMute` — 静音切换（默认 M）
+  - `speedUp` — 加速播放（默认未设置）
+  - `speedDown` — 减速播放（默认未设置）
   - `toggleImmersive` — 切换沉浸式（默认未设置）
   - `exitImmersive` — 退出沉浸式（默认 ESC）
   - `toggleQueue` — 显示/隐藏队列（默认未设置）
   - `openSettings` — 打开设置（默认未设置）
   - `globalSearch` — 全局搜索（默认 Ctrl+K）
 - 配置存储在 `settings.shortcuts` 中，持久化到 db.json + localStorage
-- 快捷键冲突检测：检测同一组合键被多个动作使用
+- 快捷键冲突检测：面板会实时扫描全部动作（不只在录制瞬间），同一组合键被多个动作占用时双方都会标红并列出冲突对象
 - ESC 键处理优先级：弹窗（全局搜索/设置/下载/队列）→ 沉浸式模式
 
 #### 实现
-- `KeyboardShortcutsPanel.jsx` — 快捷键配置面板组件
-- `KeyboardShortcutsPanel.css` — 样式文件
-- `DEFAULT_SHORTCUTS` — 默认快捷键常量（包含 12 个可配置项）
-- `matchShortcut(e, shortcutStr)` — 匹配按键事件与快捷键字符串
-- `parseShortcut(shortcutStr)` — 解析快捷键字符串
-- AudioPlayer 通过 `useImperativeHandle` 暴露 `setVolume/getVolume/skipBackward/skipForward` 供快捷键调用
+- `utils/shortcuts.js` — 快捷键纯函数模块：`SHORTCUT_GROUPS` / `DEFAULT_SHORTCUTS` / `ACTION_LABELS` / `ACTION_DESCS`，以及 `normalizeKey` / `parseShortcut` / `matchShortcut` / `eventToShortcut` / `shortcutEquals` / `findConflict` / `getAllConflicts` / `normalizeShortcuts` / `buildActionGroups`
+- `hooks/useKeyboardShortcuts.js` — 全局按键监听与动作分发
+- `components/KeyboardShortcutsPanel.jsx` / `.css` — 快捷键配置面板（分组、搜索、实时冲突检测）
+- `utils/playback.js` — 播放速度档位（`PLAYBACK_RATES` / `stepPlaybackRate`），加速/减速快捷键与播放栏、沉浸式视图共用
+- AudioPlayer 通过 `useImperativeHandle` 暴露 `setVolume/getVolume/toggleMute/setMuted/getMuted/skipBackward/skipForward/cycleAbLoop` 供快捷键调用
+
+#### 约定
+- 快捷键的动作定义与解析匹配逻辑必须放在 `utils/shortcuts.js`，Hook 与组件只做消费；**禁止 Hook 反向从组件导入**（历史上 `useKeyboardShortcuts` / `useAppSettings` 曾从 `KeyboardShortcutsPanel.jsx` 导入常量，属于分层倒置）
+- 按键匹配大小写不敏感：`normalizeKey` 统一把单字符键名转为大写，避免绑定 `M` 后按小写 `m` 无法触发
+- 新增动作时必须同步 `DEFAULT_SHORTCUTS` / `ACTION_LABELS` / `ACTION_DESCS`，并把动作挂到 `SHORTCUT_GROUPS` 的合适分组（未登记的动作会落入「其他」分组）
+- 读取设置时必须经过 `normalizeShortcuts`：它负责合并默认值并执行历史迁移，保证新增动作对老用户也有默认值
+- 静音只影响实际输出音量：`AudioPlayer` 保留 `volume` 作为记忆值，`effectiveVolume = muted ? 0 : volume`；`setVolume(v > 0)` 会自动解除静音，便于音量快捷键与睡眠定时器恢复音量
+- 纯函数模块需在 `src/utils/__tests__/` 下补充 Vitest 用例
 
 ### 16. 下载管理
 
