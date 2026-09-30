@@ -82,7 +82,7 @@ const SkeletonPlaylistRow = memo(({ index }) => {
 })
 SkeletonPlaylistRow.displayName = 'SkeletonPlaylistRow'
 
-const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, onToast }) {
+const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, onPlayAll, onAddAllToQueue, onToast }) {
   const [playlists, setPlaylists] = useState([])
   const [smartPlaylists, setSmartPlaylists] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -281,6 +281,23 @@ const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, 
   const handleGotoWork = useCallback((item) => {
     onNavigateToWork?.(item)
   }, [onNavigateToWork])
+
+  // 播放全部：以播放列表重建播放队列并从头播放
+  const handlePlayAll = useCallback(() => {
+    if (!selectedPlaylist) return
+    if (onPlayAll) {
+      onPlayAll(selectedPlaylist)
+    } else {
+      const items = selectedPlaylist.items || []
+      if (items.length > 0) handlePlayItem(items[0])
+    }
+  }, [selectedPlaylist, onPlayAll, handlePlayItem])
+
+  // 加入队列：把整张列表追加到当前播放队列
+  const handleAddAllToQueue = useCallback(() => {
+    if (!selectedPlaylist) return
+    onAddAllToQueue?.(selectedPlaylist)
+  }, [selectedPlaylist, onAddAllToQueue])
 
   // ===== 拖拽排序 =====
   const handleDragStart = useCallback((e, itemId) => {
@@ -549,13 +566,18 @@ const PlaylistView = memo(function PlaylistView({ onPlayItem, onNavigateToWork, 
                   </button>
                 )}
                 <button
+                  className="playlist-action-btn"
+                  onClick={handleAddAllToQueue}
+                  disabled={!onAddAllToQueue || !selectedPlaylist.items || selectedPlaylist.items.length === 0 || loadingSmart}
+                  title="将整张列表加入播放队列"
+                >
+                  加入队列
+                </button>
+                <button
                   className="playlist-action-btn primary"
-                  onClick={() => {
-                    const items = selectedPlaylist.items || []
-                    if (items.length > 0) handlePlayItem(items[0])
-                  }}
+                  onClick={handlePlayAll}
                   disabled={!selectedPlaylist.items || selectedPlaylist.items.length === 0 || loadingSmart}
-                  title="从头开始播放"
+                  title="按列表顺序加入队列并播放"
                 >
                   播放全部
                 </button>

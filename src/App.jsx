@@ -214,6 +214,8 @@ export default function App() {
     handleCloseAddToPlaylist,
     handlePlayPlaylistItem,
     handleNavigateToWorkFromPlaylist,
+    handlePlayPlaylist,
+    handleAddPlaylistToQueue,
     handleOpenAddToPlaylistForAudio,
 
     // 发现页筛选
@@ -643,6 +645,8 @@ export default function App() {
         <PlaylistView
           onPlayItem={handlePlayPlaylistItem}
           onNavigateToWork={handleNavigateToWorkFromPlaylist}
+          onPlayAll={handlePlayPlaylist}
+          onAddAllToQueue={handleAddPlaylistToQueue}
           onToast={showToast}
         />
       )}

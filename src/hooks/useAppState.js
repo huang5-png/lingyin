@@ -721,6 +721,8 @@ export function useAppState() {
     handleCloseAddToPlaylist,
     handlePlayPlaylistItem,
     handleNavigateToWorkFromPlaylist,
+    handlePlayPlaylist,
+    handleAddPlaylistToQueue,
   } = usePlaylistPlayback({
     works,
     showToast,
@@ -728,6 +730,10 @@ export function useAppState() {
     setCurrentView,
     setSelectedWork,
     latestAudioFilesRef,
+    buildQueueItem,
+    playQueue,
+    setPlayQueue,
+    playFromQueue: handlePlayFromQueue,
   })
 
   const handleOpenAddToPlaylistForAudio = useCallback((audio) => {
@@ -1011,6 +1017,8 @@ export function useAppState() {
     handleCloseAddToPlaylist,
     handlePlayPlaylistItem,
     handleNavigateToWorkFromPlaylist,
+    handlePlayPlaylist,
+    handleAddPlaylistToQueue,
     handleOpenAddToPlaylistForAudio,
 
     // 发现页筛选
