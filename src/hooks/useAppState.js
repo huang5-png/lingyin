@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from './useKeyboardShortcuts'
 import { useSleepTimer, SLEEP_TIMER_OPTIONS, SLEEP_TIMER_MODES, SLEEP_TIMER_PRESETS, SLEEP_TIMER_FADE_OPTIONS } from './useSleepTimer'
 import { useSubtitle } from './useSubtitle'
 import { useMediaLibrary } from './useMediaLibrary'
+import { useAudioIndex } from './useAudioIndex'
 import { useOnlineWork } from './useOnlineWork'
 import { usePlaybackHistory } from './usePlaybackHistory'
 import { useFilters } from './useFilters'
@@ -117,6 +118,9 @@ export function useAppState() {
     },
     [_handleContinueListen, works],
   )
+
+  // ===== 音频索引回填（智能播放列表 / 曲目搜索依赖）=====
+  useAudioIndex({ works, isLoadingWorks, setWorks, showToast })
 
   // ===== 收藏功能 Hook =====
   const {
@@ -780,15 +784,28 @@ export function useAppState() {
   }, [handleSelectWork, setCurrentView])
 
   const handleGlobalSearchPlayAudio = useCallback((audio, work) => {
-    if (work) {
-      setCurrentView(work.isOnline ? 'discover' : 'library')
-      if (work.isOnline) {
-        handleSelectOnlineWork({ id: work.onlineId, title: work.title, mainCoverUrl: work.cover, name: work.circle, vas: (work.cvs || []).map(c => ({ name: c })), tags: (work.tags || []).map(t => ({ name: t })) })
-      } else {
-        handleSelectWork(work)
-      }
+    if (work?.isOnline) {
+      setCurrentView('discover')
+      handleSelectOnlineWork({ id: work.onlineId, title: work.title, mainCoverUrl: work.cover, name: work.circle, vas: (work.cvs || []).map(c => ({ name: c })), tags: (work.tags || []).map(t => ({ name: t })) })
+      return
     }
-  }, [handleSelectOnlineWork, handleSelectWork, setCurrentView])
+    if (!work) return
+
+    setCurrentView('library')
+
+    // 目标曲目已在当前作品的扫描结果里：直接播放，避免重复扫描等待
+    const target = audio?.path ? audioFiles.find((a) => a.path === audio.path) : null
+    if (target) {
+      handleSelectAudio(target)
+      return
+    }
+
+    // 跨作品：登记待播放曲目，等作品扫描完成后由自动播放 effect 接管
+    if (audio?.path) {
+      pendingAutoPlayRef.current = { audioPath: audio.path, startedAt: Date.now() }
+    }
+    handleSelectWork(work)
+  }, [audioFiles, handleSelectAudio, handleSelectWork, handleSelectOnlineWork, pendingAutoPlayRef, setCurrentView])
 
   const handleGlobalSearchSelectPlaylist = useCallback((playlist) => {
     setCurrentView('playlist')
