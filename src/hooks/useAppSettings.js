@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { DEFAULT_SHORTCUTS } from '../components/KeyboardShortcutsPanel'
+import { DEFAULT_SHORTCUTS, normalizeShortcuts } from '../utils/shortcuts'
 
 export const DEFAULT_SETTINGS = {
   autoPlayNext: true,
@@ -59,21 +59,9 @@ function loadSettings() {
     const saved = localStorage.getItem('appSettings')
     if (saved) {
       const parsed = JSON.parse(saved)
-      // 迁移：旧版本 prevTrack/nextTrack 默认是 ArrowLeft/ArrowRight，
-      // 新版本把它们改为空，方向键让给快退/快进。
-      // 仅当用户没自定义过这些键时迁移（保持值等于旧默认值的情况）。
-      if (parsed.shortcuts) {
-        if (parsed.shortcuts.prevTrack === 'ArrowLeft' && parsed.shortcuts.nextTrack === 'ArrowRight'
-            && !parsed.shortcuts.seekBackward && !parsed.shortcuts.seekForward) {
-          parsed.shortcuts.prevTrack = ''
-          parsed.shortcuts.nextTrack = ''
-          parsed.shortcuts.seekBackward = 'ArrowLeft'
-          parsed.shortcuts.seekForward = 'ArrowRight'
-          // 立即写回，避免下次再迁移
-          localStorage.setItem('appSettings', JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }))
-        }
-      }
-      return { ...DEFAULT_SETTINGS, ...parsed }
+      // 快捷键整体替换会丢掉新增动作，这里统一走 normalizeShortcuts：
+      // 合并默认值 + 执行历史迁移（详见 utils/shortcuts.js）
+      return { ...DEFAULT_SETTINGS, ...parsed, shortcuts: normalizeShortcuts(parsed.shortcuts) }
     }
   } catch (e) {}
   return { ...DEFAULT_SETTINGS }
