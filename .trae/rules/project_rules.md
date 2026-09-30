@@ -1914,9 +1914,13 @@ npm run build:electron
 # 登录
 gh auth login
 
-# 创建 release
-gh release create v1.0.0 --notes "Release notes"
-
-# 上传资产
-gh release upload v1.0.0 ./release/聆音*.exe
+# 创建 release（只上传当前版本产物，务必带版本号精确匹配）
+gh release create v1.0.0 --title "聆音 v1.0.0" --notes "Release notes" "./release/1.0.0.zip"
 ```
+
+**⚠️ 资产上传禁忌（踩过坑）**
+
+- `release/` 目录会累积历史版本产物，**禁止**使用 `./release/聆音*.zip` 这类通配符上传：它会把所有历史版本的 zip 一起挂到新 release 上（每个约 100MB，重新清理非常耗时）
+- 上传前先用精确文件名（`1.x.y.zip`）；`gh` 会剥离文件名中的非 ASCII 字符，因此本地 `聆音 1.47.0 便携版.zip` 在 release 上显示为 `1.47.0.zip`，建议上传前先重命名或直接用剥离后的名字
+- 上传后核对资产数量：`gh release view v1.x.y --json assets --jq '.assets[].name'`
+- 误传多余资产用 `gh release delete-asset v1.x.y <name> --yes` 逐个清理
