@@ -10,6 +10,8 @@
     "build:vite": "vite build",
     "build:electron": "electron-builder",
     "build": "npm run build:vite && npm run build:electron",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "keywords": [
@@ -35,6 +37,7 @@
     "react-dom": "^18.3.1",
     "sharp": "^0.35.2",
     "vite": "^5.4.11",
+    "vitest": "^4.1.10",
     "wait-on": "^8.0.1"
   },
   "build": {
