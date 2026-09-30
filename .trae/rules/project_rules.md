@@ -422,14 +422,15 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 - 每次写入调用 `saveDB()` 同步到磁盘
 - 数据库文件路径：`C:\Users\{用户}\AppData\Roaming\lingyin\db.json`
 - 设置同时存储在 localStorage 和 db 中（localStorage 优先加载）
-- 播放历史（`progressHistory`）用于统计，每 30 秒记录一次
+- 播放历史（`history`）用于统计与智能播放列表，每 30 秒记录一次
+- `works` 中的每个作品携带音频索引 `audioFiles: [{ name, path, relativePath, displayName }]` 与 `audioIndexUpdatedAt`，是智能播放列表与曲目搜索的数据源（详见第 18 节）
 
 #### 数据结构一览
 ```json
 {
-  "works": [],           // 本地作品列表
-  "progress": {},        // 播放进度 { workId::audioPath: seconds }
-  "progressHistory": [], // 播放历史记录（用于统计）
+  "works": [],           // 本地作品列表（含 audioFiles 音频索引）
+  "progress": {},        // 播放进度 { workId::audioPath: { currentTime, duration, lastPlayed } }
+  "history": [],         // 播放历史记录（用于统计与智能播放列表）
   "subtitles": {},       // 字幕选择 { workId::audioPath: subtitleData }
   "settings": {},        // 用户设置
   "playlists": [],       // 播放列表
@@ -438,6 +439,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
   "folderGroups": [],      // 文件夹分组 [{ id, name, color, order, createdAt, updatedAt }]
   "bookmarks": [],          // 书签列表 [{ id, workId, workTitle, audioPath, audioName, time, name, color, createdAt, updatedAt }]
   "tagMetadata": {},        // 标签元数据 { tagName: { color, createdAt, updatedAt } }
+  "playQueue": [],          // 播放队列（重启后恢复）
+  "lastPlayState": null,    // 上次播放状态
 }
 ```
 
@@ -448,6 +451,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 - `scanFolder()` 递归收集所有音频和字幕文件
 - 音频扩展名：`mp3/wav/flac/ogg/m4a/aac/wma/opus`
 - 字幕扩展名：`lrc/srt/vtt/ass/ssa`
+- 三条添加路径（手动添加文件夹 / 批量扫描媒体库 / 拖拽添加）都会把 `scanFolder` 的音频结果经 `src/utils/audioIndex.js` 归一化后写入 `work.audioFiles`，无需二次扫描
+- 扫描结果的曲目排序使用 `scanner.js` 导出的 `naturalCompare`（按相对路径自然排序，`02` 排在 `10` 前）
 
 ### 5.1 拖拽添加文件夹
 
@@ -1182,16 +1187,27 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 
 | 智能列表 ID | 名称 | 说明 | 数据来源 |
 |------------|------|------|---------|
-| `recently_added` | 最近添加 | 最近添加到媒体库的曲目 | works 按 createdAt 倒序 |
-| `most_played` | 最多播放 | 播放次数最多的曲目 | progressHistory 统计 |
-| `unfinished` | 未听完 | 播放进度 < 90% 的曲目 | progress 记录筛选 |
-| `recently_played` | 最近播放 | 最近播放过的曲目 | progressHistory 按时间倒序 |
-| `favorites` | 我的收藏 | 已收藏的作品曲目 | favorites 列表关联 |
-| `random` | 随机推荐 | 随机抽取 50 首曲目 | works 随机采样 |
+| `recently_added` | 最近添加 | 最近添加的作品，各取前 3 首曲目 | works 按 createdAt 倒序 |
+| `most_played` | 最多播放 | 累计播放时长最长的曲目 | history 按 `workId::audioFile` 累加 `seconds` 倒序 |
+| `unfinished` | 未听完 | 已播进度的 0%～95% 之间的曲目 | progress 记录筛选，按 lastPlayed 倒序 |
+| `recently_played` | 最近播放 | 最近播放过的曲目（按曲目去重） | history 逆序扫描 |
+| `favorites` | 我的收藏 | 已收藏作品的全部曲目 | favorites 关联 works |
+| `random` | 随机推荐 | 全部曲目随机打乱后取样 | works 全量曲目 |
 
 - 智能播放列表为只读，不支持添加/删除/排序曲目
 - 点击「刷新」按钮可重新生成列表内容
-- 智能列表数据实时计算，不写入数据库
+- 智能列表数据**实时计算，不写入数据库**（`dbData` 中不保存计算结果）
+- 数量上限由调用方传入的 `limit` 决定（`PlaylistView` 传入 200），`random` 额外受 `Math.min(limit, 50)` 限制
+
+##### 曲目来源：作品音频索引（work.audioFiles）
+- 6 个智能列表**全部**依赖 `work.audioFiles` 生成曲目项，该字段是曲目级功能的唯一数据源
+- 索引条目结构：`{ name, path, relativePath, displayName }`（由 `src/utils/audioIndex.js` 归一化，只保留必要字段）
+- **写入时机**：
+  - 新增作品时随 `audioCount` 一并写入（`useMediaLibrary` 的 `buildIndexFields`，扫描结果已存在，无需二次扫描）
+  - 历史作品在应用启动后由 `useAudioIndex` 回填：作品加载完成 → 延迟 1.2s → 并发 3 路 `scanFolder` → 单次 `db:setWorksAudioFiles` 落盘
+  - 回填只针对「本地 + 有 folderPath + 未索引」的作品，已索引作品与在线作品跳过，同一会话内不重复尝试
+- 同一作品的 `audioFiles` 与 `progress` / `history` 的 `audioFile` 字段以 **`path`（绝对路径）** 对齐，改动索引字段时必须保持该对齐关系
+- 索引仅通过「重新扫描」场景改写，不随播放行为变动
 
 #### IPC API
 | 接口 | 说明 |
@@ -1204,6 +1220,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 | `playlist:removeItem` | 移除指定曲目 |
 | `playlist:reorderItems` | 按 itemId 数组重新排序，未列入的项目追加到末尾 |
 | `playlist:clear` | 清空播放列表 |
+| `db:updateWork` | 更新作品字段（标题/封面/标签等） |
+| `db:setWorksAudioFiles` | 批量写入作品音频索引（单次落盘，`entries: [{ workId, audioFiles, audioCount }]`，返回更新条数） |
 | `smartPlaylist:getAll` | 获取所有智能播放列表定义 |
 | `smartPlaylist:getItems` | 获取指定智能播放列表的曲目 |
 
@@ -1700,7 +1718,7 @@ const {
 ### 24. 全局搜索
 
 #### 功能概述
-- 全局搜索支持搜索作品、收藏、播放列表，按分类展示结果
+- 全局搜索支持搜索作品、曲目、收藏、播放列表、在线作品，按分类展示结果
 - 搜索历史记录，最多保存 10 条，支持快速重新搜索
 - 搜索关键词高亮显示，匹配字段标签（作品/RJ号/CV/社团/标签）
 - 空输入时显示正在播放的曲目和搜索历史
@@ -1712,10 +1730,26 @@ const {
 - 可在设置中自定义快捷键
 
 #### 搜索范围与优先级
-1. **搜索历史** — 匹配历史记录中的关键词，点击重新搜索
-2. **作品** — 搜索本地作品（标题、RJ号、CV、社团、标签），最多 10 条
-3. **收藏** — 在收藏作品中搜索，最多 5 条
-4. **播放列表** — 搜索播放列表名称，最多 5 条
+结果分组顺序固定为：搜索历史 → 本地作品 → 曲目 → 收藏 → 播放列表 → 在线作品。
+
+| 分组 | 匹配字段 | 上限 |
+|------|---------|------|
+| 搜索历史 | 历史关键词 | 5 |
+| 本地作品 | 标题 / RJ号 / CV / 社团 / 标签 | 10 |
+| 曲目 | 曲目名 / `displayName`（含子目录） | 8 |
+| 收藏 | 标题 / RJ号 / CV / 社团 | 5 |
+| 播放列表 | 列表名称 | 5 |
+| 在线作品 | asmr.one 关键词搜索（防抖 300ms，可中断） | 8 |
+
+- 在线搜索请求通过 `onlineAbortRef` 取消上一次未完成请求，避免竞态覆盖
+
+#### 曲目搜索数据来源
+- `GlobalSearchModal` 通过 `buildAudioFilesMap(works)`（`src/utils/audioIndex.js`）从作品记录**内部派生**曲目索引，不再接收外部 `audioFilesMap` prop
+- 数据来自 `work.audioFiles`（详见第 18 节「曲目来源：作品音频索引」），未建立索引的历史作品不会出现在「曲目」分组
+- 点击曲目结果 → `onPlayAudio(audio, work)` → `useAppState.handleGlobalSearchPlayAudio`：
+  - 目标曲目已在当前作品扫描结果中（`audioFiles` 命中 `path`）→ 直接 `handleSelectAudio` 播放
+  - 跨作品 → 写入 `pendingAutoPlayRef` 并选中作品，待目录扫描完成后由自动播放 effect 接管
+  - 在线作品 → 切到「发现」视图打开该作品
 
 #### 数据存储
 - 搜索历史存储在 `localStorage` 的 `lingyin_search_history` 键中
@@ -1724,8 +1758,8 @@ const {
 - 支持单条删除和全部清除
 
 #### 交互特性
-- **分类展示**：搜索结果按「搜索历史 / 作品 / 收藏 / 播放列表」分类，每组带标题和数量徽标
-- **关键词高亮**：匹配的文本使用暖橙色高亮背景
+- **分类展示**：搜索结果按上述 6 类分组，每组带标题和数量徽标
+- **关键词高亮**：匹配的文本使用暖橙色高亮背景（按拆分后的片段与关键词做大小写无关比较，不使用带 `g` 标志的 `regex.test`，避免 `lastIndex` 状态导致高亮闪烁）
 - **清除按钮**：输入框右侧有清除按钮，一键清空搜索内容
 - **ESC 两级退出**：有输入时按 ESC 先清除输入，无输入时关闭弹窗
 - **历史记录管理**：hover 显示删除按钮，支持单条删除和顶部「清除全部」
