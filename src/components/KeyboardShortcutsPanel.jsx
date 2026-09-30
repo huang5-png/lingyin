@@ -3,12 +3,12 @@ import './KeyboardShortcutsPanel.css';
 
 const DEFAULT_SHORTCUTS = {
   playPause: 'Space',
-  prevTrack: 'ArrowLeft',
-  nextTrack: 'ArrowRight',
+  prevTrack: '',
+  nextTrack: '',
   volumeUp: 'ArrowUp',
   volumeDown: 'ArrowDown',
-  seekBackward: '',
-  seekForward: '',
+  seekBackward: 'ArrowLeft',
+  seekForward: 'ArrowRight',
   toggleImmersive: '',
   exitImmersive: 'Escape',
   toggleQueue: '',

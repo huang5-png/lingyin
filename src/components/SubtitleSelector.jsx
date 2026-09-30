@@ -63,7 +63,7 @@ const SubtitleSelector = memo(function SubtitleSelector({ subtitles, selectedInd
         <button
           className={`translate-btn ${isTranslating ? 'translating' : ''} ${hasTranslation ? 'has-translation' : ''}`}
           onClick={onToggleTranslate}
-          title={isTranslating ? '翻译中...' : hasTranslation ? '关闭双语显示' : '翻译字幕'}
+          title={isTranslating ? '点击取消翻译' : hasTranslation ? '关闭双语显示' : '翻译字幕'}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m22 10-7-7-2 2 5 5-5 5 2 2 7-7Z"/>

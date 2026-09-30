@@ -1,6 +1,5 @@
 import { useMemo, useEffect, useRef, useCallback, memo, useState } from 'react'
 import { findCurrentCue, formatTime } from '../utils/subtitleParser'
-import UpscaledImage from './UpscaledImage'
 import SpectrumVisualizer from './SpectrumVisualizer'
 import './ImmersiveView.css'
 
@@ -28,7 +27,7 @@ const ImmersiveView = memo(function ImmersiveView({
   onClose,
   onPrev,
   onNext,
-  upscalePreset = 'anime',
+  skipSeconds = 5,
   hasTranslation = false,
   onToggleTranslate,
   isTranslating = false,
@@ -146,6 +145,16 @@ const ImmersiveView = memo(function ImmersiveView({
     resetHideTimer()
   }, [onNext, resetHideTimer])
 
+  const handleSeekBackward = useCallback(() => {
+    playerRef.current?.skipBackward?.(skipSeconds)
+    resetHideTimer()
+  }, [playerRef, skipSeconds, resetHideTimer])
+
+  const handleSeekForward = useCallback(() => {
+    playerRef.current?.skipForward?.(skipSeconds)
+    resetHideTimer()
+  }, [playerRef, skipSeconds, resetHideTimer])
+
   const handleProgressClick = useCallback((e) => {
     if (!progressRef.current || !duration) return
     const rect = progressRef.current.getBoundingClientRect()
@@ -242,7 +251,7 @@ const ImmersiveView = memo(function ImmersiveView({
             <button
               className={`immersive-icon-btn ${isTranslating ? 'translating' : ''} ${hasTranslation ? 'has-translation' : ''}`}
               onClick={onToggleTranslate}
-              title={isTranslating ? '翻译中...' : hasTranslation ? '关闭双语显示' : '翻译字幕'}
+              title={isTranslating ? '点击取消翻译' : hasTranslation ? '关闭双语显示' : '翻译字幕'}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m22 10-7-7-2 2 5 5-5 5 2 2 7-7Z"/>
@@ -253,39 +262,20 @@ const ImmersiveView = memo(function ImmersiveView({
         </div>
       </div>
 
-      <div className="immersive-cover-wrapper">
-        <UpscaledImage
-          src={work.cover}
-          alt=""
-          preset={upscalePreset}
-          className="immersive-cover"
-          fit="contain"
-        />
-      </div>
+      {/* 左右分栏：封面在左、字幕在右 */}
+      <div className="immersive-layout">
+        <div className="immersive-cover-wrapper">
+          <img
+            src={work.cover}
+            alt=""
+            className="immersive-cover"
+            onError={(e) => {
+              e.target.style.display = 'none'
+            }}
+          />
+        </div>
 
-      <div className={`immersive-bottom ${showControls ? 'controls-visible' : ''}`}>
-        {showSpectrum && audioElement && (
-          <div className="immersive-spectrum-bg">
-            <SpectrumVisualizer
-              audioElement={audioElement}
-              mode={spectrumMode}
-              sensitivity={spectrumSensitivity}
-              height={120}
-              showBg={false}
-              barCount={96}
-              colorStart="rgba(201, 100, 66, 0.3)"
-              colorEnd="rgba(236, 72, 153, 0.6)"
-            />
-          </div>
-        )}
-        <div className="immersive-bottom-inner">
-          <div className="immersive-info-row">
-            <div className="immersive-info-text">
-              <div className="immersive-title">{work.title || work.folderName}</div>
-              <div className="immersive-subtitle">{work.circle || ''}</div>
-            </div>
-          </div>
-
+        <div className="immersive-lyrics-panel">
           {immersiveLyricCues.length > 0 && (
             <div className="immersive-lyrics-container" ref={immersiveLyricRef}>
               {immersiveLyricCues.map((cue) => (
@@ -308,7 +298,25 @@ const ImmersiveView = memo(function ImmersiveView({
               ))}
             </div>
           )}
+        </div>
+      </div>
 
+      <div className={`immersive-bottom ${showControls ? 'controls-visible' : ''}`}>
+        {showSpectrum && audioElement && (
+          <div className="immersive-spectrum-bg">
+            <SpectrumVisualizer
+              audioElement={audioElement}
+              mode={spectrumMode}
+              sensitivity={spectrumSensitivity}
+              height={120}
+              showBg={false}
+              barCount={96}
+              colorStart="rgba(201, 100, 66, 0.3)"
+              colorEnd="rgba(236, 72, 153, 0.6)"
+            />
+          </div>
+        )}
+        <div className="immersive-bottom-inner">
           <div className={`immersive-controls ${showControls ? 'visible' : 'hidden'}`}>
             <div
               className="immersive-progress-bar"
@@ -332,46 +340,7 @@ const ImmersiveView = memo(function ImmersiveView({
               <span className="immersive-time immersive-time-total">{formatTime(duration)}</span>
             </div>
 
-            <div className="immersive-control-btns">
-              <button
-                className="immersive-ctrl-btn immersive-ctrl-secondary"
-                onClick={handlePrev}
-                title="上一曲"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
-                </svg>
-              </button>
-
-              <button
-                className="immersive-ctrl-btn immersive-ctrl-play"
-                onClick={handlePlayPause}
-                title={isPlaying ? '暂停' : '播放'}
-              >
-                {isPlaying ? (
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" rx="1" />
-                    <rect x="14" y="4" width="4" height="16" rx="1" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                )}
-              </button>
-
-              <button
-                className="immersive-ctrl-btn immersive-ctrl-secondary"
-                onClick={handleNext}
-                title="下一曲"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M6 18 14.5 12 6 6zM16 6h2v12h-2z" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="immersive-controls-row">
+            <div className="immersive-controls-single-row">
               <div className="immersive-volume-wrapper">
                 <button
                   className="immersive-ctrl-btn immersive-ctrl-small"
@@ -414,6 +383,63 @@ const ImmersiveView = memo(function ImmersiveView({
                   />
                 </div>
               </div>
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-secondary"
+                onClick={handleSeekBackward}
+                title={`快退 ${skipSeconds}秒`}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6l-8.5 6z" />
+                </svg>
+              </button>
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-secondary"
+                onClick={handlePrev}
+                title="上一曲"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+                </svg>
+              </button>
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-play"
+                onClick={handlePlayPause}
+                title={isPlaying ? '暂停' : '播放'}
+              >
+                {isPlaying ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-secondary"
+                onClick={handleNext}
+                title="下一曲"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 18 14.5 12 6 6zM16 6h2v12h-2z" />
+                </svg>
+              </button>
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-secondary"
+                onClick={handleSeekForward}
+                title={`快进 ${skipSeconds}秒`}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 6v12l8.5-6L4 6zm9 0v12l8.5-6L13 6z" />
+                </svg>
+              </button>
 
               <div className="immersive-rate-wrapper">
                 <button

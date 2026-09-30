@@ -50,6 +50,7 @@ const LibraryLayout = memo(function LibraryLayout({
   onCircleClick,
   activeCV,
   activeTag,
+  getTagColor,
   onAddToPlaylist,
   onAddToQueue,
   onPlayNext,
@@ -112,6 +113,9 @@ const LibraryLayout = memo(function LibraryLayout({
           onDeleteWork={onDeleteWork}
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
+          onFilterTag={onFilterTag}
+          activeTag={activeTag}
+          getTagColor={getTagColor}
           onTranslate={onTranslate}
           onTranslateBatch={onTranslateBatch}
           getTranslatedText={getTranslatedText}

@@ -114,6 +114,7 @@ export default function App() {
     circleFilter,
     tagFilter,
     tagFilterMode,
+    setTagFilterMode,
     allCVs,
     allCircles,
     allTags,
@@ -143,6 +144,7 @@ export default function App() {
     loopMode,
     shuffle,
     showQueuePanel,
+    setShowQueuePanel,
     handlePlayFromQueue,
     handleAddToQueue,
     handlePlayNext,
@@ -619,6 +621,7 @@ export default function App() {
           activeTag={''}
           onDownload={handleOpenDownloadModal}
           onReloadTracks={handleReloadOnlineTracks}
+          onSelectAudio={handleSelectAudio}
         />
       )}
       {currentView === 'annual-report' && (
@@ -738,7 +741,7 @@ export default function App() {
           onClose={handleCloseImmersive}
           onPrev={handlePrevAudio}
           onNext={handleNextAudio}
-          upscalePreset={settings.upscalePreset}
+          skipSeconds={settings.skipSeconds || 5}
           hasTranslation={hasTranslation}
           onToggleTranslate={handleToggleTranslate}
           isTranslating={isAnyTranslating}

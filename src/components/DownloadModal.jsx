@@ -35,15 +35,18 @@ function flattenTracks(tracks, parentPath = '') {
   return result
 }
 
-// 按顶层文件夹（如 mp3 / wav）分组
-function groupByTopFolder(files) {
+// 按完整文件夹路径分组（支持多层级，如 mp3/有音效、wav/无音效）
+function groupByFullPath(files) {
   const groups = new Map()
   for (const f of files) {
-    const top = f.path.split('/')[0] || '根目录'
-    if (!groups.has(top)) groups.set(top, [])
-    groups.get(top).push(f)
+    // f.path 是完整路径，如 "mp3/有音效" 或 "wav"
+    const path = f.path || '根目录'
+    if (!groups.has(path)) groups.set(path, [])
+    groups.get(path).push(f)
   }
-  return [...groups.entries()].map(([name, files]) => ({ name, files }))
+  // 按路径排序，让同类格式聚在一起
+  const sorted = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  return sorted.map(([name, files]) => ({ name, files }))
 }
 
 function formatSize(bytes) {
@@ -83,10 +86,10 @@ const DownloadModal = memo(function DownloadModal({ work, onClose, onNavigateToD
         const tracks = await window.electronAPI.asmrOneGetTracks(work.onlineId)
         if (cancelled) return
         const flat = flattenTracks(tracks)
-        const grouped = groupByTopFolder(flat)
+        const grouped = groupByFullPath(flat)
         setGroups(grouped)
-        // 默认选中所有 mp3 组（如果有），否则全选
-        const mp3Group = grouped.find((g) => g.name.toLowerCase() === 'mp3')
+        // 默认选中第一个包含 mp3 的分组，否则选第一个分组
+        const mp3Group = grouped.find((g) => g.name.toLowerCase().includes('mp3'))
         const initial = new Set()
         if (mp3Group) {
           for (const f of mp3Group.files) initial.add(f.url)

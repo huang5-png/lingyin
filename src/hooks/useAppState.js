@@ -161,10 +161,15 @@ export function useAppState() {
     cvFilter,
     circleFilter,
     tagFilter,
+    tagFilterMode,
+    setTagFilterMode,
     allCVs,
     allCircles,
+    allTags,
     filteredWorks: filterByTagWorks,
     handleFilterChange,
+    handleClearFilter,
+    handleToggleTagFilter,
   } = useFilters(groupFilteredWorks)
 
   const filteredWorks = useMemo(() => {
@@ -321,7 +326,7 @@ export function useAppState() {
     findMatchedSubtitles,
     loadSavedSubtitle,
     selectSubtitleByPriority,
-    handleSelectSubtitle,
+    handleSelectSubtitle: rawHandleSelectSubtitle,
     handleAddSubtitleFile,
     handleAutoTranslate,
   } = useSubtitle({
@@ -436,6 +441,21 @@ export function useAppState() {
       setCurrentCues,
     })
   }, [selectedWork, currentAudio, currentCues, toggleSubtitleTranslate])
+
+  // 包装手动字幕切换：原始版本只更新选中索引并返回 cues，
+  // 这里补上 setCurrentCues 与自动翻译触发，与切歌时的字幕加载行为保持一致
+  const handleSelectSubtitle = useCallback(async (index) => {
+    const result = await rawHandleSelectSubtitle(index)
+    if (!result) return
+    if (result.clearSubtitle) {
+      setCurrentCues([])
+      return
+    }
+    if (result.cues) {
+      handleAutoTranslate(result.cues, result.sub, setCurrentCues)
+      setCurrentCues(result.cues)
+    }
+  }, [rawHandleSelectSubtitle, handleAutoTranslate, setCurrentCues])
 
   // 包装 handleDeleteWork，注入 selectedWork 和清理回调
   const handleDeleteWork = useCallback(
@@ -883,6 +903,7 @@ export function useAppState() {
     circleFilter,
     tagFilter,
     tagFilterMode,
+    setTagFilterMode,
     allCVs,
     allCircles,
     allTags,
@@ -915,6 +936,7 @@ export function useAppState() {
     loopMode,
     shuffle,
     showQueuePanel,
+    setShowQueuePanel,
     handlePlayFromQueue,
     handleAddToQueue,
     handlePlayNext,

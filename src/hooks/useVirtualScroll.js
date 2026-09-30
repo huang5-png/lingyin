@@ -124,6 +124,7 @@ export function useVirtualScroll({
     scrollToTop,
     viewportHeight,
     columnCount,
+    containerWidth,
     scrollTop,
     showBackToTop,
     visibleItemCount,

@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import './DiscoverView.css'
 
 const WorkCard = memo(function WorkCard({
   work,
@@ -12,15 +13,35 @@ const WorkCard = memo(function WorkCard({
   selectedIds,
   onToggleSelect,
   workProgressMap,
+  onFilterTag,
+  activeTag,
+  getTagColor,
 }) {
   const isActive = selectedWorkId === work.id
   const isFavorited = favoriteIds?.has(work.id)
   const isSelected = selectedIds?.has(work.id)
   const progress = workProgressMap?.[work.id]
 
+  const formatDate = (dateInput) => {
+    if (!dateInput) return ''
+    let date
+    if (typeof dateInput === 'number') {
+      date = new Date(dateInput)
+    } else {
+      date = new Date(dateInput)
+    }
+    if (isNaN(date.getTime())) return ''
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
+  const displayDate = formatDate(work.release || work.createdAt || work.create_date)
+
   return (
     <div
-      className={`work-item card ${isActive ? 'active' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`discover-work-card ${isActive ? 'selected' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={() => {
         if (bulkMode) {
           onToggleSelect?.(work.id)
@@ -44,11 +65,11 @@ const WorkCard = memo(function WorkCard({
           </button>
         </div>
       )}
-      <div className="card-cover">
+      <div className="discover-card-cover">
         {work.cover ? (
           <img src={work.cover} alt="" loading="lazy" decoding="async" />
         ) : (
-          <div className="card-cover-placeholder">
+          <div className="cover-placeholder">
             <svg className="cover-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 18V5l12-2v13"/>
               <circle cx="6" cy="18" r="3"/>
@@ -56,29 +77,52 @@ const WorkCard = memo(function WorkCard({
             </svg>
           </div>
         )}
-        <div className="card-overlay">
-          {work.rating > 0 && <span className="card-rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating.toFixed(1)}</span>}
-        </div>
+        {work.rating > 0 && (
+          <div className="duration-badge">
+            <svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            {work.rating.toFixed(1)}
+          </div>
+        )}
       </div>
-      <div className="card-info">
-        <div className="card-title">{getTranslatedText?.(work.title || work.folderName) || work.title || work.folderName}</div>
-        <div className="card-meta">
-          {work.cvs && work.cvs.length > 0 && (
-            <span className="card-circle">{work.cvs.slice(0, 2).map(cv => getTranslatedText?.(cv) || cv).join('、')}</span>
+      <div className="discover-card-info">
+        <h3 className="discover-card-title">{getTranslatedText?.(work.title || work.folderName) || work.title || work.folderName}</h3>
+        <p className="discover-card-circle">
+          {work.cvs && work.cvs.length > 0
+            ? work.cvs.map(cv => getTranslatedText?.(cv) || cv).join('、')
+            : work.circle || ''}
+        </p>
+        <div className="discover-card-meta">
+          {displayDate && (
+            <p className="discover-card-date">{displayDate}</p>
+          )}
+          {work.tags && work.tags.length > 0 && (
+            <div className="discover-card-tags">
+              {work.tags.map((tag, i) => {
+                const tagIsActive = Array.isArray(activeTag) ? activeTag.includes(tag) : activeTag === tag
+                const tagColor = getTagColor?.(tag) || ''
+                return (
+                  <span
+                    key={i}
+                    className={`work-tag ${tagIsActive ? 'active' : ''}`}
+                    style={tagColor ? { '--tag-color': tagColor } : {}}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onFilterTag?.(tagIsActive ? '' : tag)
+                    }}
+                    title={tagIsActive ? '取消此标签筛选' : '按此标签筛选'}
+                  >
+                    {getTranslatedText?.(tag) || tag}
+                  </span>
+                )
+              })}
+            </div>
+          )}
+          {progress && progress.percentage > 0 && (
+            <div className="card-progress">
+              <div className="card-progress-bar" style={{ width: `${progress.percentage}%` }} />
+            </div>
           )}
         </div>
-        {work.tags && work.tags.length > 0 && (
-          <div className="card-tags">
-            {work.tags.slice(0, 4).map((tag, i) => (
-              <span key={i} className="card-tag">{getTranslatedText?.(tag) || tag}</span>
-            ))}
-          </div>
-        )}
-        {progress && progress.percentage > 0 && (
-          <div className="card-progress">
-            <div className="card-progress-bar" style={{ width: `${progress.percentage}%` }} />
-          </div>
-        )}
       </div>
       <button
         className={`work-favorite-btn card-favorite ${isFavorited ? 'favorited' : ''}`}
@@ -117,6 +161,9 @@ const WorkCard = memo(function WorkCard({
     prev.onToggleFavorite === next.onToggleFavorite &&
     prev.onDeleteWork === next.onDeleteWork &&
     prev.onToggleSelect === next.onToggleSelect &&
+    prev.onFilterTag === next.onFilterTag &&
+    prev.activeTag === next.activeTag &&
+    prev.getTagColor === next.getTagColor &&
     prev.work.title === next.work.title &&
     prev.work.cover === next.work.cover &&
     prev.work.rating === next.work.rating &&

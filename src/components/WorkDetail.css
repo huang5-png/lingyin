@@ -401,7 +401,7 @@
 
 .work-cvs {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 6px;
   flex-wrap: wrap;
   margin-top: 4px;
@@ -426,6 +426,10 @@
   cursor: pointer;
   transition: all var(--transition-fast), transform 0.16s ease;
   min-height: 28px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cv-tag:hover {
@@ -443,6 +447,7 @@
 
 .work-tags {
   display: flex;
+  align-items: stretch;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 4px;
@@ -459,6 +464,10 @@
   transition: all var(--transition-fast), transform 0.16s ease;
   cursor: pointer;
   min-height: 28px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tag:hover {
@@ -512,6 +521,10 @@
   cursor: pointer;
   transition: all 0.15s ease;
   min-height: 28px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .add-tag-btn:hover {

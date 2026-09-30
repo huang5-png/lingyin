@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from 'react'
 import './Sidebar.css'
+import './DiscoverView.css'
 import StateView from './StateView'
 import WorkCard from './WorkCard'
 import WorkRow from './WorkRow'
@@ -7,10 +8,10 @@ import { useVirtualScroll } from '@/hooks/useVirtualScroll'
 
 const GRID_ITEM_HEIGHT = 240
 const LIST_ITEM_HEIGHT = 90
-const VIRTUAL_THRESHOLD = 50
+const VIRTUAL_THRESHOLD = 200
 const SCROLL_POSITION_KEY = 'sidebar_scroll_position'
 
-function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView, bulkMode, selectedIds, onToggleBulkMode, onToggleSelect, onSelectAll, onClearSelection, onBulkFavorite, onBulkDelete, onBulkMoveToGroup, sortBy, sortOrder, onSortChange }) {
+function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onFilterTag, activeTag, getTagColor, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView, bulkMode, selectedIds, onToggleBulkMode, onToggleSelect, onSelectAll, onClearSelection, onBulkFavorite, onBulkDelete, onBulkMoveToGroup, sortBy, sortOrder, onSortChange }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showGroups, setShowGroups] = useState(true)
   const [editingGroupId, setEditingGroupId] = useState(null)
@@ -135,11 +136,6 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
     }
   }, [scrollViewKey])
 
-  const handleScrollWithSave = useCallback((e) => {
-    handleScroll(e)
-    saveScrollPosition(e.target.scrollTop)
-  }, [handleScroll, saveScrollPosition])
-
   const {
     startIndex,
     endIndex,
@@ -158,6 +154,11 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
     mode: viewMode,
     getColumnCount,
   })
+
+  const handleScrollWithSave = useCallback((e) => {
+    handleScroll(e)
+    saveScrollPosition(e.target.scrollTop)
+  }, [handleScroll, saveScrollPosition])
 
   useEffect(() => {
     if (scrollRestoreTimerRef.current) {
@@ -190,10 +191,13 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
     selectedIds,
     onToggleSelect,
     workProgressMap,
+    onFilterTag,
+    activeTag,
+    getTagColor,
   }), [
     selectedWorkId, getTranslatedText, favoriteIds, onSelectWork,
     onToggleFavorite, onDeleteWork, bulkMode, selectedIds,
-    onToggleSelect, workProgressMap,
+    onToggleSelect, workProgressMap, onFilterTag, activeTag, getTagColor,
   ])
 
   return (
@@ -630,7 +634,9 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
       <div
         ref={listRef}
         className={`work-list ${viewMode === 'grid' ? 'grid-view' : 'list-view'} ${bulkMode ? 'bulk-mode' : ''} ${useVirtual ? 'virtual-scroll' : ''}`}
-        style={viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : undefined}
+        style={{
+          ...(viewMode === 'list' && rowMinHeight ? { '--row-min-height': `${rowMinHeight}px` } : {}),
+        }}
         onScroll={useVirtual ? handleScrollWithSave : (e) => saveScrollPosition(e.target.scrollTop)}
       >
         {isLoadingWorks ? (
@@ -672,11 +678,9 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
             >
               {viewMode === 'grid' ? (
                 <div
-                  className="virtual-grid"
+                  className="discover-grid"
                   style={{
-                    display: 'grid',
                     gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
-                    gap: '16px',
                   }}
                 >
                   {visibleWorks.map((work) => (
@@ -694,9 +698,11 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
           </div>
         ) : (
           viewMode === 'grid' ? (
-            filteredWorks.map((work) => (
-              <WorkCard key={work.id} work={work} {...sharedItemProps} />
-            ))
+            <div className="discover-grid">
+              {filteredWorks.map((work) => (
+                <WorkCard key={work.id} work={work} {...sharedItemProps} />
+              ))}
+            </div>
           ) : (
             filteredWorks.map((work) => (
               <WorkRow key={work.id} work={work} {...sharedItemProps} />

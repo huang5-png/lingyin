@@ -12,6 +12,9 @@ const WorkRow = memo(function WorkRow({
   selectedIds,
   onToggleSelect,
   workProgressMap,
+  onFilterTag,
+  activeTag,
+  getTagColor,
 }) {
   const isActive = selectedWorkId === work.id
   const isFavorited = favoriteIds?.has(work.id)
@@ -67,9 +70,24 @@ const WorkRow = memo(function WorkRow({
         </div>
         {work.tags && work.tags.length > 0 && (
           <div className="work-tags-row">
-            {work.tags.slice(0, 5).map((tag, i) => (
-              <span key={i} className="work-tag-chip">{getTranslatedText?.(tag) || tag}</span>
-            ))}
+            {work.tags.slice(0, 5).map((tag, i) => {
+              const tagIsActive = Array.isArray(activeTag) ? activeTag.includes(tag) : activeTag === tag
+              const tagColor = getTagColor?.(tag) || ''
+              return (
+                <span
+                  key={i}
+                  className={`work-tag-chip ${tagIsActive ? 'active' : ''}`}
+                  style={tagColor ? { '--tag-color': tagColor } : {}}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onFilterTag?.(tagIsActive ? '' : tag)
+                  }}
+                  title={tagIsActive ? '取消此标签筛选' : '按此标签筛选'}
+                >
+                  {getTranslatedText?.(tag) || tag}
+                </span>
+              )
+            })}
           </div>
         )}
         {progress && progress.percentage > 0 && (
@@ -115,6 +133,9 @@ const WorkRow = memo(function WorkRow({
     prev.onToggleFavorite === next.onToggleFavorite &&
     prev.onDeleteWork === next.onDeleteWork &&
     prev.onToggleSelect === next.onToggleSelect &&
+    prev.onFilterTag === next.onFilterTag &&
+    prev.activeTag === next.activeTag &&
+    prev.getTagColor === next.getTagColor &&
     prev.work.title === next.work.title &&
     prev.work.cover === next.work.cover &&
     prev.work.rating === next.work.rating &&

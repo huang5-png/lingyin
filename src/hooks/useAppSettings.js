@@ -23,7 +23,6 @@ const DEFAULT_SETTINGS = {
   autoHideSidebar: true,
   playbackRate: 1,
   shortcuts: { ...DEFAULT_SHORTCUTS },
-  closeToTray: true,
   subtitleStylePreset: 'default',
   subtitleLyricFontSize: 14,
   subtitleLyricColor: '#e8e6e3',
@@ -46,13 +45,33 @@ const DEFAULT_SETTINGS = {
   persistPlayQueue: true,
   librarySortBy: 'createdAt',
   librarySortOrder: 'desc',
+  translateEngine: 'google',
+  aiTranslateBaseUrl: 'https://api.openai.com/v1',
+  aiTranslateApiKey: '',
+  aiTranslateModel: 'gpt-3.5-turbo',
+  aiTranslateUseProxy: false,
 }
 
 function loadSettings() {
   try {
     const saved = localStorage.getItem('appSettings')
     if (saved) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
+      const parsed = JSON.parse(saved)
+      // 迁移：旧版本 prevTrack/nextTrack 默认是 ArrowLeft/ArrowRight，
+      // 新版本把它们改为空，方向键让给快退/快进。
+      // 仅当用户没自定义过这些键时迁移（保持值等于旧默认值的情况）。
+      if (parsed.shortcuts) {
+        if (parsed.shortcuts.prevTrack === 'ArrowLeft' && parsed.shortcuts.nextTrack === 'ArrowRight'
+            && !parsed.shortcuts.seekBackward && !parsed.shortcuts.seekForward) {
+          parsed.shortcuts.prevTrack = ''
+          parsed.shortcuts.nextTrack = ''
+          parsed.shortcuts.seekBackward = 'ArrowLeft'
+          parsed.shortcuts.seekForward = 'ArrowRight'
+          // 立即写回，避免下次再迁移
+          localStorage.setItem('appSettings', JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }))
+        }
+      }
+      return { ...DEFAULT_SETTINGS, ...parsed }
     }
   } catch (e) {}
   return { ...DEFAULT_SETTINGS }

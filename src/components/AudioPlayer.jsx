@@ -75,39 +75,67 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const [customMinutes, setCustomMinutes] = useState('30')
   const [timePointInput, setTimePointInput] = useState('23:00')
 
+  // 过滤 wavesurfer.js 内部的 AbortError 未捕获 Promise rejection
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.reason?.name === 'AbortError' || e.reason?.message?.includes('signal is aborted')) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+    window.addEventListener('unhandledrejection', handler)
+    return () => window.removeEventListener('unhandledrejection', handler)
+  }, [])
+
   useImperativeHandle(ref, () => ({
     seekTo: (time) => {
-      if (wavesurferRef.current && duration > 0) {
+      if (useSimpleMode && simpleAudioRef.current && duration > 0) {
+        simpleAudioRef.current.currentTime = Math.max(0, Math.min(time, duration))
+      } else if (wavesurferRef.current && duration > 0) {
         wavesurferRef.current.seekTo(time / duration)
       }
     },
     getCurrentTime: () => currentTime,
     getDuration: () => duration,
     playPause: () => {
-      if (wavesurferRef.current) {
+      if (useSimpleMode && simpleAudioRef.current) {
+        if (simpleAudioRef.current.paused) {
+          simpleAudioRef.current.play()
+        } else {
+          simpleAudioRef.current.pause()
+        }
+      } else if (wavesurferRef.current) {
         wavesurferRef.current.playPause()
       }
     },
     setVolume: (v) => {
       const clamped = Math.max(0, Math.min(1, v))
       setVolume(clamped)
-      if (wavesurferRef.current) {
+      if (useSimpleMode && simpleAudioRef.current) {
+        simpleAudioRef.current.volume = clamped
+      } else if (wavesurferRef.current) {
         wavesurferRef.current.setVolume(clamped)
       }
     },
     getVolume: () => volume,
     skipBackward: (seconds) => {
-      if (wavesurferRef.current && currentTime > 0) {
+      if (useSimpleMode && simpleAudioRef.current && currentTime > 0) {
+        simpleAudioRef.current.currentTime = Math.max(0, simpleAudioRef.current.currentTime - (seconds || skipSeconds))
+      } else if (wavesurferRef.current && currentTime > 0) {
         wavesurferRef.current.skip(-(seconds || skipSeconds))
       }
     },
     skipForward: (seconds) => {
-      if (wavesurferRef.current && currentTime < duration) {
+      if (useSimpleMode && simpleAudioRef.current && currentTime < duration) {
+        simpleAudioRef.current.currentTime = Math.min(duration, simpleAudioRef.current.currentTime + (seconds || skipSeconds))
+      } else if (wavesurferRef.current && currentTime < duration) {
         wavesurferRef.current.skip(seconds || skipSeconds)
       }
     },
     setPlaybackRate: (rate) => {
-      if (wavesurferRef.current) {
+      if (useSimpleMode && simpleAudioRef.current) {
+        simpleAudioRef.current.playbackRate = rate
+      } else if (wavesurferRef.current) {
         wavesurferRef.current.setPlaybackRate(rate)
       }
     },
@@ -117,7 +145,13 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   }))
 
   const handlePlayPause = () => {
-    if (wavesurferRef.current) {
+    if (useSimpleMode && simpleAudioRef.current) {
+      if (simpleAudioRef.current.paused) {
+        simpleAudioRef.current.play()
+      } else {
+        simpleAudioRef.current.pause()
+      }
+    } else if (wavesurferRef.current) {
       wavesurferRef.current.playPause()
     }
   }
@@ -125,19 +159,25 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const handleVolumeChange = (e) => {
     const v = parseFloat(e.target.value)
     setVolume(v)
-    if (wavesurferRef.current) {
+    if (useSimpleMode && simpleAudioRef.current) {
+      simpleAudioRef.current.volume = v
+    } else if (wavesurferRef.current) {
       wavesurferRef.current.setVolume(v)
     }
   }
 
   const skipBackward = () => {
-    if (wavesurferRef.current && currentTime > 0) {
+    if (useSimpleMode && simpleAudioRef.current && currentTime > 0) {
+      simpleAudioRef.current.currentTime = Math.max(0, simpleAudioRef.current.currentTime - skipSeconds)
+    } else if (wavesurferRef.current && currentTime > 0) {
       wavesurferRef.current.skip(-skipSeconds)
     }
   }
 
   const skipForward = () => {
-    if (wavesurferRef.current && currentTime < duration) {
+    if (useSimpleMode && simpleAudioRef.current && currentTime < duration) {
+      simpleAudioRef.current.currentTime = Math.min(duration, simpleAudioRef.current.currentTime + skipSeconds)
+    } else if (wavesurferRef.current && currentTime < duration) {
       wavesurferRef.current.skip(skipSeconds)
     }
   }
@@ -161,7 +201,6 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   }
 
   const handleWaveformClick = (e) => {
-    if (!wavesurferRef.current) return
     if (!isReady) return
     if (duration <= 0) return
 
@@ -173,14 +212,36 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     const percentage = clickX / rect.width
     const clampedPercentage = Math.max(0, Math.min(1, percentage))
 
-    wavesurferRef.current.seekTo(clampedPercentage)
+    if (useSimpleMode && simpleAudioRef.current) {
+      simpleAudioRef.current.currentTime = clampedPercentage * duration
+    } else if (wavesurferRef.current) {
+      wavesurferRef.current.seekTo(clampedPercentage)
+    }
   }
+
+  const [useSimpleMode, setUseSimpleMode] = useState(false)
+  const simpleAudioRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
 
     function loadAudio() {
-      if (!waveformRef.current || !audioPath) return
+      if (!audioPath) {
+        return
+      }
+
+      const fileUrl = audioPath.startsWith('http') ? audioPath : pathToFileURL(audioPath)
+      const isWav = /\.wav$/i.test(audioPath)
+      const isOnline = audioPath.startsWith('http')
+
+      // waveformRef 可能因为 useSimpleMode=true 而不在 DOM 中
+      // 简单模式不需要 waveformRef，直接 fallbackToSimpleMode
+      // 在线音频也强制走简单模式：WaveSurfer 会单独 fetch 音频 URL，容易被 CDN 403 拒绝
+      // 简单模式用 <audio> 元素直接播放（走 session 拦截器注入 Referer），后再异步生成波形
+      if (!waveformRef.current || isOnline) {
+        fallbackToSimpleMode()
+        return
+      }
 
       setIsReady(false)
       setAudioElementReady(false)
@@ -188,100 +249,242 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
       setDuration(0)
       setError(null)
       setIsLoading(true)
+      setUseSimpleMode(false)
 
       if (wavesurferRef.current) {
         wavesurferRef.current.destroy()
         wavesurferRef.current = null
       }
 
-      try {
-        const fileUrl = audioPath.startsWith('http') ? audioPath : pathToFileURL(audioPath)
+      function fallbackToSimpleMode() {
+        if (cancelled) return
+        setUseSimpleMode(true)
+        setIsLoading(false)
 
-        const ws = WaveSurfer.create({
-          container: waveformRef.current,
-          waveColor: 'rgba(201, 100, 66, 0.4)',
-          progressColor: '#ec4899',
-          cursorColor: 'rgba(255, 255, 255, 0.9)',
-          cursorWidth: 2,
-          barWidth: 2,
-          barGap: 1,
-          barRadius: 2,
-          height: waveformHeight,
-          normalize: true,
-          hideScrollbar: true,
-          barAlign: 'center',
-          backend: 'MediaElement',
-          partialRender: true,
-        })
+        const audio = new Audio()
+        audio.preload = 'auto'
+        audio.volume = volume
 
-        wavesurferRef.current = ws
-
-        ws.load(fileUrl)
-        ws.setVolume(volume)
-
-        ws.on('ready', () => {
+        const handleLoadedMetadata = () => {
           if (cancelled) return
-          setIsLoading(false)
-          setIsReady(true)
-          const dur = ws.getDuration()
-          setDuration(dur)
-
-          const media = ws.getMediaElement?.()
-          if (media) {
-            audioElementRef.current = media
-            setAudioElementReady(true)
+          if (audio.duration && audio.duration !== Infinity) {
+            setDuration(audio.duration)
           }
-
-          ws.setPlaybackRate(playbackRate)
-          ws.play()
-          if (onReady) onReady(dur)
-        })
-
-        ws.on('error', (err) => {
+          setIsReady(true)
+        }
+        const handleCanPlay = () => {
           if (cancelled) return
-          setIsLoading(false)
-          setError(err?.message || err || '加载失败')
-          console.error('WaveSurfer error:', err)
-        })
-
-        // 节流 auioprocess 事件到约 15fps，减少 React 重渲染
-        let lastProcessTime = 0
-        ws.on('audioprocess', (time) => {
+          setIsReady(true)
+          audio.play().catch((e) => {
+            console.warn('播放失败:', e.message, audioPath)
+          })
+        }
+        const handleTimeUpdate = () => {
           if (cancelled) return
-          const now = performance.now()
-          if (now - lastProcessTime < 66) return
-          lastProcessTime = now
-          setCurrentTime(time)
-          if (onTimeUpdate) onTimeUpdate(time)
-        })
-
-        // 节流 seek 事件，避免频繁重渲染
-        let lastSeekTime = 0
-        ws.on('seek', (time) => {
-          if (cancelled) return
-          const now = performance.now()
-          if (now - lastSeekTime < 66) return
-          lastSeekTime = now
-          setCurrentTime(time)
-          if (onTimeUpdate) onTimeUpdate(time)
-        })
-
-        ws.on('play', () => !cancelled && setIsPlaying(true))
-        ws.on('pause', () => !cancelled && setIsPlaying(false))
-        ws.on('finish', () => {
+          setCurrentTime(audio.currentTime)
+          if (onTimeUpdate) onTimeUpdate(audio.currentTime)
+        }
+        const handleEnded = () => {
           if (cancelled) return
           setIsPlaying(false)
-          if (onSleepTimerTrackFinish) {
-            const handled = onSleepTimerTrackFinish()
-            if (handled) return
-          }
           if (onFinish) onFinish()
-        })
-      } catch (e) {
+        }
+        const handlePlay = () => { if (!cancelled) setIsPlaying(true) }
+        const handlePause = () => { if (!cancelled) setIsPlaying(false) }
+        const handleError = () => {
+          if (cancelled) return
+          setIsLoading(false)
+          setError('音频加载失败')
+          console.error('audio error 事件:', audio.error, 'audioPath=', audioPath)
+        }
+        const handleStalled = () => {
+          if (!cancelled) console.warn('音频加载停滞（stalled）:', audioPath)
+        }
+
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+        audio.addEventListener('canplay', handleCanPlay)
+        audio.addEventListener('timeupdate', handleTimeUpdate)
+        audio.addEventListener('ended', handleEnded)
+        audio.addEventListener('play', handlePlay)
+        audio.addEventListener('pause', handlePause)
+        audio.addEventListener('error', handleError)
+        audio.addEventListener('stalled', handleStalled)
+
+        simpleAudioRef.current = audio
+        audioElementRef.current = audio
+        setAudioElementReady(true)
+
+        // 主进程获取 duration 作为兜底
+        if (!audioPath.startsWith('http') && window.electronAPI?.getAudioDuration) {
+          window.electronAPI.getAudioDuration(audioPath).then(dur => {
+            if (cancelled) return
+            if (dur && dur > 0) {
+              setDuration(dur)
+              setIsReady(true)
+              if (onReady) onReady(dur)
+            }
+          }).catch((e) => {
+            console.error('主进程 getAudioDuration 失败:', e, audioPath)
+          })
+        }
+
+        audio.src = fileUrl
+        audio.load()
+
+        // 异步初始化 WaveSurfer 生成波形（不阻塞播放）
+        // 复用同一个 audio 元素，不重新加载文件
+        if (waveformRef.current && !cancelled) {
+          // 用 setTimeout 确保不阻塞当前播放启动
+          setTimeout(() => {
+            if (cancelled || !simpleAudioRef.current) return
+            try {
+              const ws = WaveSurfer.create({
+                container: waveformRef.current,
+                waveColor: 'rgba(201, 100, 66, 0.4)',
+                progressColor: '#ec4899',
+                cursorColor: 'rgba(255, 255, 255, 0.9)',
+                cursorWidth: 2,
+                barWidth: 2,
+                barGap: 1,
+                barRadius: 2,
+                height: waveformHeight,
+                normalize: true,
+                hideScrollbar: true,
+                barAlign: 'center',
+                backend: 'MediaElement',
+                media: audio, // 复用同一 audio 元素
+              })
+
+              wavesurferRef.current = ws
+
+              ws.on('ready', () => {
+                if (cancelled) return
+                // 波形生成完，切换到波形模式（隐藏简单进度条）
+                setUseSimpleMode(false)
+                setIsLoading(false)
+              })
+
+              ws.on('error', (err) => {
+                const errMsg = err?.message || err || ''
+                if (errMsg.includes('AbortError') || errMsg.includes('signal is aborted')) return
+                console.warn('WaveSurfer 波形生成失败（不影响播放）:', errMsg, audioPath)
+              })
+
+              // 用已有的 media 元素加载（不会重新 fetch 文件）
+              ws.load(fileUrl)
+            } catch (e) {
+              console.warn('WaveSurfer 初始化失败（不影响播放）:', e, audioPath)
+            }
+          }, 100)
+        }
+      }
+
+      const checkSizeAndLoad = async () => {
         if (cancelled) return
-        setIsLoading(false)
-        setError(e.message || '加载失败')
-        console.error('Failed to load audio:', e)
+        if (audioPath.startsWith('http')) {
+          // 在线音频用 WaveSurfer（流式加载，可生成波形）
+          loadWithWaveSurfer()
+          return
+        }
+        // 本地音频：默认用简单模式，秒开播放（和 PotPlayer 一样）
+        // 波形生成需要解码整个文件，对大文件不友好
+        fallbackToSimpleMode()
+      }
+      checkSizeAndLoad()
+
+      function loadWithWaveSurfer() {
+        if (cancelled) return
+        try {
+          const ws = WaveSurfer.create({
+            container: waveformRef.current,
+            waveColor: 'rgba(201, 100, 66, 0.4)',
+            progressColor: '#ec4899',
+            cursorColor: 'rgba(255, 255, 255, 0.9)',
+            cursorWidth: 2,
+            barWidth: 2,
+            barGap: 1,
+            barRadius: 2,
+            height: waveformHeight,
+            normalize: true,
+            hideScrollbar: true,
+            barAlign: 'center',
+            backend: 'MediaElement',
+            partialRender: true,
+          })
+
+          wavesurferRef.current = ws
+
+          ws.load(fileUrl)
+          ws.setVolume(volume)
+
+          ws.on('ready', () => {
+            if (cancelled) return
+            setIsLoading(false)
+            setIsReady(true)
+            const dur = ws.getDuration()
+            setDuration(dur)
+
+            const media = ws.getMediaElement?.()
+            if (media) {
+              audioElementRef.current = media
+              setAudioElementReady(true)
+            }
+
+            ws.setPlaybackRate(playbackRate)
+            ws.play()
+            if (onReady) onReady(dur)
+          })
+
+          ws.on('error', (err) => {
+            if (cancelled) return
+            const errMsg = err?.message || err || ''
+            if (errMsg.includes('AbortError') || errMsg.includes('signal is aborted')) {
+              return
+            }
+            if (errMsg.includes('could not be read') || errMsg.includes('permission')) {
+              fallbackToSimpleMode()
+              return
+            }
+            setIsLoading(false)
+            setError(errMsg || '加载失败')
+            console.error('WaveSurfer error:', err)
+          })
+
+          let lastProcessTime = 0
+          ws.on('audioprocess', (time) => {
+            if (cancelled) return
+            const now = performance.now()
+            if (now - lastProcessTime < 66) return
+            lastProcessTime = now
+            setCurrentTime(time)
+            if (onTimeUpdate) onTimeUpdate(time)
+          })
+
+          let lastSeekTime = 0
+          ws.on('seek', (time) => {
+            if (cancelled) return
+            const now = performance.now()
+            if (now - lastSeekTime < 66) return
+            lastSeekTime = now
+            setCurrentTime(time)
+            if (onTimeUpdate) onTimeUpdate(time)
+          })
+
+          ws.on('play', () => !cancelled && setIsPlaying(true))
+          ws.on('pause', () => !cancelled && setIsPlaying(false))
+          ws.on('finish', () => {
+            if (cancelled) return
+            setIsPlaying(false)
+            if (onSleepTimerTrackFinish) {
+              const handled = onSleepTimerTrackFinish()
+              if (handled) return
+            }
+            if (onFinish) onFinish()
+          })
+        } catch (e) {
+          if (cancelled) return
+          fallbackToSimpleMode()
+        }
       }
     }
 
@@ -293,23 +496,33 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
         wavesurferRef.current.destroy()
         wavesurferRef.current = null
       }
+      // 完全销毁 audio 元素，释放所有资源
+      if (simpleAudioRef.current) {
+        simpleAudioRef.current.pause()
+        simpleAudioRef.current.src = ''
+        simpleAudioRef.current = null
+      }
     }
   }, [audioPath, waveformHeight])
 
   useEffect(() => {
-    if (wavesurferRef.current) {
+    if (useSimpleMode && simpleAudioRef.current) {
+      simpleAudioRef.current.volume = volume
+    } else if (wavesurferRef.current) {
       wavesurferRef.current.setVolume(volume)
     }
     if (volumeSliderRef.current) {
       volumeSliderRef.current.style.backgroundSize = `${volume * 100}% 100%`
     }
-  }, [volume])
+  }, [volume, useSimpleMode])
 
   useEffect(() => {
-    if (wavesurferRef.current && isReady) {
+    if (useSimpleMode && simpleAudioRef.current && isReady) {
+      simpleAudioRef.current.playbackRate = playbackRate
+    } else if (wavesurferRef.current && isReady) {
       wavesurferRef.current.setPlaybackRate(playbackRate)
     }
-  }, [playbackRate, isReady])
+  }, [playbackRate, isReady, useSimpleMode])
 
   return (
     <div className="audio-player">
@@ -358,6 +571,19 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           >
             <div ref={waveformRef} className="waveform" />
             <div className="waveform-gradient-overlay" />
+            {useSimpleMode && (
+              <>
+                <div className="simple-progress-bg" />
+                <div
+                  className="simple-progress-fill"
+                  style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+                <div
+                  className="simple-progress-thumb"
+                  style={{ left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                />
+              </>
+            )}
           </div>
           <div
             className={`waveform-tooltip ${showTooltip ? 'visible' : ''}`}

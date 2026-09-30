@@ -224,10 +224,6 @@ body::before {
   contain-intrinsic-size: 200px 240px;
 }
 
-img {
-  content-visibility: auto;
-}
-
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
