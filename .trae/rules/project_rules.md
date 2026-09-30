@@ -1451,30 +1451,46 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 
 #### 功能概述
 - 三种定时模式：倒计时、曲目结束、指定时间点
-- 渐弱音量：停止前 30 秒逐渐降低音量，更自然的入睡体验
+- 渐弱音量：停止前 N 秒逐渐降低音量，更自然的入睡体验
 - 适合睡前听 ASMR 的使用场景
-- 不持久化到设置，每次启动重置
+- 定时状态为会话级（不持久化），但渐弱开关/时长属于设置，会持久化
 
 #### 三种定时模式
 | 模式 | 说明 |
 |------|------|
 | **倒计时** | 设置分钟数后倒计时停止，支持 5/15/30/45/60/90 分钟预设和自定义分钟数（1-300 分钟） |
-| **曲目结束** | 当前曲目播放完毕后自动停止 |
-| **指定时间** | 在设定的时间点自动停止（如 23:00），跨天自动顺延到第二天 |
+| **曲目结束** | 当前曲目播放完毕后自动暂停 |
+| **指定时间** | 在设定的时间点自动停止（如 23:00），若今天该时刻已过则顺延到第二天 |
 
 #### 核心状态
 - `sleepTimerMode` — 当前模式（`countdown` / `trackEnd` / `timePoint`）
 - `sleepTimerActive` — 定时器是否激活
 - `sleepTimerFading` — 是否处于渐弱阶段
 - `sleepTimerRemaining` — 剩余秒数
-- `sleepTimerFadeEnabled` — 渐弱音量开关（默认开启）
-- `targetTime` — 指定时间模式的目标时间（如 "23:00"）
+- `sleepTimerFadeEnabled` — 渐弱音量开关（来自 `settings.sleepTimerFadeEnabled`，默认开启）
+- `sleepTimerFadeSeconds` — 渐弱时长秒数（来自 `settings.sleepTimerFadeSeconds`，默认 30）
+
+#### 实现约定（重要）
+- **截止时间戳唯一依据**：定时内部只保存 `deadline`（毫秒时间戳），每次 tick 用 `remainingSecondsUntil(deadline)` 反算剩余秒数，不做逐秒累减，避免漂移与跨天错乱
+- **到点显式暂停**：到点后调用播放器的 `pause()`（`useImperativeHandle` 暴露），**不要**用 `playPause()` 切换，否则在暂停态下会被反向播放
+- **音量恢复有前提**：只有真正发生过渐弱时才把音量恢复到渐弱前的值；未渐弱就停表时不得改写用户音量
+- **渐弱不可重入**：以 `fadeStartVolumeRef != null` 作为渐弱的唯一进行中标记，避免重复启动多组定时器
+- **设置单一数据源**：渐弱开关与时长不放在 Hook 本地 state，而是从 `settings` 派生，通过 `updateSettings` 写入（遵循「设置状态与持久化规范」）
+
+#### 纯函数与单元测试
+纯逻辑抽离到 `src/utils/sleepTimer.js`，由 `src/utils/__tests__/sleepTimer.test.js` 覆盖：
+
+```js
+resolveTimePointTarget(timeStr, now)  // 指定时间点 → 目标时间戳，已过则顺延一天
+remainingSecondsUntil(deadline, now)  // 截止时间戳 → 剩余秒数（向上取整，非负）
+formatSleepRemaining(seconds)         // M:SS / H:MM:SS，非正数返回空串
+DEFAULT_FADE_SECONDS = 30
+```
 
 #### 渐弱音量（Fade Out）
-- 停止前 30 秒开始逐渐降低音量
-- 使用 100ms 间隔，共 300 步平滑过渡
-- 取消定时器时恢复原始音量
-- 可在定时器面板中开关此功能
+- 剩余时间 <= `fadeSeconds` 时触发，按 100ms 步进线性降到 0，随后暂停播放
+- 渐弱时长可选 10 / 30 / 60 秒，仅在渐弱开启时展示选项
+- 取消定时器或渐弱完成时，恢复渐弱前的音量
 
 #### 预设与常量
 ```js
@@ -1486,21 +1502,18 @@ export const SLEEP_TIMER_MODES = {
   TIME_POINT: 'timePoint',   // 指定时间模式
 }
 
-const FADE_DURATION = 30  // 渐弱时长（秒）
+export const SLEEP_TIMER_FADE_OPTIONS = [10, 30, 60]  // 渐弱时长选项（秒）
+export const DEFAULT_FADE_SECONDS = 30
 ```
 
-#### 倒计时逻辑
-- `useEffect` 监听 `isActive + mode` 变化，启动/停止倒计时
-- 每秒减少 `remainingSeconds`
-- 剩余时间 <= 30 秒且渐弱开启时：触发渐弱效果
-- 倒计时到 0 时：
-  - 调用 `playerRef.current.playPause()` 暂停播放
-  - 重置所有定时器状态
-  - 显示 Toast 通知
+#### 计时逻辑
+- 单个 `useEffect` 统一处理倒计时与指定时间点，依赖 `[isActive, deadline, isFading, fadeEnabled, fadeSeconds]`
+- 每 500ms tick 一次：更新 `remainingSeconds`，到 0 则 `stopPlayback()`，进入渐弱区间则 `startFadeOut()`
+- 渐弱期间停止 tick（`isFading` 为真时直接返回），状态文案显示「渐弱中...」
 
 #### 曲目结束模式
 - AudioPlayer 在 `onFinish` 事件中先调用 `handleTrackFinish()`
-- 如果定时器激活且为曲目结束模式，返回 `true` 表示已处理（阻止后续 onFinish 执行）
+- 如果定时器激活且为曲目结束模式，暂停播放并返回 `true` 表示已处理（阻止后续 onFinish 执行）
 - 否则返回 `false`，继续执行原有的 onFinish 逻辑
 
 #### UI 入口
@@ -1509,28 +1522,27 @@ const FADE_DURATION = 30  // 渐弱时长（秒）
 - 月亮图标按钮，点击展开下拉面板
 - 激活时按钮高亮 + 显示剩余时间/状态徽标
 - 渐弱时按钮有呼吸动画效果
+- 沉浸式模式（`ImmersiveView`）中的月亮按钮为**切换语义**：未激活时设置 30 分钟，已激活时取消定时器（传入的是无参回调，不要直接把 `setCountdownTimer` 传进去，否则会把点击事件当作分钟数）
 
 #### 增强版面板 UI
 - 三 Tab 切换：倒计时 / 曲目结束 / 指定时间
 - 倒计时模式：3x2 预设网格 + 自定义分钟数输入
 - 曲目结束模式：说明文字 + 启用按钮
 - 指定时间模式：time 输入框 + 设定按钮
-- 底部渐弱音量开关（带说明文字）
-- 激活状态显示"关闭"按钮，一键取消
+- 底部渐弱音量开关（带动态说明文字）+ 渐弱时长选择（仅开关开启时显示）
+- 激活状态显示"关闭"按钮，一键取消（传入 `{ notify: true }` 以提示已取消）
 
-#### 格式化函数
+#### 对外接口
 ```js
-function formatRemaining(seconds) {
-  // 小于3600秒：M:SS 格式
-  // 大于等于3600秒：H:MM:SS 格式
-}
-
-function getStatusText() {
-  // 未激活：返回空
-  // 渐弱中：返回"渐弱中..."
-  // 曲目结束模式：返回"曲目结束"
-  // 其他模式：返回格式化剩余时间
-}
+const {
+  mode, isActive, isFading, remainingSeconds,
+  fadeEnabled, fadeSeconds, setFadeEnabled, setFadeSeconds,
+  setCountdownTimer, setTrackEndTimer, setTimePointTimer,
+  cancelSleepTimer,   // cancelSleepTimer({ notify }) 控制是否提示
+  handleTrackFinish,  // 返回 true 表示已由睡眠定时器接管
+  formatRemaining, getStatusText,
+  SLEEP_TIMER_PRESETS, SLEEP_TIMER_MODES, SLEEP_TIMER_FADE_OPTIONS,
+} = useSleepTimer({ playerRef, showToast, settings, updateSettings })
 ```
 
 ### 21. 播放速度控制
