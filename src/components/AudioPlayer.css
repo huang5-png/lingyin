@@ -1174,6 +1174,36 @@
   font-weight: 400;
 }
 
+.sleep-timer-fade-options {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 0 26px;
+}
+
+.sleep-timer-fade-option {
+  flex: 1;
+  padding: 5px 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sleep-timer-fade-option:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.sleep-timer-fade-option.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
 /* ===== 播放速度控制 ===== */
 .playback-rate-control {
   position: relative;

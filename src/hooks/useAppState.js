@@ -3,7 +3,7 @@ import { formatTime } from '../utils/subtitleParser'
 import { useTranslate } from './useTranslate'
 import { usePlayQueue } from './usePlayQueue'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
-import { useSleepTimer, SLEEP_TIMER_OPTIONS, SLEEP_TIMER_MODES, SLEEP_TIMER_PRESETS } from './useSleepTimer'
+import { useSleepTimer, SLEEP_TIMER_OPTIONS, SLEEP_TIMER_MODES, SLEEP_TIMER_PRESETS, SLEEP_TIMER_FADE_OPTIONS } from './useSleepTimer'
 import { useSubtitle } from './useSubtitle'
 import { useMediaLibrary } from './useMediaLibrary'
 import { useOnlineWork } from './useOnlineWork'
@@ -306,7 +306,9 @@ export function useAppState() {
     isFading: sleepTimerFading,
     remainingSeconds: sleepTimerRemaining,
     fadeEnabled: sleepTimerFadeEnabled,
+    fadeSeconds: sleepTimerFadeSeconds,
     setFadeEnabled: setSleepTimerFadeEnabled,
+    setFadeSeconds: setSleepTimerFadeSeconds,
     setCountdownTimer: handleSetCountdownTimer,
     setTrackEndTimer: handleSetTrackEndTimer,
     setTimePointTimer: handleSetTimePointTimer,
@@ -314,7 +316,8 @@ export function useAppState() {
     handleTrackFinish: handleSleepTimerTrackFinish,
     formatRemaining: formatSleepTimerRemaining,
     getStatusText: getSleepTimerStatusText,
-  } = useSleepTimer({ playerRef, showToast })
+    SLEEP_TIMER_FADE_OPTIONS,
+  } = useSleepTimer({ playerRef, showToast, settings, updateSettings })
 
   // ===== 字幕管理 Hook =====
   const {
@@ -959,7 +962,9 @@ export function useAppState() {
     sleepTimerFading,
     sleepTimerRemaining,
     sleepTimerFadeEnabled,
+    sleepTimerFadeSeconds,
     setSleepTimerFadeEnabled,
+    setSleepTimerFadeSeconds,
     handleSetCountdownTimer,
     handleSetTrackEndTimer,
     handleSetTimePointTimer,
@@ -970,6 +975,7 @@ export function useAppState() {
     SLEEP_TIMER_OPTIONS,
     SLEEP_TIMER_MODES,
     SLEEP_TIMER_PRESETS,
+    SLEEP_TIMER_FADE_OPTIONS,
 
     // 字幕
     subtitleOptions,

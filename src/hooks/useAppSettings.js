@@ -43,6 +43,8 @@ export const DEFAULT_SETTINGS = {
   continuousPlay: false,
   restorePlayOnStart: false,
   persistPlayQueue: true,
+  sleepTimerFadeEnabled: true,
+  sleepTimerFadeSeconds: 30,
   librarySortBy: 'createdAt',
   librarySortOrder: 'desc',
   translateEngine: 'google',

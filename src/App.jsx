@@ -161,7 +161,9 @@ export default function App() {
     sleepTimerFading,
     sleepTimerRemaining,
     sleepTimerFadeEnabled,
+    sleepTimerFadeSeconds,
     setSleepTimerFadeEnabled,
+    setSleepTimerFadeSeconds,
     handleSetCountdownTimer,
     handleSetTrackEndTimer,
     handleSetTimePointTimer,
@@ -172,6 +174,7 @@ export default function App() {
     SLEEP_TIMER_OPTIONS,
     SLEEP_TIMER_MODES,
     SLEEP_TIMER_PRESETS,
+    SLEEP_TIMER_FADE_OPTIONS,
 
     // 字幕
     subtitleOptions,
@@ -708,7 +711,9 @@ export default function App() {
             sleepTimerFading={sleepTimerFading}
             sleepTimerRemaining={sleepTimerRemaining}
             sleepTimerFadeEnabled={sleepTimerFadeEnabled}
+            sleepTimerFadeSeconds={sleepTimerFadeSeconds}
             onSetSleepTimerFadeEnabled={setSleepTimerFadeEnabled}
+            onSetSleepTimerFadeSeconds={setSleepTimerFadeSeconds}
             onSetCountdownTimer={handleSetCountdownTimer}
             onSetTrackEndTimer={handleSetTrackEndTimer}
             onSetTimePointTimer={handleSetTimePointTimer}
@@ -719,6 +724,7 @@ export default function App() {
             sleepTimerOptions={SLEEP_TIMER_OPTIONS}
             sleepTimerModes={SLEEP_TIMER_MODES}
             sleepTimerPresets={SLEEP_TIMER_PRESETS}
+            sleepTimerFadeOptions={SLEEP_TIMER_FADE_OPTIONS}
             playbackRate={settings.playbackRate}
             onPlaybackRateChange={handlePlaybackRateChange}
             onAddBookmark={addBookmark}
@@ -757,7 +763,13 @@ export default function App() {
           bookmarkCount={playingWork && currentAudio ? (bookmarks.filter(b => b.workId === playingWork.id && b.audioPath === currentAudio.path)).length : 0}
           sleepTimerActive={sleepTimerActive}
           sleepTimerStatusText={getSleepTimerStatusText()}
-          onToggleSleepTimer={handleSetCountdownTimer}
+          onToggleSleepTimer={() => {
+            if (sleepTimerActive) {
+              handleCancelSleepTimer({ notify: true })
+            } else {
+              handleSetCountdownTimer(30)
+            }
+          }}
           showSpectrum={settings.showSpectrum !== false}
           spectrumMode={settings.spectrumMode || 'bars'}
           spectrumSensitivity={settings.spectrumSensitivity || 1.5}

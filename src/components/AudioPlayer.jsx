@@ -36,12 +36,12 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     onPlayFromQueue, onRemoveFromQueue, onClearQueue, onReorderQueue, onCloseQueuePanel,
     // 睡眠定时器相关
     sleepTimerMode, sleepTimerActive = false, sleepTimerFading = false,
-    sleepTimerRemaining = 0, sleepTimerFadeEnabled = true,
-    onSetSleepTimerFadeEnabled,
+    sleepTimerRemaining = 0, sleepTimerFadeEnabled = true, sleepTimerFadeSeconds = 30,
+    onSetSleepTimerFadeEnabled, onSetSleepTimerFadeSeconds,
     onSetCountdownTimer, onSetTrackEndTimer, onSetTimePointTimer,
     onCancelSleepTimer, onSleepTimerTrackFinish,
     formatSleepTimerRemaining, getSleepTimerStatusText,
-    sleepTimerOptions, sleepTimerModes, sleepTimerPresets,
+    sleepTimerOptions, sleepTimerModes, sleepTimerPresets, sleepTimerFadeOptions,
     // 播放速度相关
     playbackRate = 1, onPlaybackRateChange,
     // 书签相关
@@ -122,6 +122,17 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
         }
       } else if (wavesurferRef.current) {
         wavesurferRef.current.playPause()
+      }
+    },
+    pause: () => {
+      if (useSimpleMode && simpleAudioRef.current) {
+        if (!simpleAudioRef.current.paused) {
+          simpleAudioRef.current.pause()
+        }
+      } else if (wavesurferRef.current) {
+        if (wavesurferRef.current.isPlaying?.()) {
+          wavesurferRef.current.pause()
+        }
       }
     },
     setVolume: (v) => {
@@ -893,7 +904,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
                 {sleepTimerActive && (
                   <button
                     className="sleep-timer-cancel-btn"
-                    onClick={() => { onCancelSleepTimer?.(); setShowSleepTimer(false) }}
+                    onClick={() => { onCancelSleepTimer?.({ notify: true }); setShowSleepTimer(false) }}
                   >
                     关闭
                   </button>
@@ -1010,9 +1021,26 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
                   />
                   <span className="sleep-timer-fade-text">
                     渐弱音量
-                    <span className="sleep-timer-fade-desc">停止前 30 秒逐渐降低音量</span>
+                    <span className="sleep-timer-fade-desc">
+                      {sleepTimerFadeEnabled
+                        ? `停止前 ${sleepTimerFadeSeconds} 秒逐渐降低音量`
+                        : '到点后直接暂停播放'}
+                    </span>
                   </span>
                 </label>
+                {sleepTimerFadeEnabled && (
+                  <div className="sleep-timer-fade-options">
+                    {sleepTimerFadeOptions?.map((opt) => (
+                      <button
+                        key={opt.value}
+                        className={`sleep-timer-fade-option ${sleepTimerFadeSeconds === opt.value ? 'active' : ''}`}
+                        onClick={() => onSetSleepTimerFadeSeconds?.(opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
