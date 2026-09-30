@@ -4,6 +4,8 @@
 
 这是一个基于 **Electron + React + Vite** 的桌面端 ASMR 音声播放器。采用 **Claude 暖橙风格** UI 设计，允许用户扫描本地音声文件夹、播放音频、显示字幕/歌词、自动刮削 DLsite 元数据，在线浏览/播放/下载 asmr.one 音声资源，以及查看年度/月度/日度播放时长统计。
 
+仓库同时包含一个独立的移动端工程 `聆音手机版/`（Capacitor + Vite + React，Android 目标），它复用同一套 UI 与数据模型，通过 `src/bridge/` 下的 Bridge 层对接移动端存储与原生能力。**本规则文档以下的架构描述均针对桌面端主工程**；改动移动端工程时不要影响主工程的构建与打包。
+
 ## 技术栈与版本
 
 - Electron 33.x（主进程，无边框自定义标题栏 `frame: false`）
@@ -15,6 +17,7 @@
 - 本地 JSON 文件存储（`userData/db.json`）
 - electron-builder（Windows 便携版打包）
 - sharp（图标生成与处理）
+- Vitest（`src/utils/__tests__/` 下的单元测试，`npm test` 运行）
 
 ## 架构模式
 
@@ -164,11 +167,10 @@
 | `components/AddToPlaylistModal.jsx` | 加入播放列表弹窗（选择已有列表或新建列表并加入） |
 | `components/LibraryLayout.jsx` | 我的库布局组件（左侧 Sidebar + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
 | `components/DiscoverLayout.jsx` | 发现布局组件（左侧 DiscoverView + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
-| `components/UpscaledImage.jsx` | 图片超分组件（WebGL 多 Pass 渲染，Lanczos + Anime4K + USM 管线，自适应输出分辨率） |
 | `components/SpectrumVisualizer.jsx` | 音频频谱可视化组件（Canvas 绘制，柱状图/波形/圆形三种模式，Web Audio API AnalyserNode） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
-| `utils/upscaleShaders.js` | 图片超分 WebGL 着色器（Lanczos2/3、Bicubic、Anime4K 线条增强、双边滤波、USM 锐化、色彩调整）+ 9 档预设 |
+| `utils/sfw.js` | 全年龄（SFW）模式开关（`isSfwMode`）与「健全」标签常量（`SFW_TAG`） |
 | `utils/themePresets.js` | 主题配色工具（8 套预设主题、颜色处理函数、动态 CSS 变量生成） |
 | `styles/global.css` | 全局样式、CSS 变量、主题 |
 
@@ -179,11 +181,13 @@ npm run dev              # 开发模式（Vite + Electron 并行启动）
 npm run build            # 生产构建（vite build + electron-builder）
 npm run build:vite       # 仅构建前端
 npm run build:electron   # 仅打包 Electron
+npm test                 # 运行 Vitest 单元测试（一次）
+npm run test:watch       # Vitest 监听模式
 ```
 
 Vite 开发服务器：`http://localhost:5173`，Electron 通过 `wait-on` 等待就绪后加载。
 
-Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
+Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 `启动开发版-全年龄.bat` 以全年龄模式启动（设置 `VITE_SFW=1`）。
 
 ## 重要规则与模式
 
@@ -480,7 +484,14 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 #### 功能概述
 - 支持将字幕文本实时翻译为中文，双语显示（原文 + 译文）
 - 翻译结果本地缓存（数据库 + 内存），30 天过期
-- 支持翻译引擎选择（Google/Baidu/Microsoft），在设置中配置
+- 支持翻译引擎选择，在设置中配置，`settings.translateEngine` 可选值：
+  - `google`（默认）/ `baidu` / `microsoft` — 公共翻译接口
+  - `ai` — OpenAI 兼容接口，额外配置项：
+    - `settings.aiTranslateBaseUrl`（默认 `https://api.openai.com/v1`）
+    - `settings.aiTranslateApiKey`
+    - `settings.aiTranslateModel`（默认 `gpt-3.5-turbo`）
+    - `settings.aiTranslateUseProxy` — 是否让 AI 请求走应用代理（默认 `false`）
+- **任务取消**：翻译任务通过 `AbortController` 注册在 `electron/translate.js` 的 `abortControllers` 映射中，支持按 `cancelId` 精确取消或以 `cancelId_` 前缀批量取消；渲染进程切换作品时会主动取消旧任务
 
 #### 核心状态（App.jsx）
 - `translateCacheRef` — 内存翻译缓存（Map，key=原文，value=译文）
@@ -507,6 +518,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 |------|------|
 | `translate:text` | 单条文本翻译 |
 | `translate:batch` | 批量文本翻译 |
+| `translate:cancel` | 取消指定翻译任务（支持前缀批量取消） |
 | `translate:getCache` | 获取翻译缓存 |
 | `translate:saveCache` | 保存翻译缓存 |
 | `translate:clearCache` | 清空所有翻译缓存 |
@@ -640,8 +652,8 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 
 #### 功能概述
 - 应用启动时自动创建系统托盘图标
-- 点击关闭按钮时最小化到托盘继续后台播放（可在设置中关闭）
-- 托盘菜单支持播放控制和窗口管理
+- **点击关闭按钮即彻底退出应用**，不最小化到托盘后台（用户明确要求）
+- 托盘菜单支持播放控制和窗口管理，应用运行期间可用
 - 托盘 Tooltip 显示当前播放状态和曲目名称
 
 #### 托盘菜单
@@ -660,21 +672,19 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 | 接口 | 说明 |
 |------|------|
 | `trayUpdatePlayState(playing, title)` | 更新托盘播放状态和 Tooltip |
-| `traySetCloseToTray(enabled)` | 设置关闭最小化到托盘 |
 | `onTrayTogglePlay(callback)` | 监听托盘播放/暂停事件 |
 | `onTrayPrevTrack(callback)` | 监听托盘上一曲事件 |
 | `onTrayNextTrack(callback)` | 监听托盘下一曲事件 |
 
-#### 设置项
-- `settings.closeToTray` — 关闭窗口时最小化到托盘（默认 `true`）
-- 在「设置 → 基本 → 系统托盘」中配置
+#### 关闭行为（重要约定）
+- **不提供**「关闭窗口最小化到托盘」设置项，`traySetCloseToTray` 与 `settings.closeToTray` 均已移除
+- 窗口 `close` 事件：置 `app.isQuiting = true`，并顺带关闭迷你播放器窗口
+- `window-all-closed`：`app.isQuiting || !tray` 时调用 `app.quit()` 并兜底 `process.exit(0)`
 
 #### 主进程实现
 - `createTray()` — 创建托盘图标和菜单
 - `showMainWindow()` — 显示并聚焦主窗口
 - `updateTrayPlayState(playing, title)` — 更新托盘状态
-- 窗口 `close` 事件：根据 `closeToTray` 设置决定关闭还是隐藏
-- `app.isQuiting` 标志：区分用户主动退出和窗口关闭
 - `before-quit` 事件：销毁托盘，移除窗口事件监听
 
 ### 12.5 迷你播放器模式
@@ -881,7 +891,7 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式。
 ### 14. 设置面板
 
 设置弹窗包含 7 个分类标签页：
-- **基本** — 播放设置、系统托盘、网络代理、下载设置、翻译设置
+- **基本** — 播放设置、网络代理、下载设置、翻译设置（引擎选择 + AI 引擎参数与连通性测试）
 - **外观** — 主题、是否显示评分、波形高度、视图模式（网格/列表）
 - **主界面** — 侧边栏宽度、歌词宽度、播放器高度
 - **播放界面** — 显示歌词、自动滚动歌词、字幕语言优先级、字幕字体大小、自动翻译字幕
@@ -1637,73 +1647,31 @@ function getStatusText() {
 - 深色模式完整适配
 - 高 DPI 屏幕自动放大（1.5dppx / 2dppx）
 
-### 25. 图片超分
+### 25. 全年龄（SFW）模式
 
 #### 功能概述
-- 使用 WebGL 着色器实现高质量图片放大，参考 Magpie 和 Anime4K 的算法思路
-- 多 Pass 渲染管线：Lanczos 高质量重采样 + Anime4K 风格线条增强 + 双边滤波去噪 + USM 锐化 + 色彩调整
-- 9 档预设可选，从「性能」到「最高」，满足不同画质和性能需求
-- 自适应输出分辨率，根据容器大小和 devicePixelRatio 自动计算，避免 CSS 拉伸模糊
-- 目前应用于沉浸式播放模式的封面图片
+- 提供「全年龄版」启动方式：仅展示全年龄内容，不出现任何成人向作品
+- 对正常版启动**完全无影响**，仅在显式开启时生效
+- 判定依据：作品本地标签中包含 `健全`（常量 `SFW_TAG`）
 
-#### 算法管线
-**核心滤镜：**
+#### 开关方式
+- 环境变量：`VITE_SFW=1`（Vite 在构建期注入 `import.meta.env.VITE_SFW`）
+- 开发启动：双击 `启动开发版-全年龄.bat`（脚本内 `set VITE_SFW=1` 后执行 `npm run dev`）
+- 判定函数：`src/utils/sfw.js` 的 `isSfwMode()`，异常时安全回退为 `false`
 
-| 滤镜类型 | 说明 | Shader 文件 |
-|---------|------|------------|
-| Lanczos 3 | 高质量 sinc 重采样（7x7 核），保留细节最好 | `FRAGMENT_LANCZOS3` |
-| Lanczos 2 | 中等质量 sinc 重采样（5x5 核），速度更快 | `FRAGMENT_LANCZOS2` |
-| Bicubic | 双三次插值（Mitchell-Netravali），速度最快 | `FRAGMENT_BICUBIC` |
-| Anime4K Thin Lines | 细线增强，检测边缘并增强细线条 | `FRAGMENT_ANIME4K_THIN_LINES` |
-| Anime4K Dark Lines | 深色线加深，增强暗部线条对比度 | `FRAGMENT_ANIME4K_DARK_LINES` |
-| Bilateral Filter | 双边滤波，保边去噪，平滑色块同时保留边缘 | `FRAGMENT_BILATERAL_SMOOTH` |
-| USM Sharpen | Unsharp Mask 锐化，增强整体清晰度 | `FRAGMENT_UNSHARP_MASK` |
-| Adjust | 亮度/对比度/饱和度微调 | `FRAGMENT_ADJUST` |
-
-#### 预设档位
-| 预设 | 缩放 | 滤镜组合 | 适用场景 |
-|------|------|---------|---------|
-| 性能 | 1x+ | Bicubic | 速度优先，低配机器 |
-| 平衡 | 1.5x+ | Lanczos2 + USM Soft | 速度与质量平衡 |
-| 质量 | 2x+ | Lanczos3 + USM | 常规高质量放大 |
-| 高 | 2x+ | Lanczos3 + ThinLine + USM | 带线条增强的高质量 |
-| 特高 | 2x+ | Lanczos3 + ThinLine + DarkLine + USM | 双重线条增强 |
-| 超高 | 2x+ | Lanczos3 + Thin + Dark + Bilateral + Thin + USM Strong + Adjust | 完整管线 + 去噪 |
-| 最高 | 2x+ | Lanczos3 + Thin + Dark + Bilateral + Thin + Dark + USM Strong + Adjust | 旗舰级，最多 Pass |
-| 动漫优化 | 2x+ | Lanczos3 + Thin + Dark + Bilateral + Thin + USM + Adjust | 动漫画风专用 |
-| 柔和 | 1.5x+ | Lanczos2 + Bilateral + USM Soft | 柔和自然，不过度锐化 |
-
-#### UpscaledImage 组件
-- **props**：
-  - `src` — 图片 URL
-  - `preset` — 预设名称，默认 `'high'`
-  - `fit` — object-fit 模式，`contain` / `cover` / `fill`，默认 `contain`
-  - `className` — 额外 CSS 类名
-- **自适应分辨率**：
-  - 监听容器大小变化（ResizeObserver）
-  - 输出分辨率 = max(容器尺寸 × devicePixelRatio, 原图 × minScale)
-  - 确保放大后的图片像素密度不低于屏幕，避免 CSS 拉伸模糊
-- **降级方案**：WebGL 不可用时自动回退到 Canvas 2D + high quality smoothing
-- **延迟加载**：图片加载时显示占位图，处理完成后淡入
-
-#### Shader 坐标计算约定
-- **输入纹理尺寸**：`u_srcSize`（原始图片像素尺寸）
-- **输出图像尺寸**：`u_dstSize`（目标输出像素尺寸）
-- **输出像素坐标**：`dstPixel = v_texCoord * u_dstSize`
-- **对应输入像素坐标**：`srcPixel = dstPixel / (u_dstSize / u_srcSize) = v_texCoord * u_srcSize`
-- **参考像素中心**：`srcPixelFloor = floor(srcPixel - 0.5) + 0.5`
-- **像素偏移量**：`frac = srcPixel - srcPixelFloor`
-- **采样 UV**：`sampleUV = (srcPixelFloor + offset) / u_srcSize`
+#### 生效范围
+- **本地媒体库**（`src/hooks/useFilters.js`）：在筛选结果上追加强制条件——作品的 `tags` 必须包含 `SFW_TAG`，与其他筛选条件叠加
+- **在线发现**（`src/components/DiscoverView.jsx`）：通过模块级常量 `SFW_ACTIVE` 在全年龄模式下隐藏 NSFW 相关内容
+- 常量在模块顶层求值一次（构建期常量），运行期不切换
 
 #### 关键文件
-- `src/utils/upscaleShaders.js` — WebGL 着色器、WebGLUpscaler 类、预设配置
-- `src/components/UpscaledImage.jsx` — React 超分图片组件
-- `src/components/UpscaledImage.css` — 组件样式
+- `src/utils/sfw.js` — `SFW_TAG` / `isSfwMode()`
+- `src/hooks/useFilters.js` — 媒体库标签过滤
+- `src/components/DiscoverView.jsx` — 在线视图过滤
+- `启动开发版-全年龄.bat` — 全年龄模式启动入口
 
-#### 设置集成
-- 设置项：`settings.upscalePreset`，默认值 `'anime'`
-- 设置入口：「设置 → 外观 → 图片超分 → 沉浸式封面质量」
-- 预设列表通过 `getPresetList()` 获取
+#### 历史说明
+- 原「图片超分」功能（`components/UpscaledImage.jsx`、`utils/upscaleShaders.js`、`settings.upscalePreset`）已于 v1.43.0 整体下线，超分相关设置与依赖均已移除
 
 ## 已知约定
 
