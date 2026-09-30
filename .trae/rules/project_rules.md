@@ -1194,6 +1194,35 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 | `smartPlaylist:getAll` | 获取所有智能播放列表定义 |
 | `smartPlaylist:getItems` | 获取指定智能播放列表的曲目 |
 
+#### 导出与导入
+
+支持把播放列表导出为通用格式，或从导出的 JSON 文件导入为新列表。
+
+- **导出 M3U**：详情区「导出」按钮 → 「导出为 M3U」
+  - 生成标准 `#EXTM3U` / `#EXTINF` 内容，逐行写入曲目绝对路径（回车换行 `\r\n`）
+  - 仅包含本地曲目；在线曲目无法写入 M3U，会被跳过并在 Toast 中说明
+  - 可在 foobar2000、PotPlayer 等支持 M3U 的播放器中打开
+- **导出 JSON**：详情区「导出」按钮 → 「导出为 JSON」
+  - 导出结构：`{ type: 'lingyin-playlist', version: 1, name, exportedAt, items: [...] }`
+  - `items` 保留 `workId/workTitle/workCover/audioPath/audioName/isOnline`，便于再次导入
+- **导入 JSON**：侧边栏头部「导入」按钮
+  - 选择 JSON 文件 → 解析曲目列表 → 创建一个新播放列表并逐条加入
+  - 兼容两种格式：完整导出对象（含 `name` / `items`）或直接的曲目数组
+  - 无 `audioPath` 的条目会被过滤；重复曲目由 `playlist:addItem` 按 `audioPath` 自动去重
+  - 导入完成后自动选中新列表，并通过 Toast 报告成功数量与被跳过的重复数量
+- **智能播放列表**同样可导出（只读导出，不修改任何数据）
+- 导出文件名对 Windows 非法字符（`\ / : * ? " < > |`）做安全化替换
+- 导出/导入下拉在点击页面其他区域时自动关闭
+
+#### 通用文件 IPC
+| 接口 | 说明 |
+|------|------|
+| `file:saveText` | 弹出保存对话框写入文本内容，返回保存路径（取消返回 null） |
+| `file:openText` | 弹出文件选择对话框读取文本内容，返回 `{ filePath, content }`（取消返回 null） |
+
+- 渲染进程映射：`saveTextFile(content, defaultName, filterName, extensions)` / `openTextFile(filterName, extensions)`
+- 用于播放列表导出/导入等需要任意文本格式（M3U/JSON）的场景
+
 #### 前端组件
 - `PlaylistView.jsx`：左侧列表栏 + 右侧曲目列表
   - 左侧分两组：「智能播放列表」+「我的播放列表」
