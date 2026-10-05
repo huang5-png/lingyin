@@ -207,6 +207,9 @@ Windows 用户可双击 `启动开发版.bat` 一键启动开发模式；双击 
 - 全局样式变量在 `src/styles/global.css` 中
 - 使用 `@` 别名引用 `src/` 目录（`import X from '@/utils/scanner'`）
 - 回调函数用 `useCallback` 包裹
+- **React API 必须显式导入**：`useState` / `useEffect` / `useCallback` / `useMemo` / `memo` 等一律从 `react` 具名导入，禁止依赖隐式全局
+  - `vite build` 与 Vitest 都不校验「未定义标识符」，漏导入不会导致构建失败，只会在组件真正渲染时抛 `ReferenceError`（v1.48.0 的播放崩溃即为此类问题）
+  - 新增/改动组件后检查导入语句是否覆盖本次用到的全部 React API，尤其是“只在一处用到”的 hook（如 A-B 循环引入的 `useCallback`）
 
 ### 2.5 性能优化与虚拟滚动
 

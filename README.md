@@ -4,6 +4,19 @@
 
 ## 📋 更新日志
 
+### v1.49.1 — 修复点击播放即崩溃：AudioPlayer 缺失 useCallback 导入
+**发布日期：2026-10-05**
+
+本次是一个紧急修复：v1.48.0 引入 A-B 循环后，播放器组件用到了 `useCallback` 却没有把它加进 React 导入语句，导致一旦选中曲目、播放栏开始渲染就会抛出 `ReferenceError`，界面直接崩溃——也就是说从 v1.48.0 起「根本无法播放」。
+
+**🔧 修复**
+- **点击播放即崩溃** — 选中任意曲目后抛出 `ReferenceError: useCallback is not defined`，播放栏、波形、A-B 循环按钮全部无法渲染
+  - 根因：A-B 循环的 `getLiveTime` / `cycleAbLoop` 使用了 `useCallback`，但 `src/components/AudioPlayer.jsx` 的 React 导入语句里没有它
+  - 为什么构建和单测都没拦住：`vite build` 与 Vitest 都不校验「未定义标识符」，这类错误只在运行时暴露；已用静态扫描复查 `src/` 下全部 React API 引用，确认无同类遗漏
+
+**📄 文档**
+- 项目规则第 2 节补充约定：React API 必须显式导入，禁止依赖隐式全局，新增组件后需自查导入完整性
+
 ### v1.49.0 — 媒体库音频索引：智能播放列表全量修复，全局曲目搜索打通
 **发布日期：2026-10-01**
 
