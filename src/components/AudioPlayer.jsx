@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef, memo } from 'react'
+import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef, memo } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import { formatTime } from '../utils/subtitleParser'
 import { PLAYBACK_RATES } from '../utils/playback'
