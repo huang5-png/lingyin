@@ -91,8 +91,14 @@ const WorkRow = memo(function WorkRow({
           </div>
         )}
         {progress && progress.percentage > 0 && (
-          <div className="work-progress-bar-container">
-            <div className="work-progress-bar" style={{ width: `${progress.percentage}%` }} />
+          <div
+            className={`work-progress-bar-container ${progress.percentage >= 95 ? 'completed' : ''}`}
+            title={`作品总收听进度：${progress.percentage}%${progress.percentage >= 95 ? ' (已听完)' : ''}`}
+          >
+            <div
+              className={`work-progress-bar ${progress.percentage >= 95 ? 'completed' : ''}`}
+              style={{ width: `${Math.min(100, progress.percentage)}%` }}
+            />
           </div>
         )}
       </div>

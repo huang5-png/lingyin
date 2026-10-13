@@ -790,13 +790,65 @@
   color: white;
 }
 
-/* 播放进度条 - 卡片模式 */
+/* 播放进度卡片模块 - 卡片模式 */
+.discover-work-card .card-progress-wrapper {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  transition: all var(--transition-fast);
+}
+
+.discover-work-card .card-progress-wrapper:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-light);
+}
+
+.discover-work-card .card-progress-wrapper.completed {
+  background: rgba(76, 175, 80, 0.08);
+  border-color: rgba(76, 175, 80, 0.25);
+}
+
+.discover-work-card .card-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.discover-work-card .card-progress-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.discover-work-card .card-progress-wrapper.completed .card-progress-label {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.discover-work-card .card-progress-percent {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-primary);
+  line-height: 1;
+}
+
+.discover-work-card .card-progress-wrapper.completed .card-progress-percent {
+  color: #4caf50;
+}
+
 .discover-work-card .card-progress {
-  height: 3px;
-  background: rgba(201, 100, 66, 0.2);
+  height: 4px;
+  background: rgba(201, 100, 66, 0.15);
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 4px;
 }
 
 .discover-work-card .card-progress-bar {
@@ -804,6 +856,10 @@
   background: var(--accent-gradient);
   border-radius: 2px;
   transition: width 0.3s ease;
+}
+
+.discover-work-card .card-progress-bar.completed {
+  background: linear-gradient(90deg, #4caf50, #66bb6a);
 }
 
 /* ===== 列表视图优化 ===== */
@@ -1557,6 +1613,14 @@
   background: var(--accent-gradient);
   border-radius: 1px;
   transition: width 0.3s ease;
+}
+
+.work-progress-bar.completed {
+  background: linear-gradient(90deg, #4caf50, #66bb6a);
+}
+
+.work-progress-pct.completed {
+  color: #4caf50;
 }
 
 /* ===== 骨架屏加载样式 ===== */

@@ -26,6 +26,8 @@ import { useDownloadImport } from './useDownloadImport'
 import { useBookmarks } from './useBookmarks'
 import { useBulkSelection } from './useBulkSelection'
 import { useSystemIntegration } from './useSystemIntegration'
+import { useWorkGallery } from './useWorkGallery'
+import { useChapters } from './useChapters'
 
 export function useAppState() {
   const playerRef = useRef(null)
@@ -386,6 +388,40 @@ export function useAppState() {
   })
 
   const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated && cue.translated.trim()), [currentCues])
+
+  // ===== 作品画集管理 Hook =====
+  const {
+    galleryImages,
+    isLoading: loadingGallery,
+    lightboxIndex,
+    isLightboxOpen,
+    currentLightboxImage,
+    openLightbox,
+    closeLightbox,
+    nextImage: nextLightboxImage,
+    prevImage: prevLightboxImage,
+    setLightboxIndex,
+  } = useWorkGallery({
+    work: selectedWork || playingWork,
+    onToast: showToast,
+  })
+
+  // ===== 剧情章节分段 Hook =====
+  const {
+    chapters,
+    activeChapter,
+    hasChapters,
+    seekToChapter,
+    addCustomChapter,
+    deleteCustomChapter,
+  } = useChapters({
+    work: playingWork || selectedWork,
+    currentAudio,
+    currentTime,
+    duration,
+    playerRef,
+    onToast: showToast,
+  })
 
   // ===== 上次播放状态保存（用于启动恢复） =====
   const lastPlaySaveTimerRef = useRef(null)
@@ -1094,5 +1130,25 @@ export function useAppState() {
     handleGlobalSearchPlayAudio,
     handleGlobalSearchSelectPlaylist,
     handleGlobalSearchSelectOnlineWork,
+
+    // 作品画集
+    galleryImages,
+    loadingGallery,
+    lightboxIndex,
+    isLightboxOpen,
+    currentLightboxImage,
+    openLightbox,
+    closeLightbox,
+    nextLightboxImage,
+    prevLightboxImage,
+    setLightboxIndex,
+
+    // 剧情章节
+    chapters,
+    activeChapter,
+    hasChapters,
+    seekToChapter,
+    addCustomChapter,
+    deleteCustomChapter,
   }
 }

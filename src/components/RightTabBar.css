@@ -674,3 +674,13 @@
     height: 48px;
   }
 }
+
+.chapters-tab-panel,
+.gallery-tab-panel {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+

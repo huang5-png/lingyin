@@ -90,6 +90,17 @@ const LibraryLayout = memo(function LibraryLayout({
   sortOrder,
   onSortChange,
   onToast,
+  // 画集相关
+  galleryImages,
+  loadingGallery,
+  onOpenLightbox,
+  // 章节相关
+  chapters,
+  activeChapter,
+  duration,
+  onSeekToChapter,
+  onAddCustomChapter,
+  onDeleteCustomChapter,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -217,6 +228,15 @@ const LibraryLayout = memo(function LibraryLayout({
                 onSelectWork={onSelectWork}
                 onAddToPlaylist={onAddToPlaylist}
                 onToast={onToast}
+                galleryImages={galleryImages}
+                loadingGallery={loadingGallery}
+                onOpenLightbox={onOpenLightbox}
+                chapters={chapters}
+                activeChapter={activeChapter}
+                duration={duration}
+                onSeekToChapter={onSeekToChapter}
+                onAddCustomChapter={onAddCustomChapter}
+                onDeleteCustomChapter={onDeleteCustomChapter}
               />
             </div>
           </div>

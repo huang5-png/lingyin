@@ -139,15 +139,20 @@
 | `hooks/useVirtualScroll.js` | 虚拟滚动 Hook：列表/网格虚拟滚动、动态列数、ResizeObserver、滚动位置记忆、返回顶部 |
 | `hooks/useDownloadImport.js` | 下载完成自动导入 Hook：下载任务完成/失败通知、自动添加到媒体库 |
 | `hooks/useSystemIntegration.js` | 系统集成 Hook：系统托盘、迷你播放器、媒体会话（MediaSession）、全局媒体快捷键、曲目切换系统通知 |
-| `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、鼠标闲置自动隐藏） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、集成 QueuePanel 浮层） |
+| `hooks/useWorkGallery.js` | 作品画集 Hook：画集扫描、缓存、分类筛选、全屏灯箱索引管理 |
+| `hooks/useChapters.js` | 剧情章节 Hook：时间戳提取、波形图钉联动、当前章节追踪、自定义打点与持久化 |
+| `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、插画画廊轮播抽屉、鼠标闲置自动隐藏） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、章节时间戳图钉、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、画廊快捷键、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换、虚拟滚动、滚动位置记忆 |
-| `components/WorkCard.jsx` | 作品网格卡片组件（React.memo 优化，自定义比较函数） |
-| `components/WorkRow.jsx` | 作品列表行组件（React.memo 优化，自定义比较函数） |
+| `components/WorkCard.jsx` | 作品网格卡片组件（React.memo 优化，自定义比较函数，收听进度条与完成徽章） |
+| `components/WorkRow.jsx` | 作品列表行组件（React.memo 优化，自定义比较函数，收听进度条） |
 | `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
 | `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
 | `components/BookmarksPanel.jsx` | 书签面板（当前音频书签列表、作品书签列表、添加/编辑/删除书签、点击跳转、双击重命名、空态展示） |
-| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Bookmarks/Related/Playlists 五个 Tab） |
+| `components/ChapterList.jsx` | 剧情章节列表组件（章节分段展示、律动波纹当前章节指示、秒级跳转、手动标记与删除） |
+| `components/WorkGallery.jsx` | 作品画集瀑布流网格（按分类过滤、插画数量角标、悬浮放大、点击呼出全屏灯箱） |
+| `components/LightboxModal.jsx` | 高清全屏灯箱组件（滚轮连续缩放 0.5x~3.5x、90° 旋转、幻灯片轮播、全键盘快捷键） |
+| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Chapters/Gallery/Bookmarks/Related/Playlists 七个 Tab） |
 | `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表、重试机制） |
 | `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品，支持进度条显示、未听完标记、继续听按钮、全部/未听完/已听完筛选） |
 | `components/UsageReport.jsx` | 使用报告视图（年度/月度/日度切换、标签/CV/社团/作品排行） |
@@ -169,6 +174,8 @@
 | `components/DiscoverLayout.jsx` | 发现布局组件（左侧 DiscoverView + 右侧详情区 + 可拖拽分割线，React.memo 优化） |
 | `components/SpectrumVisualizer.jsx` | 音频频谱可视化组件（Canvas 绘制，柱状图/波形/圆形三种模式，Web Audio API AnalyserNode） |
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
+| `utils/galleryScanner.js` | 作品画集扫描与分类纯函数（递归目录图像扫描、智能分类推断、在线画集整合） |
+| `utils/chapterParser.js` | 剧情章节解析纯函数（时间戳解析、文本多格式识别、起止区间规范化、当前章节匹配） |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `utils/sfw.js` | 全年龄（SFW）模式开关（`isSfwMode`）与「健全」标签常量（`SFW_TAG`） |
 | `utils/shortcuts.js` | 快捷键纯函数模块（动作定义/分组、按键解析匹配、冲突检测、默认值合并与历史迁移） |
@@ -1835,6 +1842,38 @@ const {
 - 主进程模块：`electron/mediaSync.js`
 - 增量同步：比对本地目录曲目，发现新增/删除音频即时落盘 `work.audioFiles` 并自然排序
 - 自动刮削：对含有 RJ/VJ/BJ 码但缺少封面或 CV 标签的作品，自动批量请求 DLsite 刮削并写入 `userData/db.json`，请求间隔 1200ms 防反爬并支持随时中断
+
+### 28. 画境闻声 · 剧情章节与全景插画系统（v1.51.0）
+
+#### 音频剧情章节分段系统 (`ChapterList` + `WaveformTimelinePins`)
+- 核心解析引擎：`src/utils/chapterParser.js`
+  - 智能时间戳解析：支持纯文本秒级解析 `01:23 标题`、`[00:04:12] 场景名`、`(12:30) 结语` 等格式，自动计算起止区间与时长
+  - 规范化（`normalizeChapters`）：按起始时间自然递增排序，计算相邻章节的结束时间与持续时长，去重并过滤无效值
+  - 实时定位（`findActiveChapter`）：依据当前播放秒数精确匹配处于哪个章节区间
+- 波形进度条图钉集成：
+  - 位于 `AudioPlayer.jsx` 的波形上层（`.waveform-chapters-layer`）
+  - 百分比绝对定位（`left: (startTime / duration) * 100%`），悬浮展示章节名称与起止时间
+  - 点击波形图钉或右侧章节列表项秒级精准跳转（`playerRef.current?.seekTo`）
+- 自定义章节持久化：
+  - 键名：`lingyin_chapters_${work.id}_${encodeURIComponent(currentAudio.path)}`
+  - 听众可自由在任意进度打点并输入名称，支持删除与管理
+
+#### 作品画集与全景插画画廊 (`WorkGallery` + `LightboxModal`)
+- 扫描与整合引擎：`src/utils/galleryScanner.js`
+  - 本地深度递归：通过 `readDir` 递归遍历本地同人音声目录收集 `.jpg/.png/.webp/.gif` 等图像
+  - 智能分类标签：根据路径和文件名特征归类为「封面 / 插画CG / 立绘角色 / 特典漫画 / 其它」
+  - 封面置顶：主封面强制排在第一位，避免用户迷失
+  - 在线画廊兼容：自动合并在线作品 `images` 列表
+- 高清全屏灯箱 (`LightboxModal`)：
+  - 磨砂玻璃背景，支持鼠标滚轮连续缩放（0.5x ~ 3.5x）、直角 90° 旋转、重置缩放
+  - 幻灯片自动轮播（空格键切换，可配置轮播间隔）、全键盘导航（Esc、← / →）
+- 沉浸式模式插画联动与轮播：
+  - 沉浸式背景与封面支持动态切换为画集中选中的任意插画
+  - 慢速呼吸幻灯片轮播模式（18 秒平滑过渡），让视觉与听觉同步流动
+  - 底部可收起微缩画集导轨抽屉，随时点选切换视觉主题
+
+#### 🛡️ 原汁原味声音哲学
+- 坚决杜绝任何 EQ 均衡器、虚拟立体声、变声处理、调音台混音及人造白噪音等 DSP 数字滤波污染，始终为听众呈现未经破坏的原生声音录音母带。
 
 ## 已知约定
 

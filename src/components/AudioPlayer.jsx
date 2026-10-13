@@ -51,6 +51,15 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     showSpectrum = true,
     spectrumMode = 'bars',
     spectrumSensitivity = 1.5,
+    // 剧情章节相关
+    chapters = [],
+    activeChapter = null,
+    onSeekToChapter,
+    onToggleChaptersTab,
+    // 画集相关
+    galleryImages = [],
+    onOpenLightbox,
+    onToggleGalleryTab,
   },
   ref,
 ) {
@@ -675,6 +684,22 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             {isLoading && '加载中...'}
             {error && `错误: ${error}`}
             {!isLoading && !error && (title || '未选择音频')}
+            {activeChapter && (
+              <span
+                className="player-chapter-badge"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleChaptersTab?.()
+                }}
+                title={`当前章节：${activeChapter.title} (${activeChapter.timeFormatted})，点击查看全部章节`}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                {activeChapter.title}
+              </span>
+            )}
           </div>
           <div className="time-display">
             <span>{formatTime(currentTime)}</span>
@@ -694,6 +719,30 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           >
             <div ref={waveformRef} className="waveform" />
             <div className="waveform-gradient-overlay" />
+            {/* 章节时间戳图钉 */}
+            {chapters && chapters.length > 0 && duration > 0 && (
+              <div className="waveform-chapters-layer">
+                {chapters.map((ch, idx) => {
+                  const pct = Math.max(0, Math.min(100, (ch.startTime / duration) * 100))
+                  const isAct = activeChapter && activeChapter.id === ch.id
+                  return (
+                    <div
+                      key={ch.id || idx}
+                      className={`waveform-chapter-pin ${isAct ? 'active' : ''}`}
+                      style={{ left: `${pct}%` }}
+                      title={`章节 ${idx + 1}: ${ch.title} (${ch.timeFormatted})`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onSeekToChapter?.(ch)
+                      }}
+                    >
+                      <div className="chapter-pin-line" />
+                      <div className="chapter-pin-head" />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
             {abRegion && (
               <>
                 <div
@@ -864,6 +913,37 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             {bookmarkCount > 0 && <span className="bookmark-badge">{bookmarkCount}</span>}
           </button>
         </div>
+        {chapters && chapters.length > 0 && (
+          <div className="chapter-control">
+            <button
+              className={`ctrl-btn chapter-btn ${activeChapter ? 'active' : ''}`}
+              onClick={onToggleChaptersTab}
+              title={`剧情章节（共 ${chapters.length} 节）：当前位于 ${activeChapter?.title || '未开始'}`}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              </svg>
+              <span className="chapter-badge">{chapters.length}</span>
+            </button>
+          </div>
+        )}
+        {galleryImages && galleryImages.length > 0 && (
+          <div className="gallery-control">
+            <button
+              className="ctrl-btn gallery-btn"
+              onClick={onOpenLightbox ? () => onOpenLightbox(0) : onToggleGalleryTab}
+              title={`作品画集（共 ${galleryImages.length} 张），点击全屏浏览`}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span className="gallery-badge">{galleryImages.length}</span>
+            </button>
+          </div>
+        )}
         <div className="ab-loop-control">
           <button
             className={`ctrl-btn ab-loop-btn ${abLoop.enabled ? 'active' : ''} ${!abLoop.enabled && abLoop.a != null ? 'pending' : ''}`}

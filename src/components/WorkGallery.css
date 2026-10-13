@@ -1,0 +1,204 @@
+/* 作品画集组件样式 */
+.work-gallery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.work-gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+}
+
+.work-gallery-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted, #9b9994);
+}
+
+.work-gallery-count strong {
+  color: var(--accent-500, #c96442);
+  font-size: 15px;
+}
+
+.work-gallery-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.work-gallery-tab {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted, #9b9994);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.work-gallery-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color, #e8e6e3);
+}
+
+.work-gallery-tab.active {
+  background: var(--accent-500, #c96442);
+  border-color: var(--accent-500, #c96442);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* 瀑布流/网格 */
+.work-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.work-gallery-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.work-gallery-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-400, #d97757);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.work-gallery-thumb-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.work-gallery-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.work-gallery-card:hover .work-gallery-img {
+  transform: scale(1.06);
+}
+
+.work-gallery-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.work-gallery-card:hover .work-gallery-overlay {
+  opacity: 1;
+}
+
+.work-gallery-view-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.work-gallery-card-info {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.work-gallery-card-name {
+  font-size: 11px;
+  color: var(--text-color, #e8e6e3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.work-gallery-card-tag {
+  font-size: 10px;
+  color: var(--accent-400, #d97757);
+  background: rgba(201, 100, 66, 0.15);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* 空态与加载态 */
+.work-gallery-loading,
+.work-gallery-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
+  color: var(--text-muted, #9b9994);
+  text-align: center;
+}
+
+.work-gallery-empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color, #e8e6e3);
+}
+
+.work-gallery-empty-tip {
+  font-size: 12px;
+  color: var(--text-muted, #9b9994);
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.work-gallery-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent-500, #c96442);
+  border-radius: 50%;
+  animation: wgSpin 0.8s linear infinite;
+}
+
+@keyframes wgSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

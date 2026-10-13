@@ -118,8 +118,29 @@ const WorkCard = memo(function WorkCard({
             </div>
           )}
           {progress && progress.percentage > 0 && (
-            <div className="card-progress">
-              <div className="card-progress-bar" style={{ width: `${progress.percentage}%` }} />
+            <div
+              className={`card-progress-wrapper ${progress.percentage >= 95 ? 'completed' : ''}`}
+              title={`作品总收听进度：${progress.percentage}%${progress.percentage >= 95 ? ' (已听完)' : ''}`}
+            >
+              <div className="card-progress-header">
+                <span className="card-progress-label">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {progress.percentage >= 95 ? (
+                      <polyline points="20 6 9 17 4 12" />
+                    ) : (
+                      <path d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                    )}
+                  </svg>
+                  {progress.percentage >= 95 ? '已听完' : '收听进度'}
+                </span>
+                <span className="card-progress-percent">{progress.percentage}%</span>
+              </div>
+              <div className="card-progress">
+                <div
+                  className={`card-progress-bar ${progress.percentage >= 95 ? 'completed' : ''}`}
+                  style={{ width: `${Math.min(100, progress.percentage)}%` }}
+                />
+              </div>
             </div>
           )}
         </div>

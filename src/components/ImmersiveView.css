@@ -798,3 +798,72 @@
     font-size: 26px;
   }
 }
+
+/* 沉浸式插画画廊底栏抽屉 */
+.immersive-gallery-drawer {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 15, 18, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 8px 12px;
+  max-width: 80vw;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  animation: igDrawerIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes igDrawerIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.immersive-gallery-track {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  max-width: 75vw;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.immersive-gallery-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.immersive-gallery-thumb:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.immersive-gallery-thumb.active {
+  opacity: 1;
+  border-color: var(--accent-primary, #c96442);
+  box-shadow: 0 0 8px rgba(201, 100, 66, 0.6);
+  transform: scale(1.08);
+}
+
+.immersive-gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+

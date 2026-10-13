@@ -1,0 +1,300 @@
+/* 剧情章节列表样式 */
+.chapter-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  gap: 12px;
+}
+
+.chapter-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+}
+
+.chapter-header-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chapter-count-badge {
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 600;
+  background: rgba(201, 100, 66, 0.18);
+  color: var(--accent-500, #c96442);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.chapter-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color, #e8e6e3);
+}
+
+.chapter-add-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  color: var(--text-muted, #9b9994);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chapter-add-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color, #e8e6e3);
+}
+
+.chapter-add-btn.active {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* 添加表单 */
+.chapter-add-form {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: chapterFormIn 0.2s ease-out;
+}
+
+@keyframes chapterFormIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chapter-form-time {
+  font-size: 11px;
+  color: var(--text-muted, #9b9994);
+}
+
+.chapter-form-time strong {
+  color: var(--accent-400, #d97757);
+}
+
+.chapter-form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chapter-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+}
+
+.chapter-input:focus {
+  border-color: var(--accent-500, #c96442);
+}
+
+.chapter-submit-btn {
+  background: var(--accent-500, #c96442);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  padding: 0 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.chapter-submit-btn:hover {
+  opacity: 0.9;
+}
+
+/* 章节列表 */
+.chapter-items-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.04));
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chapter-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(2px);
+}
+
+.chapter-item.active {
+  background: rgba(201, 100, 66, 0.12);
+  border-color: var(--accent-500, #c96442);
+  box-shadow: 0 2px 8px rgba(201, 100, 66, 0.2);
+}
+
+.chapter-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.chapter-index {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-muted, #9b9994);
+  width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chapter-item.active .chapter-index {
+  color: var(--accent-500, #c96442);
+  font-weight: 700;
+}
+
+.chapter-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.chapter-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color, #e8e6e3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chapter-item.active .chapter-title {
+  color: #fff;
+  font-weight: 600;
+}
+
+.chapter-time-range {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-muted, #9b9994);
+}
+
+.chapter-duration {
+  opacity: 0.7;
+}
+
+.chapter-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 正在播放动态条 */
+.chapter-playing-tag {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+
+.chapter-wave-bar {
+  width: 2px;
+  height: 100%;
+  background: var(--accent-500, #c96442);
+  border-radius: 1px;
+  animation: chWave 0.8s ease-in-out infinite alternate;
+}
+
+.chapter-wave-bar:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.chapter-wave-bar:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes chWave {
+  from {
+    height: 3px;
+  }
+  to {
+    height: 12px;
+  }
+}
+
+.chapter-del-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #9b9994);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.chapter-del-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+/* 空态 */
+.chapter-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 16px;
+  color: var(--text-muted, #9b9994);
+  text-align: center;
+}
+
+.chapter-empty-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color, #e8e6e3);
+}
+
+.chapter-empty-tip {
+  font-size: 11px;
+  line-height: 1.5;
+  max-width: 280px;
+}

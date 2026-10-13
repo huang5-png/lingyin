@@ -16,6 +16,7 @@ import AddToPlaylistModal from './components/AddToPlaylistModal'
 import SettingsModal from './components/SettingsModal'
 import TagManagerModal from './components/TagManagerModal'
 import UpdateModal from './components/UpdateModal'
+import LightboxModal from './components/LightboxModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
 import './App.css'
@@ -233,6 +234,24 @@ export default function App() {
     handleGlobalSearchPlayAudio,
     handleGlobalSearchSelectPlaylist,
     handleGlobalSearchSelectOnlineWork,
+
+    // 作品画集
+    galleryImages,
+    loadingGallery,
+    lightboxIndex,
+    isLightboxOpen,
+    openLightbox,
+    closeLightbox,
+    nextLightboxImage,
+    prevLightboxImage,
+    setLightboxIndex,
+
+    // 剧情章节
+    chapters,
+    activeChapter,
+    seekToChapter,
+    addCustomChapter,
+    deleteCustomChapter,
   } = useAppState()
 
   const [isDragOver, setIsDragOver] = useState(false)
@@ -488,6 +507,17 @@ export default function App() {
     onOpenTagManager: handleOpenTagManager,
     // 设置
     settings,
+    // 画集相关
+    galleryImages,
+    loadingGallery,
+    onOpenLightbox: openLightbox,
+    // 章节相关
+    chapters,
+    activeChapter,
+    duration,
+    onSeekToChapter: seekToChapter,
+    onAddCustomChapter: addCustomChapter,
+    onDeleteCustomChapter: deleteCustomChapter,
   }), [
     audioFiles, currentAudio, currentCues, currentTime, handleSeek,
     subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
@@ -502,6 +532,8 @@ export default function App() {
     tagFilterMode, allTags, allTagsWithMeta, addTagToWork, removeTagFromWork, getTagColor,
     handleOpenTagManager,
     settings,
+    galleryImages, loadingGallery, openLightbox,
+    chapters, activeChapter, duration, seekToChapter, addCustomChapter, deleteCustomChapter,
   ])
 
   return (
@@ -756,6 +788,13 @@ export default function App() {
             showSpectrum={settings.showSpectrum !== false}
             spectrumMode={settings.spectrumMode || 'bars'}
             spectrumSensitivity={settings.spectrumSensitivity || 1.5}
+            chapters={chapters}
+            activeChapter={activeChapter}
+            onSeekToChapter={seekToChapter}
+            onToggleChaptersTab={() => setRightTab('chapters')}
+            galleryImages={galleryImages}
+            onOpenLightbox={openLightbox}
+            onToggleGalleryTab={() => setRightTab('gallery')}
           />
         </div>
       )}
@@ -796,6 +835,7 @@ export default function App() {
           showSpectrum={settings.showSpectrum !== false}
           spectrumMode={settings.spectrumMode || 'bars'}
           spectrumSensitivity={settings.spectrumSensitivity || 1.5}
+          galleryImages={galleryImages}
         />
       )}
 
@@ -858,6 +898,14 @@ export default function App() {
           onToast={showToast}
         />
       )}
+
+      <LightboxModal
+        images={galleryImages}
+        currentIndex={lightboxIndex}
+        isOpen={isLightboxOpen}
+        onClose={closeLightbox}
+        onSelectIndex={setLightboxIndex}
+      />
 
       {isDragOver && (
         <div className="drag-drop-overlay">

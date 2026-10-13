@@ -43,6 +43,8 @@ const ImmersiveView = memo(function ImmersiveView({
   showSpectrum = true,
   spectrumMode = 'bars',
   spectrumSensitivity = 1.5,
+  // 画集相关
+  galleryImages = [],
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
@@ -53,7 +55,21 @@ const ImmersiveView = memo(function ImmersiveView({
   const [volume, setVolume] = useState(0.8)
   const [audioElement, setAudioElement] = useState(null)
   const [abState, setAbState] = useState({ a: null, b: null, enabled: false })
+  const [galleryIndex, setGalleryIndex] = useState(0)
+  const [isGallerySlideshow, setIsGallerySlideshow] = useState(false)
+  const [showGalleryDrawer, setShowGalleryDrawer] = useState(false)
   const progressRef = useRef(null)
+
+  // 幻灯片定时轮播
+  useEffect(() => {
+    if (!isGallerySlideshow || galleryImages.length <= 1) return
+    const timer = setInterval(() => {
+      setGalleryIndex((prev) => (prev + 1) % galleryImages.length)
+    }, 18000)
+    return () => clearInterval(timer)
+  }, [isGallerySlideshow, galleryImages.length])
+
+  const activeCoverUrl = (galleryImages && galleryImages[galleryIndex]?.url) || work?.cover
 
   if (!seekThrottleRef.current) {
     seekThrottleRef.current = throttle((time) => {
@@ -247,7 +263,7 @@ const ImmersiveView = memo(function ImmersiveView({
         '--immersive-lyric-active-shadow': activeShadow,
       }}
     >
-      <div className="immersive-bg" style={{ backgroundImage: `url(${work.cover})` }} />
+      <div className="immersive-bg" style={{ backgroundImage: `url(${activeCoverUrl})` }} />
 
       <div className={`immersive-top-bar ${showControls ? 'visible' : 'hidden'}`}>
         <button className="immersive-close-btn" onClick={onClose} title="关闭 (ESC)">
@@ -280,7 +296,7 @@ const ImmersiveView = memo(function ImmersiveView({
       <div className="immersive-layout">
         <div className="immersive-cover-wrapper">
           <img
-            src={work.cover}
+            src={activeCoverUrl}
             alt=""
             className="immersive-cover"
             onError={(e) => {
@@ -501,6 +517,32 @@ const ImmersiveView = memo(function ImmersiveView({
                 <span className="immersive-ab-text">A-B</span>
               </button>
 
+              {galleryImages && galleryImages.length > 1 && (
+                <>
+                  <button
+                    className={`immersive-ctrl-btn immersive-ctrl-small ${showGalleryDrawer ? 'active' : ''}`}
+                    onClick={() => setShowGalleryDrawer(!showGalleryDrawer)}
+                    title={`作品插画画廊（${galleryIndex + 1}/${galleryImages.length}）`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span className="immersive-badge">{galleryImages.length}</span>
+                  </button>
+                  <button
+                    className={`immersive-ctrl-btn immersive-ctrl-small ${isGallerySlideshow ? 'active' : ''}`}
+                    onClick={() => setIsGallerySlideshow(!isGallerySlideshow)}
+                    title={isGallerySlideshow ? '暂停插画慢速呼吸轮播' : '开启插画慢速呼吸轮播 (每18秒)'}
+                  >
+                    <svg viewBox="0 0 24 24" fill={isGallerySlideshow ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
               <button
                 className={`immersive-ctrl-btn immersive-ctrl-small ${sleepTimerActive ? 'active' : ''}`}
                 onClick={onToggleSleepTimer}
@@ -516,6 +558,23 @@ const ImmersiveView = memo(function ImmersiveView({
             </div>
           </div>
         </div>
+
+        {showGalleryDrawer && galleryImages && galleryImages.length > 0 && (
+          <div className="immersive-gallery-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="immersive-gallery-track">
+              {galleryImages.map((img, idx) => (
+                <div
+                  key={img.id || img.url || idx}
+                  className={`immersive-gallery-thumb ${idx === galleryIndex ? 'active' : ''}`}
+                  onClick={() => setGalleryIndex(idx)}
+                  title={img.name}
+                >
+                  <img src={img.url} alt="" loading="lazy" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

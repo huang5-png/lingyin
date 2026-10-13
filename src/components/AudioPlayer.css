@@ -1323,3 +1323,117 @@
     font-size: 12px;
   }
 }
+
+/* ===== 章节分段与图钉标记 ===== */
+.player-chapter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgba(201, 100, 66, 0.15);
+  color: var(--accent-500, #c96442);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid rgba(201, 100, 66, 0.25);
+  transition: all 0.15s;
+  vertical-align: middle;
+}
+
+.player-chapter-badge:hover {
+  background: var(--accent-500, #c96442);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.waveform-chapters-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.waveform-chapter-pin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  margin-left: -7px;
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: opacity 0.15s;
+  opacity: 0.75;
+}
+
+.waveform-chapter-pin:hover {
+  opacity: 1;
+  z-index: 10;
+}
+
+.waveform-chapter-pin.active {
+  opacity: 1;
+}
+
+.chapter-pin-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.waveform-chapter-pin.active .chapter-pin-line {
+  background: var(--accent-500, #c96442);
+  box-shadow: 0 0 6px rgba(201, 100, 66, 0.6);
+}
+
+.chapter-pin-head {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent-500, #c96442);
+  margin-top: 2px;
+  transition: transform 0.15s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.waveform-chapter-pin:hover .chapter-pin-head {
+  transform: scale(1.3);
+}
+
+.waveform-chapter-pin.active .chapter-pin-head {
+  background: var(--accent-500, #c96442);
+  border-color: #fff;
+  transform: scale(1.2);
+}
+
+.chapter-badge,
+.gallery-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--accent-500, #c96442);
+  color: #fff;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+

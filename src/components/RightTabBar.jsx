@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import LyricView from './LyricView'
 import BookmarksPanel from './BookmarksPanel'
+import WorkGallery from './WorkGallery'
+import ChapterList from './ChapterList'
 import StateView from './StateView'
 import './RightTabBar.css'
 
@@ -463,10 +465,23 @@ const RightTabBar = memo(function RightTabBar({
   onSelectWork,
   onAddToPlaylist,
   onToast,
+  // 画集相关
+  galleryImages = [],
+  loadingGallery = false,
+  onOpenLightbox,
+  // 章节相关
+  chapters = [],
+  activeChapter = null,
+  duration = 0,
+  onSeekToChapter,
+  onAddCustomChapter,
+  onDeleteCustomChapter,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
     { id: 'subtitles', label: 'Subtitles' },
+    { id: 'chapters', label: `Chapters${chapters && chapters.length > 0 ? ` (${chapters.length})` : ''}` },
+    { id: 'gallery', label: `Gallery${galleryImages && galleryImages.length > 0 ? ` (${galleryImages.length})` : ''}` },
     { id: 'bookmarks', label: 'Bookmarks' },
     { id: 'related', label: 'Related' },
     { id: 'playlists', label: 'Playlists' },
@@ -562,6 +577,28 @@ const RightTabBar = memo(function RightTabBar({
                 <p>选择一个作品查看字幕</p>
               </div>
             )}
+          </div>
+        )}
+        {activeTab === 'chapters' && (
+          <div className="chapters-tab-panel">
+            <ChapterList
+              chapters={chapters}
+              activeChapter={activeChapter}
+              currentTime={currentTime}
+              duration={duration}
+              onSeekToChapter={onSeekToChapter}
+              onAddCustomChapter={onAddCustomChapter}
+              onDeleteCustomChapter={onDeleteCustomChapter}
+            />
+          </div>
+        )}
+        {activeTab === 'gallery' && (
+          <div className="gallery-tab-panel">
+            <WorkGallery
+              images={galleryImages}
+              isLoading={loadingGallery}
+              onImageClick={onOpenLightbox}
+            />
           </div>
         )}
         {activeTab === 'bookmarks' && (

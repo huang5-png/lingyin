@@ -56,6 +56,17 @@ const DiscoverLayout = memo(function DiscoverLayout({
   onUpdateBookmark,
   onDeleteBookmark,
   onToast,
+  // 画集相关
+  galleryImages,
+  loadingGallery,
+  onOpenLightbox,
+  // 章节相关
+  chapters,
+  activeChapter,
+  duration,
+  onSeekToChapter,
+  onAddCustomChapter,
+  onDeleteCustomChapter,
 }) {
   const hasDetail = !!selectedWork && !!selectedWork.isOnline
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -142,6 +153,15 @@ const DiscoverLayout = memo(function DiscoverLayout({
                 allWorks={allWorks}
                 onSelectWork={onSelectWork}
                 onToast={onToast}
+                galleryImages={galleryImages}
+                loadingGallery={loadingGallery}
+                onOpenLightbox={onOpenLightbox}
+                chapters={chapters}
+                activeChapter={activeChapter}
+                duration={duration}
+                onSeekToChapter={onSeekToChapter}
+                onAddCustomChapter={onAddCustomChapter}
+                onDeleteCustomChapter={onDeleteCustomChapter}
               />
             </div>
           </div>
