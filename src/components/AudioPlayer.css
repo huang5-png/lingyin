@@ -1437,3 +1437,18 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
+.soundstage-control {
+  margin: 0 4px;
+}
+
+.sleep-sanctuary-control {
+  display: flex;
+  align-items: center;
+}
+
+.ctrl-btn.sleep-sanctuary-btn:hover {
+  color: #ffb89e;
+  filter: drop-shadow(0 0 6px rgba(201, 100, 66, 0.5));
+}
+
+

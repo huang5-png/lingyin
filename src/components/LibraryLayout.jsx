@@ -101,6 +101,8 @@ const LibraryLayout = memo(function LibraryLayout({
   onSeekToChapter,
   onAddCustomChapter,
   onDeleteCustomChapter,
+  // 双耳声场相关
+  audioElement = null,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -237,6 +239,7 @@ const LibraryLayout = memo(function LibraryLayout({
                 onSeekToChapter={onSeekToChapter}
                 onAddCustomChapter={onAddCustomChapter}
                 onDeleteCustomChapter={onDeleteCustomChapter}
+                audioElement={audioElement}
               />
             </div>
           </div>

@@ -141,8 +141,10 @@
 | `hooks/useSystemIntegration.js` | 系统集成 Hook：系统托盘、迷你播放器、媒体会话（MediaSession）、全局媒体快捷键、曲目切换系统通知 |
 | `hooks/useWorkGallery.js` | 作品画集 Hook：画集扫描、缓存、分类筛选、全屏灯箱索引管理 |
 | `hooks/useChapters.js` | 剧情章节 Hook：时间戳提取、波形图钉联动、当前章节追踪、自定义打点与持久化 |
-| `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、插画画廊轮播抽屉、鼠标闲置自动隐藏） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、章节时间戳图钉、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、画廊快捷键、集成 QueuePanel 浮层） |
+| `hooks/useSoundstage.js` | 双耳声场 Hook：只读监听左右声道能量、声相（Pan）、方位角度（Azimuth）与立体声分离度 |
+| `hooks/useBreathingGuide.js` | 深眠呼吸导引 Hook：4-7-8/箱式/心脑共振生理节律状态机、呼吸光环缓动、暗房屏保与定时休眠联动 |
+| `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、插画画廊轮播抽屉、浮动双耳声场罗盘微件、助眠座舱入口、鼠标闲置自动隐藏） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、章节时间戳图钉、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、画廊快捷键、双耳声场紧凑微标、深眠座舱快捷入口、集成 QueuePanel 浮层） |
 | `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换、虚拟滚动、滚动位置记忆 |
 | `components/WorkCard.jsx` | 作品网格卡片组件（React.memo 优化，自定义比较函数，收听进度条与完成徽章） |
 | `components/WorkRow.jsx` | 作品列表行组件（React.memo 优化，自定义比较函数，收听进度条） |
@@ -152,7 +154,9 @@
 | `components/ChapterList.jsx` | 剧情章节列表组件（章节分段展示、律动波纹当前章节指示、秒级跳转、手动标记与删除） |
 | `components/WorkGallery.jsx` | 作品画集瀑布流网格（按分类过滤、插画数量角标、悬浮放大、点击呼出全屏灯箱） |
 | `components/LightboxModal.jsx` | 高清全屏灯箱组件（滚轮连续缩放 0.5x~3.5x、90° 旋转、幻灯片轮播、全键盘快捷键） |
-| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Chapters/Gallery/Bookmarks/Related/Playlists 七个 Tab） |
+| `components/SoundstageCompass.jsx` | 双耳声场全景罗盘组件（180° 半圆天文声学罗盘、灵动声源游走光斑、双耳声压电平表、低音/耳语/高频特征） |
+| `components/SleepSanctuaryModal.jsx` | 深眠微澜助眠座舱与暗房屏保组件（4-7-8呼吸光环、OLED 极夜纯黑屏保、诗意助眠提示、循环入眠联动） |
+| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Chapters/Compass/Gallery/Bookmarks/Related/Playlists 八个 Tab） |
 | `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表、重试机制） |
 | `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品，支持进度条显示、未听完标记、继续听按钮、全部/未听完/已听完筛选） |
 | `components/UsageReport.jsx` | 使用报告视图（年度/月度/日度切换、标签/CV/社团/作品排行） |
@@ -176,6 +180,9 @@
 | `utils/scanner.js` | 媒体库扫描、文件类型识别、字幕匹配算法、语言检测 |
 | `utils/galleryScanner.js` | 作品画集扫描与分类纯函数（递归目录图像扫描、智能分类推断、在线画集整合） |
 | `utils/chapterParser.js` | 剧情章节解析纯函数（时间戳解析、文本多格式识别、起止区间规范化、当前章节匹配） |
+| `utils/soundstageAnalyzer.js` | 双耳声学空间分析纯函数（PCM RMS 能量、声相 Pan、方位角 Azimuth、立体声分离度、频段特征） |
+| `utils/breathingGuide.js` | 深眠呼吸导引与助眠座舱状态机纯函数（4-7-8/箱式/心脑共振生理节律、缓动曲线、周期换算） |
+| `utils/audioAnalyzerManager.js` | 共享 Web Audio 只读分析管线管理器（规避多组件绑定冲突，直通 destination 输出原生音频） |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `utils/sfw.js` | 全年龄（SFW）模式开关（`isSfwMode`）与「健全」标签常量（`SFW_TAG`） |
 | `utils/shortcuts.js` | 快捷键纯函数模块（动作定义/分组、按键解析匹配、冲突检测、默认值合并与历史迁移） |

@@ -3,6 +3,7 @@ import LyricView from './LyricView'
 import BookmarksPanel from './BookmarksPanel'
 import WorkGallery from './WorkGallery'
 import ChapterList from './ChapterList'
+import SoundstageCompass from './SoundstageCompass'
 import StateView from './StateView'
 import './RightTabBar.css'
 
@@ -476,11 +477,14 @@ const RightTabBar = memo(function RightTabBar({
   onSeekToChapter,
   onAddCustomChapter,
   onDeleteCustomChapter,
+  // 双耳声场相关
+  audioElement = null,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
     { id: 'subtitles', label: 'Subtitles' },
     { id: 'chapters', label: `Chapters${chapters && chapters.length > 0 ? ` (${chapters.length})` : ''}` },
+    { id: 'compass', label: 'Compass' },
     { id: 'gallery', label: `Gallery${galleryImages && galleryImages.length > 0 ? ` (${galleryImages.length})` : ''}` },
     { id: 'bookmarks', label: 'Bookmarks' },
     { id: 'related', label: 'Related' },
@@ -590,6 +594,11 @@ const RightTabBar = memo(function RightTabBar({
               onAddCustomChapter={onAddCustomChapter}
               onDeleteCustomChapter={onDeleteCustomChapter}
             />
+          </div>
+        )}
+        {activeTab === 'compass' && (
+          <div className="compass-tab-panel" style={{ padding: '8px' }}>
+            <SoundstageCompass audioElement={audioElement} />
           </div>
         )}
         {activeTab === 'gallery' && (

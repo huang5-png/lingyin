@@ -67,6 +67,8 @@ const DiscoverLayout = memo(function DiscoverLayout({
   onSeekToChapter,
   onAddCustomChapter,
   onDeleteCustomChapter,
+  // 双耳声场相关
+  audioElement = null,
 }) {
   const hasDetail = !!selectedWork && !!selectedWork.isOnline
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -162,6 +164,7 @@ const DiscoverLayout = memo(function DiscoverLayout({
                 onSeekToChapter={onSeekToChapter}
                 onAddCustomChapter={onAddCustomChapter}
                 onDeleteCustomChapter={onDeleteCustomChapter}
+                audioElement={audioElement}
               />
             </div>
           </div>

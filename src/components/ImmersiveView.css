@@ -867,3 +867,13 @@
   object-fit: cover;
 }
 
+.immersive-compass-floating {
+  position: absolute;
+  top: 76px;
+  right: 32px;
+  width: 300px;
+  z-index: 50;
+  animation: fadeIn 0.3s ease;
+  filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.45));
+}
+

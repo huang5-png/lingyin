@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, memo } from 'react'
+import { getOrCreateAudioNodes } from '../utils/audioAnalyzerManager'
 import './SpectrumVisualizer.css'
 
 const SpectrumVisualizer = memo(function SpectrumVisualizer({
@@ -20,26 +21,17 @@ const SpectrumVisualizer = memo(function SpectrumVisualizer({
   const dataArrayRef = useRef(null)
 
   const setupAudioContext = useCallback(() => {
-    if (!audioElement || audioCtxRef.current) return
+    if (!audioElement) return
 
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) return
+      const nodes = getOrCreateAudioNodes(audioElement)
+      if (!nodes) return
 
-      const audioCtx = new AudioCtx()
-      const analyser = audioCtx.createAnalyser()
-      analyser.fftSize = 256
-      analyser.smoothingTimeConstant = 0.8
+      audioCtxRef.current = nodes.audioCtx
+      analyserRef.current = nodes.analyserMaster
+      sourceRef.current = nodes.source
 
-      const source = audioCtx.createMediaElementSource(audioElement)
-      source.connect(analyser)
-      analyser.connect(audioCtx.destination)
-
-      audioCtxRef.current = audioCtx
-      analyserRef.current = analyser
-      sourceRef.current = source
-
-      const bufferLength = analyser.frequencyBinCount
+      const bufferLength = nodes.analyserMaster.frequencyBinCount
       dataArrayRef.current = new Uint8Array(bufferLength)
     } catch (e) {
       console.warn('Spectrum visualizer setup failed:', e)

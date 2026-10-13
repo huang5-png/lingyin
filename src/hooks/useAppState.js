@@ -457,6 +457,40 @@ export function useAppState() {
     }
   }, [playingWork, currentAudio, saveLastPlayState])
 
+  // ===== 双耳声场与助眠座舱状态 =====
+  const [showSleepSanctuary, setShowSleepSanctuary] = useState(false)
+  const [currentAudioElement, setCurrentAudioElement] = useState(null)
+
+  useEffect(() => {
+    const el = playerRef.current?.getAudioElement?.()
+    if (el && el !== currentAudioElement) {
+      setCurrentAudioElement(el)
+    }
+  }, [currentAudio, currentTime, playerRef, currentAudioElement])
+
+  const handleOpenSleepSanctuary = useCallback(() => {
+    setShowSleepSanctuary(true)
+  }, [])
+
+  const handleCloseSleepSanctuary = useCallback(() => {
+    setShowSleepSanctuary(false)
+  }, [])
+
+  const handleToggleSleepSanctuary = useCallback(() => {
+    setShowSleepSanctuary((prev) => !prev)
+  }, [])
+
+  const handleToggleCompassTab = useCallback(() => {
+    if (selectedWork || playingWork) {
+      if (!selectedWork && playingWork) {
+        setSelectedWork(playingWork)
+      }
+      setRightTab('compass')
+    } else {
+      showToast?.('请先选择或播放一部作品', 'info')
+    }
+  }, [selectedWork, playingWork, setSelectedWork, setRightTab, showToast])
+
   // ===== 作品间连续播放 =====
   const handleFinishWithContinuousPlay = useCallback(() => {
     handleFinish()
@@ -776,6 +810,8 @@ export function useAppState() {
     handlePrevAudio,
     handleNextAudio,
     onPlaybackRateChange: handlePlaybackRateChange,
+    onOpenSleepSanctuary: handleOpenSleepSanctuary,
+    onToggleCompass: handleToggleCompassTab,
   })
 
   // ===== 字幕刷新 Hook =====
@@ -1150,5 +1186,13 @@ export function useAppState() {
     seekToChapter,
     addCustomChapter,
     deleteCustomChapter,
+
+    // 双耳声场与深眠座舱
+    showSleepSanctuary,
+    handleOpenSleepSanctuary,
+    handleCloseSleepSanctuary,
+    handleToggleSleepSanctuary,
+    handleToggleCompassTab,
+    currentAudioElement,
   }
 }

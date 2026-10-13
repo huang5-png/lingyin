@@ -9,7 +9,7 @@
 export const SHORTCUT_GROUPS = [
   { id: 'playback', label: '播放控制', actions: ['playPause', 'prevTrack', 'nextTrack', 'seekBackward', 'seekForward', 'toggleAbLoop'] },
   { id: 'volume', label: '音量与速度', actions: ['volumeUp', 'volumeDown', 'toggleMute', 'speedUp', 'speedDown'] },
-  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'toggleQueue', 'openSettings'] },
+  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'openSleepSanctuary', 'toggleCompass', 'toggleQueue', 'openSettings'] },
   { id: 'nav', label: '导航', actions: ['globalSearch'] },
 ]
 
@@ -27,6 +27,8 @@ export const DEFAULT_SHORTCUTS = {
   speedDown: '',
   toggleImmersive: '',
   exitImmersive: 'Escape',
+  openSleepSanctuary: '',
+  toggleCompass: '',
   toggleQueue: '',
   openSettings: '',
   globalSearch: 'Ctrl+K',
@@ -46,6 +48,8 @@ export const ACTION_LABELS = {
   speedDown: '减速播放',
   toggleImmersive: '切换沉浸式',
   exitImmersive: '退出沉浸式',
+  openSleepSanctuary: '深眠助眠座舱',
+  toggleCompass: '双耳声场罗盘',
   toggleQueue: '显示/隐藏队列',
   openSettings: '打开设置',
   globalSearch: '全局搜索',
@@ -65,6 +69,8 @@ export const ACTION_DESCS = {
   speedDown: '按档位降低播放速度',
   toggleImmersive: '进入或退出沉浸式播放模式',
   exitImmersive: '关闭沉浸式播放模式',
+  openSleepSanctuary: '打开 4-7-8 呼吸导引与 OLED 极夜纯黑睡眠屏保',
+  toggleCompass: '切换右侧面板双耳声场罗盘标签',
   toggleQueue: '显示或隐藏播放队列浮层',
   openSettings: '打开设置面板',
   globalSearch: '打开/关闭全局搜索弹窗',

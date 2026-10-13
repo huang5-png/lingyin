@@ -17,6 +17,7 @@ import SettingsModal from './components/SettingsModal'
 import TagManagerModal from './components/TagManagerModal'
 import UpdateModal from './components/UpdateModal'
 import LightboxModal from './components/LightboxModal'
+import SleepSanctuaryModal from './components/SleepSanctuaryModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
 import './App.css'
@@ -252,6 +253,14 @@ export default function App() {
     seekToChapter,
     addCustomChapter,
     deleteCustomChapter,
+
+    // 双耳声场与深眠座舱
+    showSleepSanctuary,
+    handleOpenSleepSanctuary,
+    handleCloseSleepSanctuary,
+    handleToggleSleepSanctuary,
+    handleToggleCompassTab,
+    currentAudioElement,
   } = useAppState()
 
   const [isDragOver, setIsDragOver] = useState(false)
@@ -518,6 +527,8 @@ export default function App() {
     onSeekToChapter: seekToChapter,
     onAddCustomChapter: addCustomChapter,
     onDeleteCustomChapter: deleteCustomChapter,
+    // 双耳声场
+    audioElement: currentAudioElement,
   }), [
     audioFiles, currentAudio, currentCues, currentTime, handleSeek,
     subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
@@ -534,6 +545,7 @@ export default function App() {
     settings,
     galleryImages, loadingGallery, openLightbox,
     chapters, activeChapter, duration, seekToChapter, addCustomChapter, deleteCustomChapter,
+    currentAudioElement,
   ])
 
   return (
@@ -795,6 +807,8 @@ export default function App() {
             galleryImages={galleryImages}
             onOpenLightbox={openLightbox}
             onToggleGalleryTab={() => setRightTab('gallery')}
+            onToggleCompassTab={handleToggleCompassTab}
+            onOpenSleepSanctuary={handleOpenSleepSanctuary}
           />
         </div>
       )}
@@ -823,6 +837,7 @@ export default function App() {
           onAddBookmark={addBookmark}
           hasCurrentBookmark={playingWork && currentAudio ? hasBookmarkAtTime(playingWork.id, currentAudio.path, currentTime) : false}
           bookmarkCount={playingWork && currentAudio ? (bookmarks.filter(b => b.workId === playingWork.id && b.audioPath === currentAudio.path)).length : 0}
+          onOpenSleepSanctuary={handleOpenSleepSanctuary}
           sleepTimerActive={sleepTimerActive}
           sleepTimerStatusText={getSleepTimerStatusText()}
           onToggleSleepTimer={() => {
@@ -905,6 +920,25 @@ export default function App() {
         isOpen={isLightboxOpen}
         onClose={closeLightbox}
         onSelectIndex={setLightboxIndex}
+      />
+
+      <SleepSanctuaryModal
+        isOpen={showSleepSanctuary}
+        onClose={handleCloseSleepSanctuary}
+        playerRef={playerRef}
+        currentWork={playingWork || selectedWork}
+        currentAudio={currentAudio}
+        isPlaying={playerRef.current?.isPlaying?.()}
+        onToast={showToast}
+        sleepTimerActive={sleepTimerActive}
+        onToggleSleepTimer={() => {
+          if (sleepTimerActive) {
+            handleCancelSleepTimer({ notify: true })
+          } else {
+            handleSetCountdownTimer(30)
+          }
+        }}
+        sleepTimerRemainingText={getSleepTimerStatusText()}
       />
 
       {isDragOver && (

@@ -676,11 +676,13 @@
 }
 
 .chapters-tab-panel,
-.gallery-tab-panel {
+.gallery-tab-panel,
+.compass-tab-panel {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
+
 

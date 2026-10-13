@@ -4,6 +4,7 @@ import { formatTime } from '../utils/subtitleParser'
 import { PLAYBACK_RATES } from '../utils/playback'
 import QueuePanel from './QueuePanel'
 import SpectrumVisualizer from './SpectrumVisualizer'
+import SoundstageCompass from './SoundstageCompass'
 import './AudioPlayer.css'
 
 
@@ -60,6 +61,9 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     galleryImages = [],
     onOpenLightbox,
     onToggleGalleryTab,
+    // 双耳声场与深眠座舱
+    onToggleCompassTab,
+    onOpenSleepSanctuary,
   },
   ref,
 ) {
@@ -856,6 +860,13 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             className="volume-slider"
           />
         </div>
+        <div className="soundstage-control" style={{ display: 'flex', alignItems: 'center' }}>
+          <SoundstageCompass
+            compact={true}
+            audioElement={audioElementRef.current}
+            onOpenPanel={onToggleCompassTab}
+          />
+        </div>
         <div className="queue-controls">
           <button
             className={`ctrl-btn loop-btn ${loopMode !== 'none' ? 'active' : ''}`}
@@ -1146,6 +1157,18 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
               </div>
             </div>
           )}
+        </div>
+        <div className="sleep-sanctuary-control">
+          <button
+            className="ctrl-btn sleep-sanctuary-btn"
+            onClick={onOpenSleepSanctuary}
+            title="深眠微澜 · 助眠座舱 (4-7-8呼吸导引 / OLED纯黑睡眠屏保)"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.4" />
+            </svg>
+          </button>
         </div>
         <div className="mini-player-control">
           <button

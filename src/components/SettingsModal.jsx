@@ -1340,6 +1340,51 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
           </div>
         )}
       </div>
+      <div className="settings-section">
+        <div className="settings-section-title">双耳声场与助眠座舱</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">声场罗盘默认视图</div>
+            <div className="setting-desc">右侧 Compass 标签页与浮层罗盘的默认形态</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.soundstageDefaultView || 'compass'}
+              onChange={(e) => setSettings((p) => ({ ...p, soundstageDefaultView: e.target.value }))}
+            >
+              <option value="compass">180° 全景声学罗盘</option>
+              <option value="meters">双耳声压电平柱</option>
+            </select>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">深眠呼吸默认节律</div>
+            <div className="setting-desc">进入助眠座舱时首选的呼吸调息模式</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.breathingDefaultPattern || '4-7-8'}
+              onChange={(e) => setSettings((p) => ({ ...p, breathingDefaultPattern: e.target.value }))}
+            >
+              <option value="4-7-8">4-7-8 深度助眠（舒缓促眠）</option>
+              <option value="box">4-4-4-4 箱式平息（快速平复）</option>
+              <option value="balance">5-5 心脑共振（自主神经平衡）</option>
+            </select>
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">原汁原味声音哲学</div>
+            <div className="setting-desc">坚守原生录音母带零污染，声场分析完全只读，不施加任何均衡器或人造白噪音 DSP 处理</div>
+          </div>
+          <div className="setting-control">
+            <span style={{ fontSize: '12px', color: 'var(--accent, #c96442)', fontWeight: '600' }}>✓ 纯净直通</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 

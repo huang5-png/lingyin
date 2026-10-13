@@ -19,6 +19,8 @@ export function useKeyboardShortcuts({
   handlePrevAudio,
   handleNextAudio,
   onPlaybackRateChange,
+  onOpenSleepSanctuary,
+  onToggleCompass,
 }) {
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
@@ -172,6 +174,18 @@ export function useKeyboardShortcuts({
       return
     }
 
+    if (matchShortcut(e, shortcuts.openSleepSanctuary)) {
+      e.preventDefault()
+      onOpenSleepSanctuary?.()
+      return
+    }
+
+    if (matchShortcut(e, shortcuts.toggleCompass)) {
+      e.preventDefault()
+      onToggleCompass?.()
+      return
+    }
+
     if (matchShortcut(e, shortcuts.globalSearch)) {
       e.preventDefault()
       setShowGlobalSearch?.((prev) => !prev)
@@ -194,6 +208,8 @@ export function useKeyboardShortcuts({
     handlePrevAudio,
     handleNextAudio,
     onPlaybackRateChange,
+    onOpenSleepSanctuary,
+    onToggleCompass,
   ])
 
   useEffect(() => {

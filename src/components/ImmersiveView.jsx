@@ -2,6 +2,7 @@ import { useMemo, useEffect, useRef, useCallback, memo, useState } from 'react'
 import { findCurrentCue, formatTime } from '../utils/subtitleParser'
 import { PLAYBACK_RATES } from '../utils/playback'
 import SpectrumVisualizer from './SpectrumVisualizer'
+import SoundstageCompass from './SoundstageCompass'
 import './ImmersiveView.css'
 
 function throttle(fn, delay) {
@@ -45,6 +46,8 @@ const ImmersiveView = memo(function ImmersiveView({
   spectrumSensitivity = 1.5,
   // 画集相关
   galleryImages = [],
+  // 深眠座舱相关
+  onOpenSleepSanctuary,
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
@@ -58,6 +61,7 @@ const ImmersiveView = memo(function ImmersiveView({
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [isGallerySlideshow, setIsGallerySlideshow] = useState(false)
   const [showGalleryDrawer, setShowGalleryDrawer] = useState(false)
+  const [showCompassOverlay, setShowCompassOverlay] = useState(false)
   const progressRef = useRef(null)
 
   // 幻灯片定时轮播
@@ -544,6 +548,28 @@ const ImmersiveView = memo(function ImmersiveView({
               )}
 
               <button
+                className={`immersive-ctrl-btn immersive-ctrl-small ${showCompassOverlay ? 'active' : ''}`}
+                onClick={() => setShowCompassOverlay(!showCompassOverlay)}
+                title={showCompassOverlay ? '隐藏双耳声场罗盘' : '显示双耳声场罗盘'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                </svg>
+              </button>
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-small"
+                onClick={onOpenSleepSanctuary}
+                title="深眠微澜 · 助眠座舱 (4-7-8呼吸导引 / OLED纯黑睡眠屏保)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.4" />
+                </svg>
+              </button>
+
+              <button
                 className={`immersive-ctrl-btn immersive-ctrl-small ${sleepTimerActive ? 'active' : ''}`}
                 onClick={onToggleSleepTimer}
                 title={sleepTimerActive ? `睡眠定时器：${sleepTimerStatusText}` : '睡眠定时器'}
@@ -558,6 +584,12 @@ const ImmersiveView = memo(function ImmersiveView({
             </div>
           </div>
         </div>
+
+        {showCompassOverlay && (
+          <div className="immersive-compass-floating" onClick={(e) => e.stopPropagation()}>
+            <SoundstageCompass audioElement={audioElement} />
+          </div>
+        )}
 
         {showGalleryDrawer && galleryImages && galleryImages.length > 0 && (
           <div className="immersive-gallery-drawer" onClick={(e) => e.stopPropagation()}>

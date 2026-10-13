@@ -55,6 +55,8 @@ export const DEFAULT_SETTINGS = {
   autoCheckUpdate: true,
   githubMirror: 'https://ghfast.top/',
   autoSyncLibraryOnStart: true,
+  soundstageDefaultView: 'compass',
+  breathingDefaultPattern: '4-7-8',
 }
 
 function loadSettings() {
