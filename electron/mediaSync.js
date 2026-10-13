@@ -153,7 +153,7 @@ async function syncLibraryAudio(works, { setWorksAudioFiles, updateWork }) {
  * @returns {boolean}
  */
 function needsScraping(work) {
-  if (!work) return false
+  if (!work || work.isOnline) return false
   const rjCode = work.rjCode || extractRJCode(work.title || work.folderName || work.name || '')
   if (!rjCode) return false
 

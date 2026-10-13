@@ -37,6 +37,15 @@ export function resolveDownloadUrl(rawUrl, mirrorPrefix) {
     return rawUrl
   }
   const cleanPrefix = mirrorPrefix.trim().replace(/\/+$/, '')
+  if (rawUrl.startsWith(cleanPrefix + '/') || rawUrl === cleanPrefix) {
+    return rawUrl
+  }
+  const knownMirrors = ['https://ghfast.top', 'https://ghproxy.net', 'https://gh-proxy.com']
+  for (const m of knownMirrors) {
+    if (rawUrl.startsWith(m + '/')) {
+      return rawUrl
+    }
+  }
   return `${cleanPrefix}/${rawUrl}`
 }
 

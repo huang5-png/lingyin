@@ -67,6 +67,7 @@ export default function App() {
     // 媒体库
     works,
     isLoadingWorks,
+    loadWorks,
     audioFiles,
     handleAddFolder,
     handleAddMediaLibrary,
@@ -805,6 +806,7 @@ export default function App() {
         currentSettings={settings}
         defaultTab={settingsDefaultTab}
         onOpenUpdateModal={handleOpenUpdateModal}
+        onRefreshLibrary={loadWorks}
         showToast={showToast}
       />
 

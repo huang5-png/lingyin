@@ -16,7 +16,9 @@ let currentDownloadController = null
  * @returns {number} 1 if v1 > v2, -1 if v1 < v2, 0 if v1 === v2
  */
 function compareVersions(v1, v2) {
-  if (!v1 || !v2) return 0
+  if (!v1 && !v2) return 0
+  if (!v1) return -1
+  if (!v2) return 1
   const clean1 = String(v1).trim().replace(/^[vV]/, '')
   const clean2 = String(v2).trim().replace(/^[vV]/, '')
 
@@ -45,6 +47,15 @@ function resolveDownloadUrl(rawUrl, mirrorPrefix) {
     return rawUrl
   }
   const cleanPrefix = mirrorPrefix.trim().replace(/\/+$/, '')
+  if (rawUrl.startsWith(cleanPrefix + '/') || rawUrl === cleanPrefix) {
+    return rawUrl
+  }
+  const knownMirrors = ['https://ghfast.top', 'https://ghproxy.net', 'https://gh-proxy.com']
+  for (const m of knownMirrors) {
+    if (rawUrl.startsWith(m + '/')) {
+      return rawUrl
+    }
+  }
   return `${cleanPrefix}/${rawUrl}`
 }
 

@@ -68,6 +68,15 @@ describe('needsScraping', () => {
     }
     expect(needsScraping(work)).toBe(false)
   })
+
+  it('在线作品（isOnline）不触发刮削', () => {
+    const work = {
+      title: 'RJ123456 在线作品',
+      isOnline: true,
+      cover: '',
+    }
+    expect(needsScraping(work)).toBe(false)
+  })
 })
 
 describe('isAudioListDifferent', () => {

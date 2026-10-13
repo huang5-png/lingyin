@@ -90,7 +90,7 @@ const TABS = [
   { id: 'about', label: '关于' },
 ];
 
-const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab, onOpenUpdateModal, showToast }) {
+const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab, onOpenUpdateModal, onRefreshLibrary, showToast }) {
   const [activeTab, setActiveTab] = useState('basic');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isVisible, setIsVisible] = useState(false);
@@ -151,11 +151,12 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
       setSyncStatus('completed');
       setSyncMessage(`同步完成：检查了 ${res?.totalWorks || 0} 个作品，更新了 ${res?.updatedCount || 0} 个作品曲目索引${res?.missingCount ? `，${res.missingCount} 个目录不存在` : ''}`);
       showToast?.('媒体库音频索引同步完成', 'success');
+      onRefreshLibrary?.();
     } catch (err) {
       setSyncStatus('error');
       setSyncMessage(`同步失败: ${err?.message || '未知错误'}`);
     }
-  }, [showToast]);
+  }, [showToast, onRefreshLibrary]);
 
   const handleStartAutoScrape = useCallback(async () => {
     setSyncStatus('scraping');
@@ -171,11 +172,12 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
         setSyncMessage(`刮削完成：成功补全 ${res?.updated || 0} 个作品，跳过/失败 ${res?.failed || 0} 个`);
         showToast?.(`已成功补全 ${res?.updated || 0} 个作品元数据`, 'success');
       }
+      onRefreshLibrary?.();
     } catch (err) {
       setSyncStatus('error');
       setSyncMessage(`刮削失败: ${err?.message || '未知错误'}`);
     }
-  }, [showToast]);
+  }, [showToast, onRefreshLibrary]);
 
   const handleStopAutoScrape = useCallback(async () => {
     try {
@@ -1557,6 +1559,20 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
             )}
           </div>
         )}
+        <div className="setting-item" style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--border-color, #e5e5e5)' }}>
+          <div className="setting-info">
+            <div className="setting-label">启动时自动同步媒体库</div>
+            <div className="setting-desc">应用启动时在后台静默检测媒体库本地文件增删变动并更新索引</div>
+          </div>
+          <div className="setting-control">
+            <input
+              type="checkbox"
+              className="settings-checkbox"
+              checked={settings.autoSyncLibraryOnStart !== false}
+              onChange={(e) => setSettings((p) => ({ ...p, autoSyncLibraryOnStart: e.target.checked }))}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

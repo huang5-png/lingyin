@@ -569,7 +569,23 @@ export function useAppState() {
   // 加载作品
   useEffect(() => {
     loadWorks()
-  }, [])
+  }, [loadWorks])
+
+  // 启动静默同步媒体库增量变化
+  useEffect(() => {
+    if (settings?.autoSyncLibraryOnStart === false) return
+    const timer = setTimeout(async () => {
+      try {
+        const res = await window.electronAPI?.mediaSyncLibrary?.()
+        if (res && res.updatedCount > 0) {
+          loadWorks()
+        }
+      } catch (err) {
+        console.warn('启动自动同步媒体库跳过或失败:', err)
+      }
+    }, 4500)
+    return () => clearTimeout(timer)
+  }, [settings?.autoSyncLibraryOnStart, loadWorks])
 
   // ===== 启动恢复播放 =====
   const restorePlayOnStart = useCallback(async () => {
@@ -873,6 +889,7 @@ export function useAppState() {
     works,
     isLoadingWorks,
     setWorks,
+    loadWorks,
     audioFiles,
     setAudioFiles,
     allSubtitleFiles,

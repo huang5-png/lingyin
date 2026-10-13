@@ -19,7 +19,7 @@ export function extractRJCode(text) {
  * @returns {boolean}
  */
 export function needsScraping(work) {
-  if (!work) return false
+  if (!work || work.isOnline) return false
   const rjCode = work.rjCode || extractRJCode(work.title || work.folderName || work.name || '')
   if (!rjCode) return false
 

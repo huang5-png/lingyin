@@ -39,6 +39,13 @@ describe('resolveDownloadUrl', () => {
     expect(resolveDownloadUrl(raw, 'https://ghfast.top/')).toBe(`https://ghfast.top/${raw}`)
     expect(resolveDownloadUrl(raw, 'https://ghproxy.net')).toBe(`https://ghproxy.net/${raw}`)
   })
+
+  it('避免重复拼接已有代理镜像前缀', () => {
+    const raw = 'https://github.com/user/repo/releases/download/v1.50.0/app.zip'
+    const alreadyWrapped = `https://ghfast.top/${raw}`
+    expect(resolveDownloadUrl(alreadyWrapped, 'https://ghfast.top/')).toBe(alreadyWrapped)
+    expect(resolveDownloadUrl(alreadyWrapped, 'https://ghproxy.net/')).toBe(alreadyWrapped)
+  })
 })
 
 describe('formatBytes', () => {
