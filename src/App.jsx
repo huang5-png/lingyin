@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import LeftNavBar from './components/LeftNavBar'
 import ImmersiveView from './components/ImmersiveView'
@@ -15,6 +15,7 @@ import Toast from './components/Toast'
 import AddToPlaylistModal from './components/AddToPlaylistModal'
 import SettingsModal from './components/SettingsModal'
 import TagManagerModal from './components/TagManagerModal'
+import UpdateModal from './components/UpdateModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
 import './App.css'
@@ -235,6 +236,27 @@ export default function App() {
 
   const [isDragOver, setIsDragOver] = useState(false)
   const dragCounter = useRef(0)
+
+  const [updateInfo, setUpdateInfo] = useState(null)
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
+
+  useEffect(() => {
+    if (!window.electronAPI?.onUpdateAvailable) return
+    const cleanup = window.electronAPI.onUpdateAvailable((info) => {
+      if (info?.hasUpdate) {
+        setUpdateInfo(info)
+        setShowUpdateModal(true)
+      }
+    })
+    return () => {
+      cleanup?.()
+    }
+  }, [])
+
+  const handleOpenUpdateModal = useCallback((info) => {
+    setUpdateInfo(info)
+    setShowUpdateModal(true)
+  }, [])
 
   const handleDragEnter = useCallback((e) => {
     e.preventDefault()
@@ -782,6 +804,16 @@ export default function App() {
         onSave={handleSaveSettings}
         currentSettings={settings}
         defaultTab={settingsDefaultTab}
+        onOpenUpdateModal={handleOpenUpdateModal}
+        showToast={showToast}
+      />
+
+      <UpdateModal
+        isOpen={showUpdateModal}
+        updateInfo={updateInfo}
+        onClose={() => setShowUpdateModal(false)}
+        showToast={showToast}
+        mirrorUrl={settings?.githubMirror}
       />
 
       <TagManagerModal

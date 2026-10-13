@@ -245,4 +245,33 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // 系统通知
   notificationShow: (opts) => ipcRenderer.invoke('notification:show', opts),
+
+  // 应用版本与更新
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  updaterCheck: (options) => ipcRenderer.invoke('updater:check', options),
+  updaterDownload: (options) => ipcRenderer.invoke('updater:download', options),
+  updaterCancelDownload: () => ipcRenderer.invoke('updater:cancelDownload'),
+  updaterShowInFolder: (filePath) => ipcRenderer.invoke('updater:showInFolder', filePath),
+  updaterOpenRelease: (url) => ipcRenderer.invoke('updater:openRelease', url),
+  onUpdateProgress: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('updater:progress', handler)
+    return () => ipcRenderer.removeListener('updater:progress', handler)
+  },
+  onUpdateAvailable: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('updater:updateAvailable', handler)
+    return () => ipcRenderer.removeListener('updater:updateAvailable', handler)
+  },
+
+  // 媒体库同步与自动刮削
+  mediaSyncLibrary: () => ipcRenderer.invoke('mediaSync:syncLibrary'),
+  mediaSyncStartAutoScrape: (options) => ipcRenderer.invoke('mediaSync:startAutoScrape', options),
+  mediaSyncStopAutoScrape: () => ipcRenderer.invoke('mediaSync:stopAutoScrape'),
+  onMediaSyncScrapeProgress: (callback) => {
+    const handler = (_, data) => callback(data)
+    ipcRenderer.on('mediaSync:scrapeProgress', handler)
+    return () => ipcRenderer.removeListener('mediaSync:scrapeProgress', handler)
+  },
 })
+

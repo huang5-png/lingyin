@@ -90,13 +90,101 @@ const TABS = [
   { id: 'about', label: '关于' },
 ];
 
-const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab }) {
+const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, currentSettings, defaultTab, onOpenUpdateModal, showToast }) {
   const [activeTab, setActiveTab] = useState('basic');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [testAiStatus, setTestAiStatus] = useState('idle');
   const [testAiError, setTestAiError] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+  const [checkUpdateStatus, setCheckUpdateStatus] = useState('idle'); // 'idle' | 'checking' | 'latest' | 'has_update' | 'error'
+  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'scraping' | 'completed' | 'error'
+  const [scrapeProgress, setScrapeProgress] = useState(null);
+  const [syncMessage, setSyncMessage] = useState('');
+
+  useEffect(() => {
+    if (isOpen && window.electronAPI?.getAppVersion) {
+      window.electronAPI.getAppVersion().then((v) => {
+        if (v) setAppVersion(v);
+      }).catch(() => {});
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !window.electronAPI?.onMediaSyncScrapeProgress) return;
+    const cleanup = window.electronAPI.onMediaSyncScrapeProgress((data) => {
+      setScrapeProgress(data);
+    });
+    return () => {
+      cleanup?.();
+    };
+  }, [isOpen]);
+
+  const handleCheckUpdate = useCallback(async () => {
+    setCheckUpdateStatus('checking');
+    try {
+      const res = await window.electronAPI?.updaterCheck?.({
+        mirrorUrl: settings.githubMirror,
+      });
+      if (res?.hasUpdate) {
+        setCheckUpdateStatus('has_update');
+        onOpenUpdateModal?.(res);
+      } else if (res?.error) {
+        setCheckUpdateStatus('error');
+        showToast?.(res.error, 'warning');
+      } else {
+        setCheckUpdateStatus('latest');
+        showToast?.('已是最新版本', 'success');
+      }
+    } catch (err) {
+      setCheckUpdateStatus('error');
+      showToast?.(err?.message || '检查更新失败', 'error');
+    }
+  }, [settings.githubMirror, onOpenUpdateModal, showToast]);
+
+  const handleSyncLibrary = useCallback(async () => {
+    setSyncStatus('syncing');
+    setSyncMessage('正在扫描并同步媒体库音频文件与健康状态...');
+    try {
+      const res = await window.electronAPI?.mediaSyncLibrary?.();
+      setSyncStatus('completed');
+      setSyncMessage(`同步完成：检查了 ${res?.totalWorks || 0} 个作品，更新了 ${res?.updatedCount || 0} 个作品曲目索引${res?.missingCount ? `，${res.missingCount} 个目录不存在` : ''}`);
+      showToast?.('媒体库音频索引同步完成', 'success');
+    } catch (err) {
+      setSyncStatus('error');
+      setSyncMessage(`同步失败: ${err?.message || '未知错误'}`);
+    }
+  }, [showToast]);
+
+  const handleStartAutoScrape = useCallback(async () => {
+    setSyncStatus('scraping');
+    setScrapeProgress(null);
+    setSyncMessage('正在开始批量自动刮削 DLsite 元数据...');
+    try {
+      const res = await window.electronAPI?.mediaSyncStartAutoScrape?.();
+      setSyncStatus('completed');
+      if (res?.message) {
+        setSyncMessage(res.message);
+        showToast?.(res.message, 'info');
+      } else {
+        setSyncMessage(`刮削完成：成功补全 ${res?.updated || 0} 个作品，跳过/失败 ${res?.failed || 0} 个`);
+        showToast?.(`已成功补全 ${res?.updated || 0} 个作品元数据`, 'success');
+      }
+    } catch (err) {
+      setSyncStatus('error');
+      setSyncMessage(`刮削失败: ${err?.message || '未知错误'}`);
+    }
+  }, [showToast]);
+
+  const handleStopAutoScrape = useCallback(async () => {
+    try {
+      await window.electronAPI?.mediaSyncStopAutoScrape?.();
+      setSyncStatus('idle');
+      setSyncMessage('已终止刮削任务');
+      showToast?.('已终止刮削任务', 'info');
+    } catch (_) {}
+  }, [showToast]);
 
   const handleTestAiTranslate = useCallback(async () => {
     if (!settings.aiTranslateBaseUrl || !settings.aiTranslateApiKey || !settings.aiTranslateModel) {
@@ -338,6 +426,38 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
               value={settings.proxyUrl || ''}
               onChange={(e) => setSettings((p) => ({ ...p, proxyUrl: e.target.value }))}
             />
+          </div>
+        </div>
+      </div>
+      <div className="settings-section">
+        <div className="settings-section-title">软件更新</div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">启动时自动检查更新</div>
+            <div className="setting-desc">应用启动时在后台静默检查 GitHub 上的最新版本</div>
+          </div>
+          <div className="setting-control">
+            <ToggleSwitch
+              checked={settings.autoCheckUpdate !== false}
+              onChange={() => handleToggle('autoCheckUpdate')}
+            />
+          </div>
+        </div>
+        <div className="setting-item">
+          <div className="setting-info">
+            <div className="setting-label">GitHub 下载加速源</div>
+            <div className="setting-desc">为 GitHub Release 资源配置加速镜像，提升便携版下载速度</div>
+          </div>
+          <div className="setting-control">
+            <select
+              className="settings-select"
+              value={settings.githubMirror || 'https://ghfast.top/'}
+              onChange={(e) => setSettings((p) => ({ ...p, githubMirror: e.target.value }))}
+            >
+              <option value="https://ghfast.top/">ghfast.top (推荐加速)</option>
+              <option value="https://ghproxy.net/">ghproxy.net (备用镜像)</option>
+              <option value="direct">官方直连 (GitHub 直连)</option>
+            </select>
           </div>
         </div>
       </div>
@@ -1401,6 +1521,43 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
           ⚠️ 覆盖模式将删除所有现有数据，请谨慎操作
         </div>
       </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">媒体库维护与自动刮削</div>
+        <div className="setting-desc">增量补齐音频曲目索引，自动为缺少封面或声优标签的 RJ 音声刮削 DLsite 元数据</div>
+        <div className="media-maintenance-actions" style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
+          <button
+            className="secondary-btn data-action-btn"
+            onClick={handleSyncLibrary}
+            disabled={syncStatus === 'syncing' || syncStatus === 'scraping'}
+          >
+            {syncStatus === 'syncing' ? '正在同步索引...' : '增量同步曲目索引'}
+          </button>
+          <button
+            className="primary-btn data-action-btn"
+            onClick={handleStartAutoScrape}
+            disabled={syncStatus === 'syncing' || syncStatus === 'scraping'}
+          >
+            {syncStatus === 'scraping' ? '正在刮削中...' : '自动补全 DLsite 元数据'}
+          </button>
+          {syncStatus === 'scraping' && (
+            <button
+              className="secondary-btn data-action-btn"
+              onClick={handleStopAutoScrape}
+            >
+              终止刮削
+            </button>
+          )}
+        </div>
+        {syncMessage && (
+          <div className="setting-desc" style={{ marginTop: '10px', color: 'var(--accent-color, #c96442)', fontSize: '13px' }}>
+            {syncMessage}
+            {scrapeProgress && (
+              <span> ({scrapeProgress.current}/{scrapeProgress.total}: {scrapeProgress.rjCode} - {scrapeProgress.status})</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -1410,21 +1567,51 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
         <img src="/app-icon.png" alt="聆音" className="about-icon-img" />
       </div>
       <div className="about-name">聆音 Lingyin</div>
-      <div className="about-version">版本 1.1.0</div>
+      <div className="about-version">版本 {appVersion ? `v${appVersion}` : 'v1.50.0'}</div>
       <div className="about-desc">
         沉浸式 ASMR 音声播放器，
         支持波形可视化、歌词同步、作品管理等功能。
       </div>
       <div className="about-links">
-        <span className="about-link">GitHub</span>
+        <span
+          className="about-link"
+          style={{ cursor: 'pointer' }}
+          onClick={() => window.electronAPI?.openExternal?.('https://github.com/huang5-png/lingyin')}
+        >
+          GitHub
+        </span>
         <span className="about-dot">·</span>
-        <span className="about-link">反馈建议</span>
+        <span
+          className="about-link"
+          style={{ cursor: 'pointer' }}
+          onClick={() => window.electronAPI?.openExternal?.('https://github.com/huang5-png/lingyin/issues')}
+        >
+          反馈建议
+        </span>
       </div>
-      <div className="about-actions">
+      <div className="about-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '16px' }}>
+        <button
+          className="about-action-btn"
+          onClick={handleCheckUpdate}
+          disabled={checkUpdateStatus === 'checking'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          {checkUpdateStatus === 'checking'
+            ? '正在检查更新...'
+            : checkUpdateStatus === 'latest'
+            ? '已是最新版本 ✓'
+            : checkUpdateStatus === 'has_update'
+            ? '发现新版本，点击查看'
+            : '检查新版本'}
+        </button>
         <button
           className="about-action-btn"
           onClick={async () => {
-            await window.electronAPI.openLogFolder()
+            await window.electronAPI?.openLogFolder?.()
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

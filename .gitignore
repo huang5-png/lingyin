@@ -39,6 +39,7 @@ db.json
 
 # Misc
 *.bat
+*.lnk
 upload-release.js
 
 # Build outputs

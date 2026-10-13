@@ -52,6 +52,9 @@ export const DEFAULT_SETTINGS = {
   aiTranslateApiKey: '',
   aiTranslateModel: 'gpt-3.5-turbo',
   aiTranslateUseProxy: false,
+  autoCheckUpdate: true,
+  githubMirror: 'https://ghfast.top/',
+  autoSyncLibraryOnStart: true,
 }
 
 function loadSettings() {

@@ -1823,6 +1823,19 @@ const {
 - `db.json.settings` — 通过 `dbSaveSettings` 落盘，由 `useTheme` 在启动时异步回填（内存值优先）
 - 两者在 `commitSettings` 中同步写入，保持内容一致
 
+### 27. 应用内自动更新与媒体库维护调度
+
+#### 自动更新架构
+- 主进程模块：`electron/updater.js` 对接 GitHub Releases API，对比语义化版本号
+- 镜像加速源支持：默认支持 `ghfast.top`、`ghproxy.net` 与直连模式
+- 进度反馈：下载流经由 `updater:progress` 事件向渲染进程实时派发百分比与瞬时网速
+- 弹窗组件：`src/components/UpdateModal.jsx` 支持版本对比展示、下载控制与一键定位
+
+#### 媒体库增量维护与元数据刮削
+- 主进程模块：`electron/mediaSync.js`
+- 增量同步：比对本地目录曲目，发现新增/删除音频即时落盘 `work.audioFiles` 并自然排序
+- 自动刮削：对含有 RJ/VJ/BJ 码但缺少封面或 CV 标签的作品，自动批量请求 DLsite 刮削并写入 `userData/db.json`，请求间隔 1200ms 防反爬并支持随时中断
+
 ## 已知约定
 
 - 代码注释用中文

@@ -292,24 +292,26 @@ const ImmersiveView = memo(function ImmersiveView({
         <div className="immersive-lyrics-panel">
           {immersiveLyricCues.length > 0 && (
             <div className="immersive-lyrics-container" ref={immersiveLyricRef}>
-              {immersiveLyricCues.map((cue) => (
-                <div
-                  key={cue.realIndex}
-                  className={`immersive-lyric-line ${cue.isActive ? 'active' : ''}`}
-                  onClick={() => handleCueClick(cue.time)}
-                >
-                  {cue.text.split('\n').map((line, lineIdx) => (
-                    <div key={lineIdx}>{line}</div>
-                  ))}
-                  {hasTranslation && cue.translated && (
-                    <div className="immersive-lyric-translated">
-                      {cue.translated.split('\n').map((line, lineIdx) => (
-                        <div key={lineIdx}>{line}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+              <div className="immersive-lyrics-inner">
+                {immersiveLyricCues.map((cue) => (
+                  <div
+                    key={cue.realIndex}
+                    className={`immersive-lyric-line ${cue.isActive ? 'active' : ''}`}
+                    onClick={() => handleCueClick(cue.time)}
+                  >
+                    {cue.text.split('\n').map((line, lineIdx) => (
+                      <div key={lineIdx}>{line}</div>
+                    ))}
+                    {hasTranslation && cue.translated && (
+                      <div className="immersive-lyric-translated">
+                        {cue.translated.split('\n').map((line, lineIdx) => (
+                          <div key={lineIdx}>{line}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -7,6 +7,8 @@ const axios = require('axios')
 const { initDB, getAllWorks, addWork, updateWork, setWorksAudioFiles, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState, getSmartPlaylists, getSmartPlaylistItems, getDataStats, exportData, importData, getAllTags, getTagMetadata, setTagColor, renameTag, mergeTags, deleteTag, addTagToWork, removeTagFromWork, batchAddTags, batchRemoveTags } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
+const { checkForUpdates, downloadUpdate, cancelDownloadUpdate, showUpdateInFolder } = require('./updater')
+const { syncLibraryAudio, autoScrapeDLsite, stopAutoScrape } = require('./mediaSync')
 const logger = require('./logger')
 
 // 创建 keep-alive agent，复用连接，减少 ECONNRESET
@@ -463,6 +465,26 @@ app.whenReady().then(async () => {
   createWindow()
   createTray()
   registerGlobalShortcuts()
+
+  // 启动 6 秒后静默检查是否有新版本
+  setTimeout(async () => {
+    try {
+      const settings = await getSettings()
+      if (settings.autoCheckUpdate !== false) {
+        const proxy = await getProxyConfig()
+        const updateResult = await checkForUpdates({
+          currentVersion: app.getVersion(),
+          mirrorUrl: settings.githubMirror || '',
+          proxy,
+        })
+        if (updateResult && updateResult.hasUpdate && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('updater:updateAvailable', updateResult)
+        }
+      }
+    } catch (err) {
+      logger.warn('[Updater] 启动自动检查更新失败:', err.message)
+    }
+  }, 6000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -2057,3 +2079,85 @@ ipcMain.handle('miniPlayer:startDrag', () => {
   }
   return true
 })
+
+// ========== 应用版本与检查更新 ==========
+
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion()
+})
+
+ipcMain.handle('updater:check', async (_, options = {}) => {
+  const settings = await getSettings()
+  const proxy = await getProxyConfig()
+  const mirrorUrl = options.mirrorUrl || settings.githubMirror || ''
+  return await checkForUpdates({
+    currentVersion: app.getVersion(),
+    mirrorUrl,
+    proxy,
+    ...options,
+  })
+})
+
+ipcMain.handle('updater:download', async (_, options = {}) => {
+  const settings = await getSettings()
+  const proxy = await getProxyConfig()
+  const mirrorUrl = options.mirrorUrl || settings.githubMirror || ''
+  return await downloadUpdate(
+    {
+      mirrorUrl,
+      proxy,
+      ...options,
+    },
+    (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('updater:progress', progress)
+      }
+    }
+  )
+})
+
+ipcMain.handle('updater:cancelDownload', () => {
+  return cancelDownloadUpdate()
+})
+
+ipcMain.handle('updater:showInFolder', (_, filePath) => {
+  return showUpdateInFolder(filePath)
+})
+
+ipcMain.handle('updater:openRelease', (_, url) => {
+  if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+    shell.openExternal(url)
+    return true
+  }
+  return false
+})
+
+// ========== 媒体库增量同步与自动刮削 ==========
+
+ipcMain.handle('mediaSync:syncLibrary', async () => {
+  const works = await getAllWorks()
+  return await syncLibraryAudio(works, {
+    setWorksAudioFiles,
+    updateWork,
+  })
+})
+
+ipcMain.handle('mediaSync:startAutoScrape', async (_, options = {}) => {
+  const works = await getAllWorks()
+  return await autoScrapeDLsite({
+    works,
+    getWorkDetail,
+    updateWork,
+    intervalMs: options.intervalMs || 1200,
+    onProgress: (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('mediaSync:scrapeProgress', progress)
+      }
+    },
+  })
+})
+
+ipcMain.handle('mediaSync:stopAutoScrape', () => {
+  return stopAutoScrape()
+})
+

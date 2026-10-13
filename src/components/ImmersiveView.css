@@ -308,13 +308,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  /* 不能在这里用 justify-content: center：内容超高时居中会让顶部溢出到滚动区之外，
+     导致顶部歌词永远滚不到（表现为一进来就停在列表中段）。改由内层 margin: auto 居中 */
+  justify-content: flex-start;
   padding: 16px 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
   mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
+}
+
+/* 内容不足一屏时由 auto margin 吸收剩余空间实现垂直居中；
+   内容超出时 auto margin 归零，从第一行开始正常滚动 */
+.immersive-lyrics-inner {
+  margin: auto 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .immersive-lyrics-container::-webkit-scrollbar {
