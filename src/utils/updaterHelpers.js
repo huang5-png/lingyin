@@ -1,4 +1,20 @@
 /**
+ * 剥离 URL 中嵌套的一个或多个 GitHub 镜像加速前缀，还原为原始 URL
+ * 例如：https://ghfast.top/https://github.com/... -> https://github.com/...
+ * @param {string} url
+ * @returns {string}
+ */
+export function unwrapDownloadUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  let clean = url.trim()
+  const mirrorPrefixRegex = /^https?:\/\/[^\/]+\/(?=https?:\/\/)/i
+  while (mirrorPrefixRegex.test(clean)) {
+    clean = clean.replace(mirrorPrefixRegex, '')
+  }
+  return clean
+}
+
+/**
  * 比较两个版本号字符串（支持 v1.50.0 或 1.50.0 格式）
  * @param {string} v1
  * @param {string} v2
@@ -26,27 +42,40 @@ export function compareVersions(v1, v2) {
 }
 
 /**
- * 根据镜像配置拼接下载 URL
+ * 根据镜像配置拼接下载 URL，若已有旧镜像前缀会自动解包并重新绑定
  * @param {string} rawUrl
  * @param {string} mirrorPrefix
  * @returns {string}
  */
 export function resolveDownloadUrl(rawUrl, mirrorPrefix) {
   if (!rawUrl) return ''
+  const unwrapped = unwrapDownloadUrl(rawUrl)
   if (!mirrorPrefix || mirrorPrefix === 'direct' || mirrorPrefix === 'none') {
-    return rawUrl
+    return unwrapped
   }
   const cleanPrefix = mirrorPrefix.trim().replace(/\/+$/, '')
-  if (rawUrl.startsWith(cleanPrefix + '/') || rawUrl === cleanPrefix) {
-    return rawUrl
+  return `${cleanPrefix}/${unwrapped}`
+}
+
+/**
+ * 格式化更新包文件名（避免下载为纯数字如 1.50.0.zip 难以辨认）
+ * @param {string} assetName
+ * @param {string} version
+ * @returns {string}
+ */
+export function formatUpdateFileName(assetName, version) {
+  const v = version ? String(version).replace(/^[vV]/, '') : ''
+  if (!assetName || typeof assetName !== 'string') {
+    return v ? `聆音-v${v}-便携版.zip` : '聆音-便携版.zip'
   }
-  const knownMirrors = ['https://ghfast.top', 'https://ghproxy.net', 'https://gh-proxy.com']
-  for (const m of knownMirrors) {
-    if (rawUrl.startsWith(m + '/')) {
-      return rawUrl
-    }
+  const lower = assetName.toLowerCase()
+  if (lower.includes('lingyin') || assetName.includes('聆音')) {
+    return assetName
   }
-  return `${cleanPrefix}/${rawUrl}`
+  if (/^\d+\.\d+(\.\d+)?\.zip$/i.test(assetName)) {
+    return `聆音-v${v || assetName.replace(/\.zip$/i, '')}-便携版.zip`
+  }
+  return assetName
 }
 
 /**

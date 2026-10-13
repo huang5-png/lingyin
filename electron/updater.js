@@ -8,6 +8,25 @@ const DEFAULT_REPO = 'huang5-png/lingyin'
 const DEFAULT_API_URL = `https://api.github.com/repos/${DEFAULT_REPO}/releases/latest`
 
 let currentDownloadController = null
+let lastCheckCache = null
+let lastCheckTime = 0
+const CHECK_CACHE_TTL = 15000 // 15秒检查防抖缓存
+
+/**
+ * 剥离 URL 中嵌套的一个或多个 GitHub 镜像加速前缀，还原为原始 URL
+ * 例如：https://ghfast.top/https://github.com/... -> https://github.com/...
+ * @param {string} url
+ * @returns {string}
+ */
+function unwrapDownloadUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  let clean = url.trim()
+  const mirrorPrefixRegex = /^https?:\/\/[^\/]+\/(?=https?:\/\/)/i
+  while (mirrorPrefixRegex.test(clean)) {
+    clean = clean.replace(mirrorPrefixRegex, '')
+  }
+  return clean
+}
 
 /**
  * 比较两个版本号字符串（支持 v1.50.0 或 1.50.0 格式）
@@ -36,27 +55,40 @@ function compareVersions(v1, v2) {
 }
 
 /**
- * 根据镜像配置拼接下载 URL
+ * 根据镜像配置拼接下载 URL，若已有旧镜像前缀会自动解包并重新绑定
  * @param {string} rawUrl
  * @param {string} mirrorPrefix
  * @returns {string}
  */
 function resolveDownloadUrl(rawUrl, mirrorPrefix) {
   if (!rawUrl) return ''
+  const unwrapped = unwrapDownloadUrl(rawUrl)
   if (!mirrorPrefix || mirrorPrefix === 'direct' || mirrorPrefix === 'none') {
-    return rawUrl
+    return unwrapped
   }
   const cleanPrefix = mirrorPrefix.trim().replace(/\/+$/, '')
-  if (rawUrl.startsWith(cleanPrefix + '/') || rawUrl === cleanPrefix) {
-    return rawUrl
+  return `${cleanPrefix}/${unwrapped}`
+}
+
+/**
+ * 格式化更新包文件名（避免下载为纯数字如 1.50.0.zip 难以辨认）
+ * @param {string} assetName
+ * @param {string} version
+ * @returns {string}
+ */
+function formatUpdateFileName(assetName, version) {
+  const v = version ? String(version).replace(/^[vV]/, '') : ''
+  if (!assetName || typeof assetName !== 'string') {
+    return v ? `聆音-v${v}-便携版.zip` : '聆音-便携版.zip'
   }
-  const knownMirrors = ['https://ghfast.top', 'https://ghproxy.net', 'https://gh-proxy.com']
-  for (const m of knownMirrors) {
-    if (rawUrl.startsWith(m + '/')) {
-      return rawUrl
-    }
+  const lower = assetName.toLowerCase()
+  if (lower.includes('lingyin') || assetName.includes('聆音')) {
+    return assetName
   }
-  return `${cleanPrefix}/${rawUrl}`
+  if (/^\d+\.\d+(\.\d+)?\.zip$/i.test(assetName)) {
+    return `聆音-v${v || assetName.replace(/\.zip$/i, '')}-便携版.zip`
+  }
+  return assetName
 }
 
 /**
@@ -78,11 +110,21 @@ function formatBytes(bytes) {
  * @param {string} [options.currentVersion]
  * @param {string} [options.mirrorUrl]
  * @param {object} [options.proxy]
+ * @param {boolean} [options.forceRefresh]
  * @returns {Promise<object>}
  */
 async function checkForUpdates(options = {}) {
   const currentVersion = options.currentVersion || app.getVersion()
   const mirrorUrl = options.mirrorUrl || ''
+  const now = Date.now()
+
+  // 15 秒内存缓存防抖，避免触发 GitHub Rate Limit
+  if (!options.forceRefresh && lastCheckCache && (now - lastCheckTime < CHECK_CACHE_TTL)) {
+    logger.info('[Updater] 使用防抖缓存返回更新检查结果')
+    const cached = { ...lastCheckCache }
+    cached.downloadUrl = resolveDownloadUrl(cached.rawDownloadUrl, mirrorUrl)
+    return cached
+  }
 
   try {
     const axiosConfig = {
@@ -127,15 +169,16 @@ async function checkForUpdates(options = {}) {
 
     const rawDownloadUrl = targetAsset ? targetAsset.browser_download_url : release.html_url
     const finalDownloadUrl = resolveDownloadUrl(rawDownloadUrl, mirrorUrl)
+    const displayAssetName = formatUpdateFileName(targetAsset ? targetAsset.name : '', remoteVersion)
 
     logger.info('[Updater] 检查完成:', {
       currentVersion,
       remoteVersion,
       hasUpdate,
-      assetName: targetAsset ? targetAsset.name : 'none',
+      assetName: displayAssetName,
     })
 
-    return {
+    const result = {
       hasUpdate,
       currentVersion,
       remoteVersion,
@@ -145,17 +188,27 @@ async function checkForUpdates(options = {}) {
       publishedAt: release.published_at || '',
       releaseUrl: release.html_url || '',
       downloadUrl: finalDownloadUrl,
-      rawDownloadUrl,
-      assetName: targetAsset ? targetAsset.name : '',
+      rawDownloadUrl: unwrapDownloadUrl(rawDownloadUrl),
+      assetName: displayAssetName,
+      rawAssetName: targetAsset ? targetAsset.name : '',
       assetSize: targetAsset ? targetAsset.size : 0,
       assetSizeFormatted: targetAsset ? formatBytes(targetAsset.size) : '',
     }
+
+    lastCheckCache = result
+    lastCheckTime = now
+
+    return result
   } catch (err) {
     logger.warn('[Updater] 检查更新失败:', err.message)
+    let errorMsg = err.message || '网络连接超时或无法访问 GitHub'
+    if (err.response && err.response.status === 403) {
+      errorMsg = 'GitHub API 请求频次受限 (Rate Limit Exceeded)，请稍后重试'
+    }
     return {
       hasUpdate: false,
       currentVersion,
-      error: err.message || '网络连接超时或无法访问 GitHub',
+      error: errorMsg,
     }
   }
 }
@@ -340,8 +393,10 @@ function showUpdateInFolder(filePath) {
 }
 
 module.exports = {
+  unwrapDownloadUrl,
   compareVersions,
   resolveDownloadUrl,
+  formatUpdateFileName,
   formatBytes,
   checkForUpdates,
   downloadUpdate,

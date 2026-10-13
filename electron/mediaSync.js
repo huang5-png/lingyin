@@ -64,7 +64,7 @@ function scanAudioRecursive(rootDir, currentDir = rootDir) {
 }
 
 /**
- * 比较两份音频列表是否实质不同
+ * 比较两份音频列表是否实质不同（包含相对路径、文件名与绝对路径变动）
  */
 function isAudioListDifferent(listA, listB) {
   if (!Array.isArray(listA) || !Array.isArray(listB)) return true
@@ -74,6 +74,7 @@ function isAudioListDifferent(listA, listB) {
     const b = listB[i]
     if (!a || !b) return true
     if ((a.relativePath || a.name) !== (b.relativePath || b.name)) return true
+    if (a.path && b.path && a.path !== b.path) return true
   }
   return false
 }
@@ -183,7 +184,7 @@ async function autoScrapeDLsite(options = {}) {
 
   const eligibleWorks = works.filter((w) => needsScraping(w))
   if (eligibleWorks.length === 0) {
-    return { total: 0, updated: 0, failed: 0, message: '所有作品元数据均已完整' }
+    return { total: 0, updated: 0, failed: 0, aborted: false, message: '所有作品元数据均已完整' }
   }
 
   isScrapingRunning = true
@@ -198,6 +199,14 @@ async function autoScrapeDLsite(options = {}) {
   for (let i = 0; i < eligibleWorks.length; i++) {
     if (signal.aborted) {
       logger.info('[MediaSync] 刮削任务已被用户手动终止')
+      if (onProgress) {
+        onProgress({
+          current: i,
+          total: eligibleWorks.length,
+          status: 'aborted',
+          message: '任务已被终止',
+        })
+      }
       break
     }
 
@@ -230,6 +239,8 @@ async function autoScrapeDLsite(options = {}) {
         }
         if (!work.description && detail.description) patch.description = detail.description
         if ((!work.rating || work.rating === 0) && detail.rating) patch.rating = detail.rating
+        if (!work.release && detail.release) patch.release = detail.release
+        if (!work.price && detail.price) patch.price = detail.price
 
         await updateWork(work.id, patch)
         successCount++
@@ -277,6 +288,7 @@ async function autoScrapeDLsite(options = {}) {
     }
   }
 
+  const wasAborted = signal.aborted
   isScrapingRunning = false
   abortScrapingController = null
 
@@ -284,12 +296,14 @@ async function autoScrapeDLsite(options = {}) {
     total: eligibleWorks.length,
     success: successCount,
     failed: failedCount,
+    aborted: wasAborted,
   })
 
   return {
     total: eligibleWorks.length,
     updated: successCount,
     failed: failedCount,
+    aborted: wasAborted,
   }
 }
 

@@ -31,7 +31,7 @@ export function needsScraping(work) {
 }
 
 /**
- * 比较两份音频列表是否实质不同
+ * 比较两份音频列表是否实质不同（包含相对路径、文件名与绝对路径变动）
  * @param {Array} listA
  * @param {Array} listB
  * @returns {boolean}
@@ -44,6 +44,7 @@ export function isAudioListDifferent(listA, listB) {
     const b = listB[i]
     if (!a || !b) return true
     if ((a.relativePath || a.name) !== (b.relativePath || b.name)) return true
+    if (a.path && b.path && a.path !== b.path) return true
   }
   return false
 }

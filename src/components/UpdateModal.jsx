@@ -12,14 +12,17 @@ const UpdateModal = memo(function UpdateModal({
   const [progressData, setProgressData] = useState(null)
   const [savedFilePath, setSavedFilePath] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [currentMirror, setCurrentMirror] = useState(mirrorUrl || 'https://ghfast.top/')
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      setCurrentMirror(mirrorUrl || 'https://ghfast.top/')
+    } else {
       setDownloadStatus('idle')
       setProgressData(null)
       setErrorMessage('')
     }
-  }, [isOpen])
+  }, [isOpen, mirrorUrl])
 
   // 监听下载进度
   useEffect(() => {
@@ -51,7 +54,7 @@ const UpdateModal = memo(function UpdateModal({
       const res = await window.electronAPI.updaterDownload({
         downloadUrl: updateInfo.rawDownloadUrl || updateInfo.downloadUrl,
         fileName: updateInfo.assetName || `Lingyin-${updateInfo.remoteVersion}-便携版.zip`,
-        mirrorUrl,
+        mirrorUrl: currentMirror,
       })
 
       if (res?.success) {
@@ -71,7 +74,7 @@ const UpdateModal = memo(function UpdateModal({
         setErrorMessage(err?.message || '下载过程中网络中断')
       }
     }
-  }, [updateInfo, mirrorUrl, showToast])
+  }, [updateInfo, currentMirror, showToast])
 
   const handleCancelDownload = useCallback(async () => {
     try {
@@ -137,6 +140,19 @@ const UpdateModal = memo(function UpdateModal({
                 </div>
               )}
 
+              <div className="update-mirror-row">
+                <span className="mirror-label">下载加速源：</span>
+                <select
+                  className="update-mirror-select"
+                  value={currentMirror}
+                  onChange={(e) => setCurrentMirror(e.target.value)}
+                >
+                  <option value="https://ghfast.top/">ghfast.top (推荐加速)</option>
+                  <option value="https://ghproxy.net/">ghproxy.net (备用镜像)</option>
+                  <option value="direct">官方直连 (GitHub 直连)</option>
+                </select>
+              </div>
+
               <div className="update-notes-title">更新说明</div>
               <div className="update-notes-content">
                 <pre>{updateInfo.releaseNotes || '暂无详细更新说明'}</pre>
@@ -184,6 +200,18 @@ const UpdateModal = memo(function UpdateModal({
             <div className="update-error-view">
               <div className="error-title">下载失败</div>
               <div className="error-desc">{errorMessage}</div>
+              <div className="update-mirror-row" style={{ marginTop: '16px', justifyContent: 'center' }}>
+                <span className="mirror-label">更换加速源：</span>
+                <select
+                  className="update-mirror-select"
+                  value={currentMirror}
+                  onChange={(e) => setCurrentMirror(e.target.value)}
+                >
+                  <option value="https://ghfast.top/">ghfast.top (推荐加速)</option>
+                  <option value="https://ghproxy.net/">ghproxy.net (备用镜像)</option>
+                  <option value="direct">官方直连 (GitHub 直连)</option>
+                </select>
+              </div>
             </div>
           )}
         </div>

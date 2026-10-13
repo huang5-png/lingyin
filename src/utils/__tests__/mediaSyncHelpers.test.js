@@ -85,14 +85,20 @@ describe('isAudioListDifferent', () => {
   })
 
   it('曲目内容相同时判定为相同', () => {
-    const listA = [{ relativePath: '1.mp3' }, { relativePath: '2.mp3' }]
-    const listB = [{ relativePath: '1.mp3' }, { relativePath: '2.mp3' }]
+    const listA = [{ relativePath: '1.mp3', path: 'D:/audio/1.mp3' }, { relativePath: '2.mp3', path: 'D:/audio/2.mp3' }]
+    const listB = [{ relativePath: '1.mp3', path: 'D:/audio/1.mp3' }, { relativePath: '2.mp3', path: 'D:/audio/2.mp3' }]
     expect(isAudioListDifferent(listA, listB)).toBe(false)
   })
 
   it('曲目顺序或名称不同时判定为不同', () => {
     const listA = [{ relativePath: '1.mp3' }, { relativePath: '2.mp3' }]
     const listB = [{ relativePath: '2.mp3' }, { relativePath: '1.mp3' }]
+    expect(isAudioListDifferent(listA, listB)).toBe(true)
+  })
+
+  it('相对路径相同但绝对路径变更（如文件夹迁移或盘符变动）时判定为不同', () => {
+    const listA = [{ relativePath: 'track.mp3', path: 'D:/Audio/track.mp3' }]
+    const listB = [{ relativePath: 'track.mp3', path: 'E:/Audio/track.mp3' }]
     expect(isAudioListDifferent(listA, listB)).toBe(true)
   })
 })

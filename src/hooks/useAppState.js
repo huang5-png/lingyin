@@ -577,7 +577,7 @@ export function useAppState() {
     const timer = setTimeout(async () => {
       try {
         const res = await window.electronAPI?.mediaSyncLibrary?.()
-        if (res && res.updatedCount > 0) {
+        if (res && (res.updatedCount > 0 || res.missingCount > 0)) {
           loadWorks()
         }
       } catch (err) {

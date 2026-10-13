@@ -255,3 +255,41 @@
 .cancel-btn-full {
   width: 100%;
 }
+
+.update-mirror-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.mirror-label {
+  color: var(--text-secondary, #787570);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.update-mirror-select {
+  flex: 1;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e3df);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #201e1c);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.update-mirror-select:hover {
+  border-color: var(--accent-color, #c96442);
+}
+
+.update-mirror-select:focus {
+  border-color: var(--accent-color, #c96442);
+  box-shadow: 0 0 0 2px var(--accent-light, #fef4ee);
+}
+

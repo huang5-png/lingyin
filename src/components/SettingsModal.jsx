@@ -1583,7 +1583,7 @@ const SettingsModal = memo(function SettingsModal({ isOpen, onClose, onSave, cur
         <img src="/app-icon.png" alt="聆音" className="about-icon-img" />
       </div>
       <div className="about-name">聆音 Lingyin</div>
-      <div className="about-version">版本 {appVersion ? `v${appVersion}` : 'v1.50.0'}</div>
+      <div className="about-version">版本 {appVersion ? `v${appVersion}` : 'v1.50.1'}</div>
       <div className="about-desc">
         沉浸式 ASMR 音声播放器，
         支持波形可视化、歌词同步、作品管理等功能。
