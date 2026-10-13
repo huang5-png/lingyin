@@ -587,6 +587,28 @@ export function useAppState() {
     return () => clearTimeout(timer)
   }, [settings?.autoSyncLibraryOnStart, loadWorks])
 
+  // 当媒体库列表更新时，若当前选中的本地作品在 works 中有更新，联动同步最新作品属性（如封面、CV、标签、曲目数）
+  useEffect(() => {
+    if (!selectedWork || selectedWork.isOnline) return
+    const updated = works.find((w) => w.id === selectedWork.id)
+    if (!updated || updated === selectedWork) return
+
+    const hasMetaChanged =
+      updated.cover !== selectedWork.cover ||
+      updated.title !== selectedWork.title ||
+      updated.circle !== selectedWork.circle ||
+      updated.audioCount !== selectedWork.audioCount ||
+      updated.pathMissing !== selectedWork.pathMissing ||
+      updated.rjCode !== selectedWork.rjCode ||
+      updated.updatedAt !== selectedWork.updatedAt ||
+      JSON.stringify(updated.cvs || []) !== JSON.stringify(selectedWork.cvs || []) ||
+      JSON.stringify(updated.tags || []) !== JSON.stringify(selectedWork.tags || [])
+
+    if (hasMetaChanged) {
+      setSelectedWork(updated)
+    }
+  }, [works, selectedWork, setSelectedWork])
+
   // ===== 启动恢复播放 =====
   const restorePlayOnStart = useCallback(async () => {
     if (!settings?.restorePlayOnStart) return
