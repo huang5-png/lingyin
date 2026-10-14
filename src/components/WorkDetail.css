@@ -1410,3 +1410,76 @@
     height: 9px;
   }
 }
+
+/* 同系列横幅 */
+.work-franchise-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(201, 100, 66, 0.12) 0%, rgba(168, 85, 247, 0.08) 100%);
+  border: 1px solid rgba(201, 100, 66, 0.25);
+  border-radius: var(--radius-sm);
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.franchise-flag {
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.franchise-stem-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.franchise-part-text {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.franchise-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.franchise-nav-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.franchise-nav-btn:hover {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+/* CV 星盘微标按钮 */
+.cv-astral-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.75;
+  transition: all 0.2s ease;
+}
+
+.cv-astral-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+

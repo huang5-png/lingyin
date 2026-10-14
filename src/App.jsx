@@ -20,6 +20,7 @@ import LightboxModal from './components/LightboxModal'
 import SleepSanctuaryModal from './components/SleepSanctuaryModal'
 import SensoryStampModal from './components/SensoryStampModal'
 import ChroniclePosterModal from './components/ChroniclePosterModal'
+import SeiyuuProfileModal from './components/SeiyuuProfileModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
 import './App.css'
@@ -287,6 +288,37 @@ export default function App() {
     openPosterModal,
     closePosterModal,
     handleToggleChronicleTab,
+
+    // 音声台本与随行剧场
+    scriptFiles,
+    selectedScriptPath,
+    setSelectedScriptPath,
+    rawScriptText,
+    scriptLines,
+    loadingScript,
+    theaterMode,
+    setTheaterMode,
+    autoCruise,
+    setAutoCruise,
+    scriptFontSize,
+    setScriptFontSize,
+    activeScriptLineIndex,
+    isUserScrollingScript,
+    handleUserScrollScript,
+    handleResumeScriptSync,
+    handleImportScriptFile,
+    handleQuoteToStamp,
+    handleCopyScriptLine,
+    handleToggleScriptTab,
+
+    // 声优宇宙星盘
+    isSeiyuuProfileOpen,
+    activeSeiyuuCV,
+    seiyuuProfileData,
+    openSeiyuuProfile,
+    closeSeiyuuProfile,
+    handleStartSeiyuuRadio,
+    handleFilterThisCV,
   } = useAppState()
 
   const [isDragOver, setIsDragOver] = useState(false)
@@ -563,6 +595,28 @@ export default function App() {
     onOpenPosterModal: openPosterModal,
     onSeekToStamp: seekToStamp,
     onDeleteStamp: deleteStamp,
+    // 音声台本与随行剧场
+    scriptFiles,
+    selectedScriptPath,
+    onSelectScriptPath: setSelectedScriptPath,
+    scriptLines,
+    rawScriptText,
+    loadingScript,
+    theaterMode,
+    onToggleTheaterMode: () => setTheaterMode((prev) => !prev),
+    autoCruise,
+    onToggleAutoCruise: () => setAutoCruise((prev) => !prev),
+    scriptFontSize,
+    onChangeScriptFontSize: setScriptFontSize,
+    activeScriptLineIndex,
+    isUserScrollingScript,
+    onUserScrollScript: handleUserScrollScript,
+    onResumeScriptSync: handleResumeScriptSync,
+    onImportScript: handleImportScriptFile,
+    onQuoteToStamp: handleQuoteToStamp,
+    onCopyScriptLine: handleCopyScriptLine,
+    // 声优星盘与系列相关
+    onOpenSeiyuuProfile: openSeiyuuProfile,
   }), [
     audioFiles, currentAudio, currentCues, currentTime, handleSeek,
     subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
@@ -581,6 +635,11 @@ export default function App() {
     chapters, activeChapter, duration, seekToChapter, addCustomChapter, deleteCustomChapter,
     currentAudioElement,
     chronicleData, stamps, updateChronicle, openStampModal, openPosterModal, seekToStamp, deleteStamp,
+    scriptFiles, selectedScriptPath, setSelectedScriptPath, scriptLines, rawScriptText, loadingScript,
+    theaterMode, setTheaterMode, autoCruise, setAutoCruise, scriptFontSize, setScriptFontSize,
+    activeScriptLineIndex, isUserScrollingScript, handleUserScrollScript, handleResumeScriptSync,
+    handleImportScriptFile, handleQuoteToStamp, handleCopyScriptLine,
+    openSeiyuuProfile,
   ])
 
   return (
@@ -853,6 +912,7 @@ export default function App() {
             onOpenStampModal={openStampModal}
             onJumpNextPeak={jumpNextPeak}
             onToggleChronicleTab={handleToggleChronicleTab}
+            onToggleScriptTab={handleToggleScriptTab}
           />
         </div>
       )}
@@ -901,6 +961,8 @@ export default function App() {
           currentTingleIntensity={currentTingleIntensity}
           onOpenStampModal={openStampModal}
           onJumpNextPeak={jumpNextPeak}
+          scriptLines={scriptLines}
+          activeScriptLineIndex={activeScriptLineIndex}
         />
       )}
 
@@ -1006,6 +1068,15 @@ export default function App() {
         stamps={stamps}
         onClose={closePosterModal}
         onToast={showToast}
+      />
+
+      <SeiyuuProfileModal
+        isOpen={isSeiyuuProfileOpen}
+        onClose={closeSeiyuuProfile}
+        profileData={seiyuuProfileData}
+        onStartRadio={handleStartSeiyuuRadio}
+        onFilterThisCV={handleFilterThisCV}
+        onSelectWork={handleSelectWork}
       />
 
       {isDragOver && (

@@ -9,7 +9,7 @@
 export const SHORTCUT_GROUPS = [
   { id: 'playback', label: '播放控制', actions: ['playPause', 'prevTrack', 'nextTrack', 'seekBackward', 'seekForward', 'jumpNextPeak', 'toggleStampModal', 'toggleAbLoop'] },
   { id: 'volume', label: '音量与速度', actions: ['volumeUp', 'volumeDown', 'toggleMute', 'speedUp', 'speedDown'] },
-  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'openSleepSanctuary', 'toggleCompass', 'toggleChronicle', 'toggleQueue', 'openSettings'] },
+  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'toggleScript', 'openSleepSanctuary', 'toggleCompass', 'toggleChronicle', 'toggleQueue', 'openSettings'] },
   { id: 'nav', label: '导航', actions: ['globalSearch'] },
 ]
 
@@ -29,6 +29,7 @@ export const DEFAULT_SHORTCUTS = {
   speedDown: '',
   toggleImmersive: '',
   exitImmersive: 'Escape',
+  toggleScript: 'Alt+S',
   openSleepSanctuary: '',
   toggleCompass: '',
   toggleChronicle: '',
@@ -53,6 +54,7 @@ export const ACTION_LABELS = {
   speedDown: '减速播放',
   toggleImmersive: '切换沉浸式',
   exitImmersive: '退出沉浸式',
+  toggleScript: '切换台本剧场',
   openSleepSanctuary: '深眠助眠座舱',
   toggleCompass: '双耳声场罗盘',
   toggleChronicle: '音声手账面板',
@@ -77,6 +79,7 @@ export const ACTION_DESCS = {
   speedDown: '按档位降低播放速度',
   toggleImmersive: '进入或退出沉浸式播放模式',
   exitImmersive: '关闭沉浸式播放模式',
+  toggleScript: '切换右侧面板台本剧场或沉浸式随行提词抽屉',
   openSleepSanctuary: '打开 4-7-8 呼吸导引与 OLED 极夜纯黑睡眠屏保',
   toggleCompass: '切换右侧面板双耳声场罗盘标签',
   toggleChronicle: '切换右侧面板音声手账标签页',

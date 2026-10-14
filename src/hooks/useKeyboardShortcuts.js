@@ -24,6 +24,7 @@ export function useKeyboardShortcuts({
   onToggleChronicle,
   onJumpNextPeak,
   onOpenStampModal,
+  onToggleScript,
 }) {
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
@@ -207,6 +208,12 @@ export function useKeyboardShortcuts({
       return
     }
 
+    if (matchShortcut(e, shortcuts.toggleScript)) {
+      e.preventDefault()
+      onToggleScript?.()
+      return
+    }
+
     if (matchShortcut(e, shortcuts.globalSearch)) {
       e.preventDefault()
       setShowGlobalSearch?.((prev) => !prev)
@@ -234,6 +241,7 @@ export function useKeyboardShortcuts({
     onToggleChronicle,
     onJumpNextPeak,
     onOpenStampModal,
+    onToggleScript,
   ])
 
   useEffect(() => {

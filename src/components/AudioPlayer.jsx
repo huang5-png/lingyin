@@ -73,6 +73,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     onOpenStampModal,
     onJumpNextPeak,
     onToggleChronicleTab,
+    onToggleScriptTab,
   },
   ref,
 ) {
@@ -1009,6 +1010,17 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             )}
           </button>
         </div>
+        {onToggleScriptTab && (
+          <div className="script-control">
+            <button
+              className="ctrl-btn script-btn"
+              onClick={onToggleScriptTab}
+              title="切换台本剧场面板 (快捷键 Alt+S)"
+            >
+              <span className="script-ctrl-icon">📜</span>
+            </button>
+          </div>
+        )}
         <div className="ab-loop-control">
           <button
             className={`ctrl-btn ab-loop-btn ${abLoop.enabled ? 'active' : ''} ${!abLoop.enabled && abLoop.a != null ? 'pending' : ''}`}

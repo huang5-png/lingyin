@@ -30,6 +30,8 @@ import { useWorkGallery } from './useWorkGallery'
 import { useChapters } from './useChapters'
 import { useTingleHeatmap } from './useTingleHeatmap'
 import { useVoiceChronicle } from './useVoiceChronicle'
+import { useVoiceScript } from './useVoiceScript'
+import { useSeiyuuProfile } from './useSeiyuuProfile'
 
 export function useAppState() {
   const playerRef = useRef(null)
@@ -473,6 +475,59 @@ export function useAppState() {
     setRightTab((prev) => (prev === 'chronicle' ? 'details' : 'chronicle'))
   }, [setRightTab])
 
+  // ===== 音声台本与剧本随行 Hook =====
+  const {
+    scriptFiles,
+    selectedScriptPath,
+    setSelectedScriptPath,
+    rawText: rawScriptText,
+    scriptLines,
+    loadingScript,
+    theaterMode,
+    setTheaterMode,
+    autoCruise,
+    setAutoCruise,
+    fontSize: scriptFontSize,
+    setFontSize: setScriptFontSize,
+    activeLineIndex: activeScriptLineIndex,
+    isUserScrolling: isUserScrollingScript,
+    handleUserScroll: handleUserScrollScript,
+    handleResumeSync: handleResumeScriptSync,
+    handleImportScriptFile,
+    handleQuoteToStamp,
+    handleCopyLine: handleCopyScriptLine,
+  } = useVoiceScript({
+    work: playingWork || selectedWork,
+    currentAudio,
+    currentTime,
+    duration,
+    cues: currentCues,
+    onToast: showToast,
+    onOpenStampModal: openStampModal,
+  })
+
+  const handleToggleScriptTab = useCallback(() => {
+    setRightTab((prev) => (prev === 'script' ? 'details' : 'script'))
+  }, [setRightTab])
+
+  // ===== 声优宇宙星盘 Hook =====
+  const {
+    isOpen: isSeiyuuProfileOpen,
+    activeCV: activeSeiyuuCV,
+    profileData: seiyuuProfileData,
+    openSeiyuuProfile,
+    closeSeiyuuProfile,
+    handleStartRadio: handleStartSeiyuuRadio,
+    handleFilterThisCV,
+  } = useSeiyuuProfile({
+    allWorks: works,
+    progressHistory,
+    stamps,
+    onPlayPlaylist: handlePlayPlaylist,
+    onFilterCV: handleFilterCV,
+    onToast: showToast,
+  })
+
   // ===== 上次播放状态保存（用于启动恢复） =====
   const lastPlaySaveTimerRef = useRef(null)
 
@@ -865,6 +920,7 @@ export function useAppState() {
     onToggleChronicle: handleToggleChronicleTab,
     onJumpNextPeak: jumpNextPeak,
     onOpenStampModal: openStampModal,
+    onToggleScript: handleToggleScriptTab,
   })
 
   // ===== 字幕刷新 Hook =====
@@ -1271,5 +1327,36 @@ export function useAppState() {
     openPosterModal,
     closePosterModal,
     handleToggleChronicleTab,
+
+    // 音声台本与随行剧场
+    scriptFiles,
+    selectedScriptPath,
+    setSelectedScriptPath,
+    rawScriptText,
+    scriptLines,
+    loadingScript,
+    theaterMode,
+    setTheaterMode,
+    autoCruise,
+    setAutoCruise,
+    scriptFontSize,
+    setScriptFontSize,
+    activeScriptLineIndex,
+    isUserScrollingScript,
+    handleUserScrollScript,
+    handleResumeScriptSync,
+    handleImportScriptFile,
+    handleQuoteToStamp,
+    handleCopyScriptLine,
+    handleToggleScriptTab,
+
+    // 声优宇宙星盘
+    isSeiyuuProfileOpen,
+    activeSeiyuuCV,
+    seiyuuProfileData,
+    openSeiyuuProfile,
+    closeSeiyuuProfile,
+    handleStartSeiyuuRadio,
+    handleFilterThisCV,
   }
 }

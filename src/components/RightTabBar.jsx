@@ -5,6 +5,8 @@ import WorkGallery from './WorkGallery'
 import ChapterList from './ChapterList'
 import SoundstageCompass from './SoundstageCompass'
 import VoiceChroniclePanel from './VoiceChroniclePanel'
+import VoiceScriptPanel from './VoiceScriptPanel'
+import { detectFranchiseSeries } from '../utils/seriesMatcher'
 import StateView from './StateView'
 import './RightTabBar.css'
 
@@ -82,6 +84,10 @@ const RelatedPanel = memo(function RelatedPanel({ work, allWorks, onSelectWork, 
       .slice(0, 5)
   }, [relatedWorks, work])
 
+  const franchise = useMemo(() => {
+    return detectFranchiseSeries(work, allWorks)
+  }, [work, allWorks])
+
   if (!work) {
     return (
       <div className="empty-panel">
@@ -90,7 +96,7 @@ const RelatedPanel = memo(function RelatedPanel({ work, allWorks, onSelectWork, 
     )
   }
 
-  if (relatedWorks.length === 0) {
+  if (relatedWorks.length === 0 && !franchise) {
     return (
       <div className="related-panel">
         <StateView type="empty" iconType="search" size="sm" title="暂无相关作品" description="尝试为作品添加更多标签和CV信息" />
@@ -100,6 +106,30 @@ const RelatedPanel = memo(function RelatedPanel({ work, allWorks, onSelectWork, 
 
   return (
     <div className="related-panel">
+      {franchise && (
+        <div className="related-section franchise-section">
+          <h4 className="related-section-title">
+            <span className="related-section-icon">📚</span>
+            同系列脉络 · {franchise.franchiseName}
+            <span className="related-section-count">{franchise.totalParts} 部</span>
+          </h4>
+          <div className="franchise-series-strip">
+            {franchise.seriesList.map((item) => (
+              <div
+                key={item.work.id}
+                className={`franchise-part-chip ${item.isCurrent ? 'active' : ''}`}
+                onClick={() => !item.isCurrent && onSelectWork?.(item.work)}
+                title={item.work.title || item.work.folderName}
+              >
+                <span className="part-num">第 {item.index} 部</span>
+                <span className="part-title">{item.work.title || item.work.folderName}</span>
+                {item.isCurrent && <span className="part-current-badge">正在收听</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="related-section">
         <h4 className="related-section-title">
           <span className="related-section-icon">✨</span>
@@ -488,10 +518,31 @@ const RightTabBar = memo(function RightTabBar({
   onOpenPosterModal,
   onSeekToStamp,
   onDeleteStamp,
+  // 台本剧场相关
+  scriptFiles = [],
+  selectedScriptPath,
+  onSelectScriptPath,
+  scriptLines = [],
+  rawScriptText = '',
+  loadingScript = false,
+  theaterMode = true,
+  onToggleTheaterMode,
+  autoCruise = true,
+  onToggleAutoCruise,
+  scriptFontSize = 14,
+  onChangeScriptFontSize,
+  activeScriptLineIndex = -1,
+  isUserScrollingScript = false,
+  onUserScrollScript,
+  onResumeScriptSync,
+  onImportScript,
+  onQuoteToStamp,
+  onCopyScriptLine,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
     { id: 'subtitles', label: 'Subtitles' },
+    { id: 'script', label: `Script${scriptFiles && scriptFiles.length > 0 ? ` (${scriptFiles.length})` : ''}` },
     { id: 'chapters', label: `Chapters${chapters && chapters.length > 0 ? ` (${chapters.length})` : ''}` },
     { id: 'compass', label: 'Compass' },
     { id: 'gallery', label: `Gallery${galleryImages && galleryImages.length > 0 ? ` (${galleryImages.length})` : ''}` },
@@ -591,6 +642,32 @@ const RightTabBar = memo(function RightTabBar({
                 <p>选择一个作品查看字幕</p>
               </div>
             )}
+          </div>
+        )}
+        {activeTab === 'script' && (
+          <div className="script-tab-panel" style={{ height: '100%', overflow: 'hidden' }}>
+            <VoiceScriptPanel
+              work={work}
+              scriptFiles={scriptFiles}
+              selectedScriptPath={selectedScriptPath}
+              onSelectScriptPath={onSelectScriptPath}
+              scriptLines={scriptLines}
+              rawText={rawScriptText}
+              loadingScript={loadingScript}
+              theaterMode={theaterMode}
+              onToggleTheaterMode={onToggleTheaterMode}
+              autoCruise={autoCruise}
+              onToggleAutoCruise={onToggleAutoCruise}
+              fontSize={scriptFontSize}
+              onChangeFontSize={onChangeScriptFontSize}
+              activeLineIndex={activeScriptLineIndex}
+              isUserScrolling={isUserScrollingScript}
+              onUserScroll={onUserScrollScript}
+              onResumeSync={onResumeScriptSync}
+              onImportScript={onImportScript}
+              onQuoteToStamp={onQuoteToStamp}
+              onCopyLine={onCopyScriptLine}
+            />
           </div>
         )}
         {activeTab === 'chapters' && (

@@ -1,0 +1,403 @@
+.seiyuu-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 14, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-index-modal, 1000);
+  animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.seiyuu-modal-dialog {
+  width: 90%;
+  max-width: 760px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(201, 100, 66, 0.15);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.seiyuu-astral-glow {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(201, 100, 66, 0.2) 0%, rgba(168, 85, 247, 0.1) 50%, transparent 70%);
+  pointer-events: none;
+  filter: blur(30px);
+}
+
+/* 头部 */
+.seiyuu-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 14px 24px;
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+  z-index: 1;
+}
+
+.seiyuu-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.seiyuu-avatar-icon {
+  font-size: 28px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(201, 100, 66, 0.12);
+}
+
+.seiyuu-role-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+}
+
+.seiyuu-name-title {
+  margin: 2px 0 0 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+}
+
+.seiyuu-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.seiyuu-close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 统计卡片网格 */
+.seiyuu-stats-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.seiyuu-stat-card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.seiyuu-stat-card.card-gold {
+  border-color: rgba(201, 100, 66, 0.35);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(201, 100, 66, 0.08) 100%);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stat-val-huge {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--accent-primary);
+}
+
+.stat-val {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+}
+
+.stat-unit {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--text-tertiary);
+}
+
+.stat-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+/* 主体内容 */
+.seiyuu-body-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 18px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.seiyuu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.seiyuu-section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-icon {
+  font-size: 14px;
+}
+
+/* 声线风味星云 */
+.seiyuu-flavor-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.flavor-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.flavor-tag-chip.rank-hero {
+  background: rgba(201, 100, 66, 0.12);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.flavor-tag-chip.rank-featured {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.flavor-pct {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  opacity: 0.7;
+}
+
+/* 社团列表 */
+.seiyuu-circles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seiyuu-circle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.circle-name-text {
+  width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.circle-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.circle-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), #ec4899);
+  border-radius: 3px;
+}
+
+.circle-count-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  width: 32px;
+  text-align: right;
+}
+
+/* 代表作精选网格 */
+.seiyuu-works-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seiyuu-work-mini-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.seiyuu-work-mini-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  transform: translateX(2px);
+}
+
+.work-mini-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.work-mini-thumb-fallback {
+  width: 44px;
+  height: 44px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.work-mini-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.work-mini-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work-mini-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.work-mini-rj {
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+}
+
+/* 底部操作 */
+.seiyuu-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.seiyuu-filter-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.seiyuu-filter-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.seiyuu-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seiyuu-radio-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.radio-wave-icon {
+  font-size: 13px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

@@ -55,9 +55,15 @@ const ImmersiveView = memo(function ImmersiveView({
   currentTingleIntensity = 0,
   onOpenStampModal,
   onJumpNextPeak,
+  // 台本剧场提词相关
+  scriptLines = [],
+  activeScriptLineIndex = -1,
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
+  const teleprompterScrollRef = useRef(null)
+  const activeTeleprompterRef = useRef(null)
+  const [showTeleprompterDrawer, setShowTeleprompterDrawer] = useState(false)
   const hideTimerRef = useRef(null)
   const [showControls, setShowControls] = useState(true)
   const [showVolumeSlider, setShowVolumeSlider] = useState(false)
@@ -230,6 +236,12 @@ const ImmersiveView = memo(function ImmersiveView({
     setAbState(playerRef.current?.getAbLoop?.() || { a: null, b: null, enabled: false })
     resetHideTimer()
   }, [playerRef, resetHideTimer])
+
+  // 随音频进度平滑推进沉浸式随行提词抽屉
+  useEffect(() => {
+    if (!showTeleprompterDrawer || activeScriptLineIndex < 0 || !activeTeleprompterRef.current) return
+    activeTeleprompterRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [activeScriptLineIndex, showTeleprompterDrawer])
 
   const abLoopTitle = abState.enabled
     ? `A-B 循环中：${formatTime(abState.a)} - ${formatTime(abState.b)}，点击关闭`
@@ -597,6 +609,16 @@ const ImmersiveView = memo(function ImmersiveView({
                 )}
               </button>
 
+              {scriptLines && scriptLines.length > 0 && (
+                <button
+                  className={`immersive-ctrl-btn immersive-ctrl-small ${showTeleprompterDrawer ? 'active' : ''}`}
+                  onClick={() => setShowTeleprompterDrawer(!showTeleprompterDrawer)}
+                  title={showTeleprompterDrawer ? '隐藏随行台本提词器' : '展开随行台本提词器'}
+                >
+                  <span className="immersive-script-icon">📜</span>
+                </button>
+              )}
+
               <button
                 className="immersive-ctrl-btn immersive-ctrl-small"
                 onClick={onOpenSleepSanctuary}
@@ -643,6 +665,51 @@ const ImmersiveView = memo(function ImmersiveView({
                   <img src={img.url} alt="" loading="lazy" />
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 沉浸式半透明随行台本抽屉 */}
+        {showTeleprompterDrawer && scriptLines && scriptLines.length > 0 && (
+          <div className="immersive-teleprompter-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="teleprompter-header">
+              <span className="teleprompter-title">📜 随行台本剧场</span>
+              <button
+                className="teleprompter-close-btn"
+                onClick={() => setShowTeleprompterDrawer(false)}
+                title="关闭随行台本"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="teleprompter-scroll" ref={teleprompterScrollRef}>
+              {scriptLines.map((line, idx) => {
+                const isActive = idx === activeScriptLineIndex
+                if (line.type === 'blank') return <div key={line.id} className="teleprompter-line-blank" />
+                return (
+                  <div
+                    key={line.id}
+                    ref={isActive ? activeTeleprompterRef : null}
+                    className={`teleprompter-line line-${line.type} ${isActive ? 'is-active' : ''}`}
+                  >
+                    {line.type === 'dialogue' && (
+                      <div className="teleprompter-dialogue">
+                        <span className="teleprompter-speaker">{line.speaker}:</span>
+                        <span className="teleprompter-text">{line.text}</span>
+                      </div>
+                    )}
+                    {line.type === 'action' && (
+                      <div className="teleprompter-action">（{line.content}）</div>
+                    )}
+                    {line.type === 'sound_effect' && (
+                      <div className="teleprompter-se">[SE: {line.content}]</div>
+                    )}
+                    {line.type === 'narration' && (
+                      <div className="teleprompter-narration">{line.text}</div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

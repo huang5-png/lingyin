@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect, memo } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
+import { detectFranchiseSeries } from '@/utils/seriesMatcher'
 import StateView from './StateView'
 
 // 曲目骨架屏组件
@@ -15,7 +16,7 @@ const TrackSkeletonItem = memo(function TrackSkeletonItem({ hasDuration = true }
   )
 })
 
-const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onToggleTagFilter, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup, onAddTag, onRemoveTag, allTags, getTagColor }) {
+const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onToggleTagFilter, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup, onAddTag, onRemoveTag, allTags, getTagColor, allWorks, onSelectWork, onOpenSeiyuuProfile }) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
@@ -41,6 +42,10 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
     if (!work || !audioFiles || audioFiles.length === 0) return null
     return buildDirectoryTree(audioFiles, work.folderPath || work.title || '')
   }, [work, audioFiles])
+
+  const franchise = useMemo(() => {
+    return detectFranchiseSeries(work, allWorks)
+  }, [work, allWorks])
 
   const currentDir = useMemo(() => {
     if (!directoryTree) return null
@@ -222,6 +227,33 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
               {work.rating > 0 && <span className="rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating.toFixed(2)}</span>}
               {work.circle && <span className="circle clickable" onClick={() => onCircleClick?.(getTranslatedText?.(work.circle) || work.circle)} title="点击筛选此社团">社团: {getTranslatedText?.(work.circle) || work.circle}</span>}
             </div>
+            {franchise && (
+              <div className="work-franchise-bar">
+                <span className="franchise-flag">📚 同系列</span>
+                <span className="franchise-stem-name">{franchise.franchiseName}</span>
+                <span className="franchise-part-text">第 {franchise.currentPartIndex} 部 / 共 {franchise.totalParts} 部</span>
+                <div className="franchise-nav-actions">
+                  {franchise.prevWork && (
+                    <button
+                      className="franchise-nav-btn"
+                      onClick={() => onSelectWork?.(franchise.prevWork)}
+                      title={`上一部：${franchise.prevWork.title || franchise.prevWork.folderName}`}
+                    >
+                      ⏮️ 上一部
+                    </button>
+                  )}
+                  {franchise.nextWork && (
+                    <button
+                      className="franchise-nav-btn"
+                      onClick={() => onSelectWork?.(franchise.nextWork)}
+                      title={`下一部：${franchise.nextWork.title || franchise.nextWork.folderName}`}
+                    >
+                      ⏭️ 下一部
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {work.cvs && work.cvs.length > 0 && (
               <div className="work-cvs">
                 <span className="label">CV:</span>
@@ -230,8 +262,21 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
                     key={i}
                     className={`cv-tag ${activeCV === cv ? 'active' : ''}`}
                     onClick={(e) => { e.stopPropagation(); onFilterCV?.(activeCV === cv ? '' : cv) }}
+                    title="点击筛选此 CV，点击星标开启声优星盘"
                   >
                     {getTranslatedText?.(cv) || cv}
+                    {onOpenSeiyuuProfile && (
+                      <button
+                        className="cv-astral-btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onOpenSeiyuuProfile(cv)
+                        }}
+                        title={`查看「${cv}」声优星盘档案`}
+                      >
+                        🌟
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>

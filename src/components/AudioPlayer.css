@@ -1528,5 +1528,17 @@
   filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.5));
 }
 
+.script-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
+.ctrl-btn.script-btn {
+  color: #38bdf8;
+}
 
+.ctrl-btn.script-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.5));
+}
