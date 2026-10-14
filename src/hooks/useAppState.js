@@ -246,12 +246,6 @@ export function useAppState() {
     sceneryFilteredWorks,
   } = useSoundscape(filteredWorks)
 
-  const currentWorkScenery = useMemo(() => {
-    const target = playingWork || selectedWork
-    if (!target) return null
-    return detectWorkScenery(target)
-  }, [playingWork, selectedWork])
-
   // ===== 批量选择 Hook =====
   const {
     bulkMode,
@@ -392,6 +386,12 @@ export function useAppState() {
   })
 
   const hasTranslation = useMemo(() => currentCues.some(cue => cue.translated && cue.translated.trim()), [currentCues])
+
+  const currentWorkScenery = useMemo(() => {
+    const target = playingWork || selectedWork
+    if (!target) return null
+    return detectWorkScenery(target)
+  }, [playingWork, selectedWork])
 
   // ===== 作品画集管理 Hook =====
   const {
