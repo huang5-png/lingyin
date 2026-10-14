@@ -1542,3 +1542,35 @@
   background: rgba(56, 189, 248, 0.15);
   filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.5));
 }
+
+.bedside-clock-control,
+.dreamscape-recap-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ctrl-btn.bedside-clock-btn {
+  color: #a78bfa;
+}
+
+.ctrl-btn.bedside-clock-btn:hover {
+  background: rgba(167, 139, 250, 0.15);
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5));
+  transform: translateY(-1px);
+}
+
+.ctrl-btn.dreamscape-recap-btn {
+  color: #f59e0b;
+  animation: dreamscape-beacon 2.5s ease-in-out infinite;
+}
+
+@keyframes dreamscape-beacon {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.3)); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.8)); }
+}
+
+.ctrl-btn.dreamscape-recap-btn:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+

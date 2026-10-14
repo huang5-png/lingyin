@@ -103,6 +103,22 @@ const LibraryLayout = memo(function LibraryLayout({
   onDeleteCustomChapter,
   // 双耳声场相关
   audioElement = null,
+  // 梦境画卷与声景透镜
+  hasMorningGreeting = false,
+  onOpenDreamscape = null,
+  activeScenery = null,
+  onSelectScenery = null,
+  sceneryCounts = null,
+  // 声态异构变体相关
+  variantAnalysis = null,
+  collapseVariants = true,
+  onToggleCollapseVariants = null,
+  onHotSwapVariant = null,
+  // 声优星盘与标签
+  onOpenSeiyuuProfile = null,
+  onAddTag = null,
+  onRemoveTag = null,
+  allTags = null,
 }) {
   const hasDetail = !!selectedWork
   const shouldHideSidebar = settings.autoHideSidebar && hasDetail
@@ -160,6 +176,11 @@ const LibraryLayout = memo(function LibraryLayout({
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortChange={onSortChange}
+          hasMorningGreeting={hasMorningGreeting}
+          onOpenDreamscape={onOpenDreamscape}
+          activeScenery={activeScenery}
+          onSelectScenery={onSelectScenery}
+          sceneryCounts={sceneryCounts}
         />
       </div>
       {selectedWork && (
@@ -201,6 +222,17 @@ const LibraryLayout = memo(function LibraryLayout({
                 onToggleFavorite={onToggleFavorite}
                 folderGroups={folderGroups}
                 onSetWorkGroup={onSetWorkGroup}
+                allWorks={allWorks}
+                onSelectWork={onSelectWork}
+                onOpenSeiyuuProfile={onOpenSeiyuuProfile}
+                onAddTag={onAddTag}
+                onRemoveTag={onRemoveTag}
+                allTags={allTags}
+                variantAnalysis={variantAnalysis}
+                collapseVariants={collapseVariants}
+                onToggleCollapseVariants={onToggleCollapseVariants}
+                onHotSwapVariant={onHotSwapVariant}
+                onSelectScenery={onSelectScenery}
               />
             </div>
             <div className="content-splitter" onMouseDown={onSplitterMouseDown} />

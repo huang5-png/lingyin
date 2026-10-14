@@ -7,9 +7,9 @@
  * 分组未覆盖的动作会由 buildActionGroups 归入「其他」，不会丢失。
  */
 export const SHORTCUT_GROUPS = [
-  { id: 'playback', label: '播放控制', actions: ['playPause', 'prevTrack', 'nextTrack', 'seekBackward', 'seekForward', 'jumpNextPeak', 'toggleStampModal', 'toggleAbLoop'] },
+  { id: 'playback', label: '播放控制', actions: ['playPause', 'prevTrack', 'nextTrack', 'hotSwapVariant', 'seekBackward', 'seekForward', 'jumpNextPeak', 'toggleStampModal', 'toggleAbLoop'] },
   { id: 'volume', label: '音量与速度', actions: ['volumeUp', 'volumeDown', 'toggleMute', 'speedUp', 'speedDown'] },
-  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'toggleScript', 'openSleepSanctuary', 'toggleCompass', 'toggleChronicle', 'toggleQueue', 'openSettings'] },
+  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'toggleBedsideClock', 'openDreamscape', 'toggleScript', 'openSleepSanctuary', 'toggleCompass', 'toggleChronicle', 'toggleQueue', 'openSettings'] },
   { id: 'nav', label: '导航', actions: ['globalSearch'] },
 ]
 
@@ -17,6 +17,7 @@ export const DEFAULT_SHORTCUTS = {
   playPause: 'Space',
   prevTrack: '',
   nextTrack: '',
+  hotSwapVariant: 'Alt+V',
   seekBackward: 'ArrowLeft',
   seekForward: 'ArrowRight',
   jumpNextPeak: '',
@@ -29,6 +30,8 @@ export const DEFAULT_SHORTCUTS = {
   speedDown: '',
   toggleImmersive: '',
   exitImmersive: 'Escape',
+  toggleBedsideClock: 'Alt+B',
+  openDreamscape: 'Alt+D',
   toggleScript: 'Alt+S',
   openSleepSanctuary: '',
   toggleCompass: '',
@@ -42,6 +45,7 @@ export const ACTION_LABELS = {
   playPause: '播放/暂停',
   prevTrack: '上一曲',
   nextTrack: '下一曲',
+  hotSwapVariant: '声态变体热切',
   seekBackward: '快退',
   seekForward: '快进',
   jumpNextPeak: '跃迁下一高能点',
@@ -54,6 +58,8 @@ export const ACTION_LABELS = {
   speedDown: '减速播放',
   toggleImmersive: '切换沉浸式',
   exitImmersive: '退出沉浸式',
+  toggleBedsideClock: '床头夜钟座舱',
+  openDreamscape: '晨光梦境画卷',
   toggleScript: '切换台本剧场',
   openSleepSanctuary: '深眠助眠座舱',
   toggleCompass: '双耳声场罗盘',
@@ -67,6 +73,7 @@ export const ACTION_DESCS = {
   playPause: '切换播放与暂停状态',
   prevTrack: '跳转到上一首曲目',
   nextTrack: '跳转到下一首曲目',
+  hotSwapVariant: '在当前音频的多录音/混音变体间无缝镜像热切',
   seekBackward: '向后快退指定秒数',
   seekForward: '向前快进指定秒数',
   jumpNextPeak: '飞跃到音频的下一个 ASMR 酥麻高能峰值',
@@ -79,6 +86,8 @@ export const ACTION_DESCS = {
   speedDown: '按档位降低播放速度',
   toggleImmersive: '进入或退出沉浸式播放模式',
   exitImmersive: '关闭沉浸式播放模式',
+  toggleBedsideClock: '开启或关闭极夜床头微光助眠夜钟',
+  openDreamscape: '打开昨夜入眠回忆录与晨光拂晓手签画卷',
   toggleScript: '切换右侧面板台本剧场或沉浸式随行提词抽屉',
   openSleepSanctuary: '打开 4-7-8 呼吸导引与 OLED 极夜纯黑睡眠屏保',
   toggleCompass: '切换右侧面板双耳声场罗盘标签',

@@ -3,6 +3,7 @@ import { findCurrentCue, formatTime } from '../utils/subtitleParser'
 import { PLAYBACK_RATES } from '../utils/playback'
 import SpectrumVisualizer from './SpectrumVisualizer'
 import SoundstageCompass from './SoundstageCompass'
+import TrackVariantCapsule from './TrackVariantCapsule'
 import './ImmersiveView.css'
 
 function throttle(fn, delay) {
@@ -58,6 +59,14 @@ const ImmersiveView = memo(function ImmersiveView({
   // 台本剧场提词相关
   scriptLines = [],
   activeScriptLineIndex = -1,
+  // 声态异构变体相关
+  hasTrackVariants = false,
+  currentTrackVariant = null,
+  siblingTrackVariants = [],
+  onHotSwapVariant = null,
+  onOpenVariantCompare = null,
+  // 床头夜钟
+  onOpenBedsideClock = null,
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
@@ -311,6 +320,23 @@ const ImmersiveView = memo(function ImmersiveView({
           <div className="immersive-top-sub">{work.circle || ''}</div>
         </div>
         <div className="immersive-top-actions">
+          {hasTrackVariants && currentTrackVariant && (
+            <TrackVariantCapsule
+              currentVariant={currentTrackVariant}
+              siblingVariants={siblingTrackVariants}
+              onHotSwap={onHotSwapVariant}
+              onOpenCompare={onOpenVariantCompare}
+            />
+          )}
+          {onOpenBedsideClock && (
+            <button
+              className="immersive-icon-btn"
+              onClick={onOpenBedsideClock}
+              title="极夜床头微光助眠夜钟 (快捷键 Alt+B)"
+            >
+              <span style={{ fontSize: '14px' }}>🛌</span>
+            </button>
+          )}
           {currentCues.length > 0 && onToggleTranslate && (
             <button
               className={`immersive-icon-btn ${isTranslating ? 'translating' : ''} ${hasTranslation ? 'has-translation' : ''}`}

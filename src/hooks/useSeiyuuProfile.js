@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { analyzeSeiyuuProfile, buildSeiyuuRadioQueue } from '../utils/seiyuuAnalyzer'
 
 export function useSeiyuuProfile({
@@ -11,6 +11,21 @@ export function useSeiyuuProfile({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeCV, setActiveCV] = useState(null)
+  const [historyRecords, setHistoryRecords] = useState(Array.isArray(progressHistory) ? progressHistory : [])
+
+  useEffect(() => {
+    if (Array.isArray(progressHistory) && progressHistory.length > 0) {
+      setHistoryRecords(progressHistory)
+      return
+    }
+    if (isOpen && window.electronAPI?.dbGetAllHistory) {
+      window.electronAPI.dbGetAllHistory().then((res) => {
+        if (Array.isArray(res)) {
+          setHistoryRecords(res)
+        }
+      }).catch(() => {})
+    }
+  }, [isOpen, progressHistory])
 
   const openSeiyuuProfile = useCallback((cvName) => {
     if (!cvName || typeof cvName !== 'string') return
@@ -27,8 +42,8 @@ export function useSeiyuuProfile({
 
   const profileData = useMemo(() => {
     if (!isOpen || !activeCV) return null
-    return analyzeSeiyuuProfile(activeCV, allWorks, progressHistory, stamps)
-  }, [isOpen, activeCV, allWorks, progressHistory, stamps])
+    return analyzeSeiyuuProfile(activeCV, allWorks, historyRecords, stamps)
+  }, [isOpen, activeCV, allWorks, historyRecords, stamps])
 
   // 开启声优专属心动电台
   const handleStartRadio = useCallback(() => {

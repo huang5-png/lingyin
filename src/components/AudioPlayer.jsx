@@ -6,6 +6,7 @@ import QueuePanel from './QueuePanel'
 import SpectrumVisualizer from './SpectrumVisualizer'
 import SoundstageCompass from './SoundstageCompass'
 import TingleHeatmapOverlay from './TingleHeatmapOverlay'
+import TrackVariantCapsule from './TrackVariantCapsule'
 import './AudioPlayer.css'
 
 function pathToFileURL(filePath) {
@@ -74,6 +75,16 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     onJumpNextPeak,
     onToggleChronicleTab,
     onToggleScriptTab,
+    // 声态异构变体相关
+    hasTrackVariants = false,
+    currentTrackVariant = null,
+    siblingTrackVariants = [],
+    onHotSwapVariant,
+    onOpenVariantCompare,
+    // 床头夜钟与梦境回溯
+    onOpenBedsideClock,
+    onOpenDreamscapeRecap,
+    hasMorningGreeting = false,
   },
   ref,
 ) {
@@ -726,6 +737,14 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
                 🔥 {Math.round(currentTingleIntensity * 100)}%
               </span>
             )}
+            {hasTrackVariants && currentTrackVariant && (
+              <TrackVariantCapsule
+                currentVariant={currentTrackVariant}
+                siblingVariants={siblingTrackVariants}
+                onHotSwap={onHotSwapVariant}
+                onOpenCompare={onOpenVariantCompare}
+              />
+            )}
           </div>
           <div className="time-display">
             <span>{formatTime(currentTime)}</span>
@@ -1236,6 +1255,28 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             </svg>
           </button>
         </div>
+        {onOpenBedsideClock && (
+          <div className="bedside-clock-control">
+            <button
+              className="ctrl-btn bedside-clock-btn"
+              onClick={onOpenBedsideClock}
+              title="极夜床头微光助眠夜钟 (快捷键 Alt+B)"
+            >
+              <span className="bedside-clock-ctrl-icon">🛌</span>
+            </button>
+          </div>
+        )}
+        {hasMorningGreeting && onOpenDreamscapeRecap && (
+          <div className="dreamscape-recap-control">
+            <button
+              className="ctrl-btn dreamscape-recap-btn"
+              onClick={onOpenDreamscapeRecap}
+              title="🌅 晨光拂晓 · 昨夜入眠画卷已生成 (快捷键 Alt+D)"
+            >
+              <span className="dreamscape-recap-ctrl-icon">🌅</span>
+            </button>
+          </div>
+        )}
         <div className="mini-player-control">
           <button
             className="ctrl-btn mini-player-btn"

@@ -4,6 +4,7 @@ import './DiscoverView.css'
 import StateView from './StateView'
 import WorkCard from './WorkCard'
 import WorkRow from './WorkRow'
+import SoundscapeFilterBar from './SoundscapeFilterBar'
 import { useVirtualScroll } from '@/hooks/useVirtualScroll'
 
 const GRID_ITEM_HEIGHT = 240
@@ -11,7 +12,63 @@ const LIST_ITEM_HEIGHT = 90
 const VIRTUAL_THRESHOLD = 200
 const SCROLL_POSITION_KEY = 'sidebar_scroll_position'
 
-function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFolder, onAddMediaLibrary, cvFilter, circleFilter, onFilterChange, allCVs, allCircles, onOpenSettings, onDeleteWork, viewMode, onViewModeChange, onFilterTag, activeTag, getTagColor, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, isAnyTranslating, showOnlyFavorites, onToggleFavoritesFilter, favoriteIds, onToggleFavorite, folderGroups, activeGroupId, onGroupChange, onCreateGroup, onRenameGroup, onDeleteGroup, onSetWorkGroup, groupWorkCounts, isFavoritesView, bulkMode, selectedIds, onToggleBulkMode, onToggleSelect, onSelectAll, onClearSelection, onBulkFavorite, onBulkDelete, onBulkMoveToGroup, sortBy, sortOrder, onSortChange }) {
+function Sidebar({
+  works,
+  isLoadingWorks,
+  selectedWorkId,
+  onSelectWork,
+  onAddFolder,
+  onAddMediaLibrary,
+  cvFilter,
+  circleFilter,
+  onFilterChange,
+  allCVs,
+  allCircles,
+  onOpenSettings,
+  onDeleteWork,
+  viewMode,
+  onViewModeChange,
+  onFilterTag,
+  activeTag,
+  getTagColor,
+  onTranslate,
+  onTranslateBatch,
+  getTranslatedText,
+  isTranslated,
+  isTranslating,
+  isAnyTranslating,
+  showOnlyFavorites,
+  onToggleFavoritesFilter,
+  favoriteIds,
+  onToggleFavorite,
+  folderGroups,
+  activeGroupId,
+  onGroupChange,
+  onCreateGroup,
+  onRenameGroup,
+  onDeleteGroup,
+  onSetWorkGroup,
+  groupWorkCounts,
+  isFavoritesView,
+  bulkMode,
+  selectedIds,
+  onToggleBulkMode,
+  onToggleSelect,
+  onSelectAll,
+  onClearSelection,
+  onBulkFavorite,
+  onBulkDelete,
+  onBulkMoveToGroup,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  // 梦境画卷与声景透镜
+  hasMorningGreeting = false,
+  onOpenDreamscape = null,
+  activeScenery = null,
+  onSelectScenery = null,
+  sceneryCounts = null,
+}) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showGroups, setShowGroups] = useState(true)
   const [editingGroupId, setEditingGroupId] = useState(null)
@@ -459,6 +516,13 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
           )}
           </div>
         )}
+        {hasMorningGreeting && onOpenDreamscape && (
+          <div className="morning-greeting-pill" onClick={onOpenDreamscape} title="查看昨夜入眠记录与心境画卷">
+            <span className="greeting-icon">🌅</span>
+            <span className="greeting-text">昨夜梦境画卷已备好 · 点击回溯</span>
+            <span className="greeting-arrow">→</span>
+          </div>
+        )}
         <div className="sidebar-filters">
           <div className="filter-group search-group">
             <input
@@ -469,6 +533,13 @@ function Sidebar({ works, isLoadingWorks, selectedWorkId, onSelectWork, onAddFol
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {onSelectScenery && (
+            <SoundscapeFilterBar
+              activeScenery={activeScenery}
+              onSelectScenery={onSelectScenery}
+              sceneryCounts={sceneryCounts}
+            />
+          )}
           <div className="filter-row">
             <div className="filter-group filter-half">
               <label>CV 筛选</label>

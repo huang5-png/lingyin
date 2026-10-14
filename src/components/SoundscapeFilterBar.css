@@ -1,0 +1,115 @@
+/* SoundscapeFilterBar.css - 声景情境漫游透镜 */
+.soundscape-filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+}
+
+.soundscape-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.soundscape-header-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.soundscape-title-icon {
+  font-size: 12px;
+}
+
+.soundscape-title-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  letter-spacing: 0.2px;
+  font-family: var(--font-heading, 'Poppins', sans-serif);
+}
+
+.soundscape-clear-btn {
+  background: transparent;
+  border: none;
+  font-size: 10px;
+  color: var(--accent-primary, #c96442);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.soundscape-clear-btn:hover {
+  background: rgba(201, 100, 66, 0.1);
+}
+
+.soundscape-pills-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 4px 6px;
+  scrollbar-width: none;
+}
+
+.soundscape-pills-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.soundscape-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 9999px;
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  color: var(--text-secondary, #475569);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.soundscape-pill:hover {
+  background: var(--preset-bg, rgba(201, 100, 66, 0.08));
+  border-color: var(--preset-color, #c96442);
+  color: var(--text-primary, #1e293b);
+  transform: translateY(-1px);
+}
+
+.soundscape-pill.active {
+  background: var(--preset-bg, rgba(201, 100, 66, 0.15));
+  border-color: var(--preset-color, #c96442);
+  color: var(--preset-color, #c96442);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.soundscape-pill .pill-icon {
+  font-size: 12px;
+}
+
+.soundscape-pill .pill-name {
+  font-size: 11px;
+}
+
+.soundscape-pill .pill-count {
+  font-size: 10px;
+  opacity: 0.75;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 5px;
+  border-radius: 9999px;
+  margin-left: 2px;
+  font-family: var(--font-mono, monospace);
+}
+
+.soundscape-pill.active .pill-count {
+  background: color-mix(in srgb, var(--preset-color, #c96442) 25%, transparent);
+  opacity: 1;
+}
+

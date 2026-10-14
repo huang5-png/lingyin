@@ -32,6 +32,11 @@ import { useTingleHeatmap } from './useTingleHeatmap'
 import { useVoiceChronicle } from './useVoiceChronicle'
 import { useVoiceScript } from './useVoiceScript'
 import { useSeiyuuProfile } from './useSeiyuuProfile'
+import { useTrackVariants } from './useTrackVariants'
+import { useBedsideSlumber } from './useBedsideSlumber'
+import { useDreamscape } from './useDreamscape'
+import { useSoundscape } from './useSoundscape'
+import { detectWorkScenery } from '../utils/soundscapeAnalyzer'
 
 export function useAppState() {
   const playerRef = useRef(null)
@@ -233,6 +238,23 @@ export function useAppState() {
     return sorted
   }, [filterByTagWorks, filterFavorites, settings?.librarySortBy, settings?.librarySortOrder])
 
+  // ===== 声景心境全景漫游透镜 Hook =====
+  const {
+    presets: soundscapePresets,
+    activeSceneryId,
+    activePreset: activeSceneryPreset,
+    handleSelectScenery,
+    handleClearScenery,
+    sceneryCounts,
+    sceneryFilteredWorks,
+  } = useSoundscape(filteredWorks)
+
+  const currentWorkScenery = useMemo(() => {
+    const target = playingWork || selectedWork
+    if (!target) return null
+    return detectWorkScenery(target)
+  }, [playingWork, selectedWork])
+
   // ===== 批量选择 Hook =====
   const {
     bulkMode,
@@ -251,7 +273,7 @@ export function useAppState() {
     handleBulkDelete,
     handleBulkMoveToGroup,
   } = useBulkSelection({
-    works: filteredWorks,
+    works: sceneryFilteredWorks,
     onToggleFavorite: toggleFavorite,
     onDeleteWork: mediaLibraryDeleteWork,
     onSetWorkGroup: setWorkGroup,
@@ -509,24 +531,6 @@ export function useAppState() {
   const handleToggleScriptTab = useCallback(() => {
     setRightTab((prev) => (prev === 'script' ? 'details' : 'script'))
   }, [setRightTab])
-
-  // ===== 声优宇宙星盘 Hook =====
-  const {
-    isOpen: isSeiyuuProfileOpen,
-    activeCV: activeSeiyuuCV,
-    profileData: seiyuuProfileData,
-    openSeiyuuProfile,
-    closeSeiyuuProfile,
-    handleStartRadio: handleStartSeiyuuRadio,
-    handleFilterThisCV,
-  } = useSeiyuuProfile({
-    allWorks: works,
-    progressHistory,
-    stamps,
-    onPlayPlaylist: handlePlayPlaylist,
-    onFilterCV: handleFilterCV,
-    onToast: showToast,
-  })
 
   // ===== 上次播放状态保存（用于启动恢复） =====
   const lastPlaySaveTimerRef = useRef(null)
@@ -897,32 +901,6 @@ export function useAppState() {
     })
   }, [playingWork, handleToggleImmersive, handlePlayerCoverClick])
 
-  // ===== 快捷键 Hook =====
-  useKeyboardShortcuts({
-    settings,
-    playerRef,
-    isImmersive,
-    setIsImmersive,
-    showGlobalSearch,
-    setShowGlobalSearch,
-    showSettingsModal,
-    setShowSettingsModal,
-    showDownloadModal,
-    setShowDownloadModal,
-    showQueuePanel,
-    setShowQueuePanel,
-    currentAudio,
-    handlePrevAudio,
-    handleNextAudio,
-    onPlaybackRateChange: handlePlaybackRateChange,
-    onOpenSleepSanctuary: handleOpenSleepSanctuary,
-    onToggleCompass: handleToggleCompassTab,
-    onToggleChronicle: handleToggleChronicleTab,
-    onJumpNextPeak: jumpNextPeak,
-    onOpenStampModal: openStampModal,
-    onToggleScript: handleToggleScriptTab,
-  })
-
   // ===== 字幕刷新 Hook =====
   const {
     handleRefreshSubtitles,
@@ -966,6 +944,168 @@ export function useAppState() {
   const handleOpenAddToPlaylistForAudio = useCallback((audio) => {
     handleOpenAddToPlaylist(audio, selectedWork)
   }, [handleOpenAddToPlaylist, selectedWork])
+
+  // 筛选指定 CV 快捷函数
+  const handleFilterCV = useCallback((cv) => {
+    handleFilterChange('cv', cv)
+  }, [handleFilterChange])
+
+  // ===== 声优宇宙星盘 Hook =====
+  const {
+    isOpen: isSeiyuuProfileOpen,
+    activeCV: activeSeiyuuCV,
+    profileData: seiyuuProfileData,
+    openSeiyuuProfile,
+    closeSeiyuuProfile,
+    handleStartRadio: handleStartSeiyuuRadio,
+    handleFilterThisCV,
+  } = useSeiyuuProfile({
+    allWorks: works,
+    stamps,
+    onPlayPlaylist: handlePlayPlaylist,
+    onFilterCV: handleFilterCV,
+    onToast: showToast,
+  })
+
+  // ===== 声态异构 · 音轨同态变体与无缝热切 Hook =====
+  const {
+    variantAnalysis,
+    hasVariants: hasTrackVariants,
+    currentVariant: currentTrackVariant,
+    siblingVariants: siblingTrackVariants,
+    collapseVariants,
+    toggleCollapseVariants,
+    handleHotSwapVariant,
+    isComparisonOpen: isVariantCompareOpen,
+    comparisonTarget: variantCompareTarget,
+    comparisonSummary: variantCompareSummary,
+    openComparisonModal: openVariantCompareModal,
+    closeComparisonModal: closeVariantCompareModal,
+  } = useTrackVariants({
+    audioFiles,
+    currentAudio,
+    currentTime,
+    playerRef,
+    onSelectAudio: handleSelectAudio,
+    onToast: showToast,
+  })
+
+  const handleCycleNextVariant = useCallback(() => {
+    if (siblingTrackVariants.length > 0) {
+      handleHotSwapVariant(siblingTrackVariants[0])
+    } else {
+      showToast?.({
+        type: 'info',
+        message: '当前音频暂无其他同态变体（如BGM/麦克风版本）',
+      })
+    }
+  }, [siblingTrackVariants, handleHotSwapVariant, showToast])
+
+  // ===== 枕畔微光 · 床头夜钟助眠座舱 Hook =====
+  const {
+    isOpen: isBedsideClockOpen,
+    openBedsideClock,
+    closeBedsideClock,
+    currentDate: bedsideCurrentDate,
+    moonPhase: bedsideMoonPhase,
+    pixelShift: bedsidePixelShift,
+    dimMode: bedsideDimMode,
+    toggleDimMode: toggleBedsideDimMode,
+    handleExtend15Minutes: handleBedsideExtend15Min,
+  } = useBedsideSlumber({
+    playerRef,
+    onSetCountdownTimer: handleSetCountdownTimer,
+    sleepTimerRemaining,
+    onToast: showToast,
+  })
+
+  const handleToggleBedsideClock = useCallback(() => {
+    if (isBedsideClockOpen) {
+      closeBedsideClock()
+    } else {
+      openBedsideClock()
+    }
+  }, [isBedsideClockOpen, closeBedsideClock, openBedsideClock])
+
+  // ===== 枕畔心境 · 梦境声纹记忆画卷与晨光拂晓回溯 Hook =====
+  const {
+    latestRecord: latestDreamscapeRecord,
+    isRecapOpen: isDreamscapeRecapOpen,
+    openRecap: openDreamscapeRecap,
+    closeRecap: closeDreamscapeRecap,
+    hasMorningGreeting,
+    noteUserInteraction,
+    settleDreamscapeOnSleep,
+  } = useDreamscape({
+    playingWork,
+    currentAudio,
+    currentTime,
+    duration,
+    stamps,
+    sleepTimerActive,
+    onToast: showToast,
+  })
+
+  // 接续昨夜入眠点继续听
+  const handleContinueFromSlumber = useCallback((record) => {
+    if (!record) return
+    const targetWork = works.find(w => w.id === record.workId)
+    if (targetWork) {
+      handleSelectWork(targetWork)
+      const targetAudio = (targetWork.audioFiles || []).find(a => a.path === record.audioPath)
+      if (targetAudio) {
+        handleSelectAudio(targetAudio)
+        const seekTarget = record.estimatedTrackSeconds || 0
+        const timer = setInterval(() => {
+          if (playerRef.current && playerRef.current.getDuration() > 0) {
+            playerRef.current.seekTo(seekTarget)
+            clearInterval(timer)
+          }
+        }, 200)
+        setTimeout(() => clearInterval(timer), 8000)
+      }
+    }
+    showToast?.({
+      type: 'success',
+      message: `已接续昨夜梦境：从第 ${formatTime(record.estimatedTrackSeconds)} 开始播放`,
+    })
+  }, [works, handleSelectWork, handleSelectAudio, playerRef, showToast])
+
+  // 监听睡眠定时器结束时触发梦境结算
+  useEffect(() => {
+    if (sleepTimerFading) {
+      settleDreamscapeOnSleep(true)
+    }
+  }, [sleepTimerFading, settleDreamscapeOnSleep])
+
+  // ===== 快捷键 Hook =====
+  useKeyboardShortcuts({
+    settings,
+    playerRef,
+    isImmersive,
+    setIsImmersive,
+    showGlobalSearch,
+    setShowGlobalSearch,
+    showSettingsModal,
+    setShowSettingsModal,
+    showDownloadModal,
+    setShowDownloadModal,
+    showQueuePanel,
+    setShowQueuePanel,
+    currentAudio,
+    handlePrevAudio,
+    handleNextAudio,
+    onPlaybackRateChange: handlePlaybackRateChange,
+    onOpenSleepSanctuary: handleOpenSleepSanctuary,
+    onToggleCompass: handleToggleCompassTab,
+    onToggleChronicle: handleToggleChronicleTab,
+    onJumpNextPeak: jumpNextPeak,
+    onOpenStampModal: openStampModal,
+    onToggleScript: handleToggleScriptTab,
+    onToggleBedsideClock: handleToggleBedsideClock,
+    onHotSwapVariant: handleCycleNextVariant,
+    onOpenDreamscape: openDreamscapeRecap,
+  })
 
   // 发现页筛选回调
   const handleFilterCVInDiscover = useCallback((cv) => {
@@ -1154,7 +1294,8 @@ export function useAppState() {
     allCVs,
     allCircles,
     allTags,
-    filteredWorks,
+    filteredWorks: sceneryFilteredWorks,
+    rawFilteredWorks: filteredWorks,
     handleFilterChange,
     handleClearFilter,
     handleToggleTagFilter,
@@ -1358,5 +1499,62 @@ export function useAppState() {
     closeSeiyuuProfile,
     handleStartSeiyuuRadio,
     handleFilterThisCV,
+
+    // 声态异构 · 音轨同态变体与无缝热切
+    variantAnalysis,
+    hasTrackVariants,
+    currentTrackVariant,
+    currentVariantInfo: currentTrackVariant,
+    siblingTrackVariants,
+    activeSiblingVariants: siblingTrackVariants,
+    collapseVariants,
+    toggleCollapseVariants,
+    handleHotSwapVariant,
+    handleCycleNextVariant,
+    isVariantCompareOpen,
+    isVariantModalOpen: isVariantCompareOpen,
+    variantCompareTarget,
+    variantCompareSummary,
+    openVariantCompareModal,
+    openVariantModal: openVariantCompareModal,
+    closeVariantCompareModal,
+    closeVariantModal: closeVariantCompareModal,
+
+    // 枕畔微光 · 床头夜钟助眠座舱
+    isBedsideClockOpen,
+    openBedsideClock,
+    closeBedsideClock,
+    handleToggleBedsideClock,
+    toggleBedsideClock: handleToggleBedsideClock,
+    bedsideCurrentDate,
+    bedsideMoonPhase,
+    bedsidePixelShift,
+    bedsideDimMode,
+    toggleBedsideDimMode,
+    handleBedsideExtend15Min,
+    extendBedsideTimer: handleBedsideExtend15Min,
+
+    // 枕畔心境 · 梦境声纹记忆画卷与晨光回溯
+    latestDreamscapeRecord,
+    currentDreamscapeRecord: latestDreamscapeRecord,
+    isDreamscapeRecapOpen,
+    openDreamscapeRecap,
+    closeDreamscapeRecap,
+    hasMorningGreeting,
+    handleContinueFromSlumber,
+    resumeFromSlumberMoment: handleContinueFromSlumber,
+    noteUserInteraction,
+
+    // 声景心境全景漫游透镜
+    soundscapePresets,
+    activeSceneryId,
+    activeScenery: activeSceneryId,
+    activeSceneryPreset,
+    sceneryCounts,
+    currentWorkScenery,
+    handleSelectScenery,
+    setActiveScenery: handleSelectScenery,
+    handleClearScenery,
+    sceneryFilteredWorks,
   }
 }

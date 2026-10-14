@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect, memo } from 'react'
 import './WorkDetail.css'
 import { buildDirectoryTree } from '@/utils/scanner'
 import { detectFranchiseSeries } from '@/utils/seriesMatcher'
+import { detectWorkScenery } from '@/utils/soundscapeAnalyzer'
 import StateView from './StateView'
 
 // 曲目骨架屏组件
@@ -16,7 +17,49 @@ const TrackSkeletonItem = memo(function TrackSkeletonItem({ hasDuration = true }
   )
 })
 
-const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, onSelectAudio, onEditMetadata, onRefreshMetadata, onRefreshSubtitles, onFilterCV, onFilterTag, onToggleTagFilter, onCircleClick, activeCV, activeTag, onDownload, onReloadTracks, onTranslate, onTranslateBatch, getTranslatedText, isTranslated, isTranslating, onAddToPlaylist, onAddToQueue, onPlayNext, isFavorite, onToggleFavorite, folderGroups, onSetWorkGroup, onAddTag, onRemoveTag, allTags, getTagColor, allWorks, onSelectWork, onOpenSeiyuuProfile }) {
+const WorkDetail = memo(function WorkDetail({
+  work,
+  audioFiles,
+  currentAudio,
+  onSelectAudio,
+  onEditMetadata,
+  onRefreshMetadata,
+  onRefreshSubtitles,
+  onFilterCV,
+  onFilterTag,
+  onToggleTagFilter,
+  onCircleClick,
+  activeCV,
+  activeTag,
+  onDownload,
+  onReloadTracks,
+  onTranslate,
+  onTranslateBatch,
+  getTranslatedText,
+  isTranslated,
+  isTranslating,
+  onAddToPlaylist,
+  onAddToQueue,
+  onPlayNext,
+  isFavorite,
+  onToggleFavorite,
+  folderGroups,
+  onSetWorkGroup,
+  onAddTag,
+  onRemoveTag,
+  allTags,
+  getTagColor,
+  allWorks,
+  onSelectWork,
+  onOpenSeiyuuProfile,
+  // 声态异构变体相关
+  variantAnalysis = null,
+  collapseVariants = true,
+  onToggleCollapseVariants = null,
+  onHotSwapVariant = null,
+  // 声景情境透镜
+  onSelectScenery = null,
+}) {
   const [showEditor, setShowEditor] = useState(false)
   const [editData, setEditData] = useState(work || {})
   const [currentDirPath, setCurrentDirPath] = useState(null)
@@ -46,6 +89,10 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
   const franchise = useMemo(() => {
     return detectFranchiseSeries(work, allWorks)
   }, [work, allWorks])
+
+  const sceneryAnalysis = useMemo(() => {
+    return detectWorkScenery(work)
+  }, [work])
 
   const currentDir = useMemo(() => {
     if (!directoryTree) return null
@@ -226,6 +273,16 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
             <div className="work-meta-row">
               {work.rating > 0 && <span className="rating"><svg className="star-icon" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {work.rating.toFixed(2)}</span>}
               {work.circle && <span className="circle clickable" onClick={() => onCircleClick?.(getTranslatedText?.(work.circle) || work.circle)} title="点击筛选此社团">社团: {getTranslatedText?.(work.circle) || work.circle}</span>}
+              {sceneryAnalysis?.primaryScenery && (
+                <span
+                  className="scenery-badge clickable"
+                  onClick={() => onSelectScenery?.(sceneryAnalysis.primaryScenery.id)}
+                  title={`识别为空间声景「${sceneryAnalysis.primaryScenery.name}」：${sceneryAnalysis.primaryScenery.description}。点击在声景透镜中筛选`}
+                >
+                  <span className="scenery-badge-icon">{sceneryAnalysis.primaryScenery.icon}</span>
+                  <span className="scenery-badge-text">{sceneryAnalysis.primaryScenery.name}</span>
+                </span>
+              )}
             </div>
             {franchise && (
               <div className="work-franchise-bar">
@@ -490,6 +547,16 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
             </div>
           </div>
           <div className="section-header-right">
+            {variantAnalysis?.hasVariants && onToggleCollapseVariants && (
+              <button
+                className={`variant-toggle-btn ${collapseVariants ? 'active' : ''}`}
+                onClick={onToggleCollapseVariants}
+                title={collapseVariants ? '当前已聚合同态变体，点击展开全部衍生音轨' : '当前展示全部音轨，点击智能折叠聚合同态变体'}
+              >
+                <span className="variant-toggle-icon">🧬</span>
+                <span className="variant-toggle-label">{collapseVariants ? '变体聚合' : '完整展开'}</span>
+              </button>
+            )}
             <span className="section-count">
               {isLoadingTracks ? '加载中...' : hasTracksError ? '加载失败' : `${audioFiles.length} 首`}
             </span>
@@ -525,31 +592,47 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
               }
             />
           ) : (
-            currentDir?.children.map((item, idx) => (
-              item.isDirectory ? (
-                <div
-                  key={item.path}
-                  className="audio-item folder-item"
-                  onClick={() => handleEnterFolder(item)}
-                >
-                  <div className="audio-indicator" />
-                  <span className="audio-index">
-                    <span className="folder-icon">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            currentDir?.children.map((item, idx) => {
+              if (item.isDirectory) {
+                return (
+                  <div
+                    key={item.path}
+                    className="audio-item folder-item"
+                    onClick={() => handleEnterFolder(item)}
+                  >
+                    <div className="audio-indicator" />
+                    <span className="audio-index">
+                      <span className="folder-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                      </span>
                     </span>
-                  </span>
-                  <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
-                  <span className="audio-duration">{item.audioCount} 首</span>
-                </div>
-              ) : (
+                    <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
+                    <span className="audio-duration">{item.audioCount} 首</span>
+                  </div>
+                )
+              }
+
+              const group = variantAnalysis?.sceneGroupMap?.get(item.path)
+              const isPrimary = !group || group.primaryTrack.path === item.path
+
+              // 折叠变体模式下，非代表轨不单独占一行
+              if (collapseVariants && group && group.variants.length > 1 && !isPrimary) {
+                return null
+              }
+
+              const singleVariant = variantAnalysis?.trackVariantMap?.get(item.path)
+              const isDirectPlaying = currentAudio?.path === item.path
+              const isGroupPlaying = isDirectPlaying || (collapseVariants && Boolean(group?.variants?.some(v => v.track.path === currentAudio?.path)))
+
+              return (
                 <div
                   key={item.path}
-                  className={`audio-item ${currentAudio?.path === item.path ? 'playing' : ''}`}
+                  className={`audio-item ${isGroupPlaying ? 'playing' : ''}`}
                   onClick={() => onSelectAudio(item)}
                 >
                   <div className="audio-indicator" />
                   <span className="audio-index">
-                    {currentAudio?.path === item.path ? (
+                    {isGroupPlaying ? (
                       <span className="playing-icon">
                         <span className="bar bar-1" />
                         <span className="bar bar-2" />
@@ -559,7 +642,41 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
                       idx + 1
                     )}
                   </span>
-                  <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
+                  <div className="audio-item-content">
+                    <div className="audio-item-main">
+                      <span className="audio-name">{getTranslatedText?.(item.name) || item.name}</span>
+                      {(!collapseVariants || !group || group.variants.length <= 1) && singleVariant && (
+                        <span className="track-single-variant-tag" title={singleVariant.label}>
+                          {singleVariant.icon} {singleVariant.label}
+                        </span>
+                      )}
+                    </div>
+                    {collapseVariants && group && group.variants.length > 1 && (
+                      <div className="track-sibling-pills" onClick={(e) => e.stopPropagation()}>
+                        {group.variants.map((v) => {
+                          const isThisActive = currentAudio?.path === v.track.path
+                          return (
+                            <button
+                              key={v.track.path}
+                              className={`track-sibling-pill ${isThisActive ? 'active' : ''}`}
+                              onClick={() => {
+                                if (isThisActive) return
+                                if (currentAudio && group.variants.some(gv => gv.track.path === currentAudio.path) && onHotSwapVariant) {
+                                  onHotSwapVariant(v.track)
+                                } else {
+                                  onSelectAudio(v.track)
+                                }
+                              }}
+                              title={`${v.variantInfo.label} (${v.track.name}) - 点击${isThisActive ? '当前播放中' : '无缝热切'}`}
+                            >
+                              <span className="sibling-pill-icon">{v.variantInfo.icon}</span>
+                              <span className="sibling-pill-label">{v.variantInfo.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                   {item.duration && <span className="audio-duration">{formatDuration(item.duration)}</span>}
                   <div className="audio-action-btns">
                     {onPlayNext && (
@@ -614,7 +731,7 @@ const WorkDetail = memo(function WorkDetail({ work, audioFiles, currentAudio, on
                   </div>
                 </div>
               )
-            ))
+            })
           )}
         </div>
       </div>

@@ -25,6 +25,9 @@ export function useKeyboardShortcuts({
   onJumpNextPeak,
   onOpenStampModal,
   onToggleScript,
+  onToggleBedsideClock,
+  onHotSwapVariant,
+  onOpenDreamscape,
 }) {
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
@@ -214,6 +217,24 @@ export function useKeyboardShortcuts({
       return
     }
 
+    if (matchShortcut(e, shortcuts.toggleBedsideClock)) {
+      e.preventDefault()
+      onToggleBedsideClock?.()
+      return
+    }
+
+    if (matchShortcut(e, shortcuts.hotSwapVariant)) {
+      e.preventDefault()
+      onHotSwapVariant?.()
+      return
+    }
+
+    if (matchShortcut(e, shortcuts.openDreamscape)) {
+      e.preventDefault()
+      onOpenDreamscape?.()
+      return
+    }
+
     if (matchShortcut(e, shortcuts.globalSearch)) {
       e.preventDefault()
       setShowGlobalSearch?.((prev) => !prev)
@@ -242,6 +263,9 @@ export function useKeyboardShortcuts({
     onJumpNextPeak,
     onOpenStampModal,
     onToggleScript,
+    onToggleBedsideClock,
+    onHotSwapVariant,
+    onOpenDreamscape,
   ])
 
   useEffect(() => {

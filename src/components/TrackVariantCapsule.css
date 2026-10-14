@@ -1,0 +1,210 @@
+/* TrackVariantCapsule.css - 声态变体热切胶囊样式 */
+.variant-capsule-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  z-index: 100;
+}
+
+.variant-capsule-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--bg-tertiary, rgba(201, 100, 66, 0.08));
+  border: 1px solid var(--border-color, rgba(201, 100, 66, 0.25));
+  color: var(--accent-primary, #c96442);
+  font-size: 11px;
+  font-family: var(--font-heading, 'Poppins', sans-serif);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.variant-capsule-trigger:hover {
+  background: var(--accent-primary, #c96442);
+  color: #fff;
+  border-color: var(--accent-primary, #c96442);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(201, 100, 66, 0.25);
+}
+
+.variant-capsule-icon {
+  font-size: 11px;
+}
+
+.variant-capsule-label {
+  letter-spacing: 0.2px;
+}
+
+.variant-capsule-arrow {
+  font-size: 9px;
+  opacity: 0.8;
+  margin-left: 1px;
+}
+
+.variant-capsule-container.compact .variant-capsule-trigger {
+  height: 20px;
+  padding: 0 6px;
+  font-size: 10px;
+}
+
+/* 下拉菜单 */
+.variant-capsule-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 270px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(16px);
+  padding: 8px 0;
+  z-index: 1000;
+  animation: variant-drop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes variant-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.variant-dropdown-header {
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.variant-dropdown-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  font-family: var(--font-heading, 'Poppins', sans-serif);
+}
+
+.variant-dropdown-tip {
+  font-size: 10px;
+  color: var(--text-muted, #64748b);
+}
+
+.variant-dropdown-list {
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.variant-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 6px);
+  text-align: left;
+  border: none;
+  background: transparent;
+  width: 100%;
+  color: var(--text-primary, #1e293b);
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+.variant-dropdown-item.active {
+  background: rgba(201, 100, 66, 0.1);
+  color: var(--accent-primary, #c96442);
+  font-weight: 600;
+}
+
+.variant-dropdown-item.clickable {
+  cursor: pointer;
+}
+
+.variant-dropdown-item.clickable:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  transform: translateX(2px);
+}
+
+.variant-item-icon {
+  font-size: 14px;
+}
+
+.variant-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.variant-item-name {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.variant-item-badge {
+  font-size: 9px;
+  color: var(--accent-primary, #c96442);
+}
+
+.variant-item-sub {
+  font-size: 9px;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.variant-item-check {
+  font-size: 12px;
+  color: var(--accent-primary, #c96442);
+  font-weight: bold;
+}
+
+.variant-item-action {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.05));
+  color: var(--accent-primary, #c96442);
+  font-family: var(--font-heading, 'Poppins', sans-serif);
+}
+
+.variant-dropdown-footer {
+  padding: 6px 10px 2px;
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+}
+
+.variant-compare-btn {
+  width: 100%;
+  padding: 5px;
+  background: transparent;
+  border: 1px dashed var(--border-color, rgba(0, 0, 0, 0.15));
+  border-radius: 6px;
+  color: var(--text-secondary, #475569);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.variant-compare-btn:hover {
+  border-color: var(--accent-primary, #c96442);
+  color: var(--accent-primary, #c96442);
+  background: rgba(201, 100, 66, 0.05);
+}

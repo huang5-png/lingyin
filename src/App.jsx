@@ -21,6 +21,9 @@ import SleepSanctuaryModal from './components/SleepSanctuaryModal'
 import SensoryStampModal from './components/SensoryStampModal'
 import ChroniclePosterModal from './components/ChroniclePosterModal'
 import SeiyuuProfileModal from './components/SeiyuuProfileModal'
+import BedsideClockModal from './components/BedsideClockModal'
+import DreamscapeRecapModal from './components/DreamscapeRecapModal'
+import VariantComparisonModal from './components/VariantComparisonModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
 import './App.css'
@@ -319,6 +322,53 @@ export default function App() {
     closeSeiyuuProfile,
     handleStartSeiyuuRadio,
     handleFilterThisCV,
+
+    // 声态异构变体相关
+    variantAnalysis,
+    hasTrackVariants,
+    currentTrackVariant,
+    currentVariantInfo,
+    siblingTrackVariants,
+    activeSiblingVariants,
+    collapseVariants,
+    toggleCollapseVariants,
+    isVariantCompareOpen,
+    isVariantModalOpen,
+    variantCompareTarget,
+    openVariantCompareModal,
+    openVariantModal,
+    closeVariantCompareModal,
+    closeVariantModal,
+    handleHotSwapVariant,
+
+    // 床头夜钟全屏模式
+    isBedsideClockOpen,
+    openBedsideClock,
+    closeBedsideClock,
+    toggleBedsideClock,
+    bedsideCurrentDate,
+    bedsideMoonPhase,
+    bedsidePixelShift,
+    bedsideDimMode,
+    toggleBedsideDimMode,
+    handleBedsideExtend15Min,
+    extendBedsideTimer,
+
+    // 梦境入眠回溯
+    latestDreamscapeRecord,
+    currentDreamscapeRecord,
+    isDreamscapeRecapOpen,
+    hasMorningGreeting,
+    openDreamscapeRecap,
+    closeDreamscapeRecap,
+    handleContinueFromSlumber,
+    resumeFromSlumberMoment,
+
+    // 声景空间情境透镜
+    activeScenery,
+    setActiveScenery,
+    sceneryCounts,
+    currentWorkScenery,
   } = useAppState()
 
   const [isDragOver, setIsDragOver] = useState(false)
@@ -617,6 +667,18 @@ export default function App() {
     onCopyScriptLine: handleCopyScriptLine,
     // 声优星盘与系列相关
     onOpenSeiyuuProfile: openSeiyuuProfile,
+    // 声态异构变体相关
+    variantAnalysis,
+    collapseVariants,
+    onToggleCollapseVariants: toggleCollapseVariants,
+    onHotSwapVariant: handleHotSwapVariant,
+    // 声景情境透镜
+    activeScenery,
+    onSelectScenery: setActiveScenery,
+    sceneryCounts,
+    // 晨光入眠画卷回溯
+    hasMorningGreeting,
+    onOpenDreamscape: openDreamscapeRecap,
   }), [
     audioFiles, currentAudio, currentCues, currentTime, handleSeek,
     subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
@@ -640,6 +702,8 @@ export default function App() {
     activeScriptLineIndex, isUserScrollingScript, handleUserScrollScript, handleResumeScriptSync,
     handleImportScriptFile, handleQuoteToStamp, handleCopyScriptLine,
     openSeiyuuProfile,
+    variantAnalysis, collapseVariants, toggleCollapseVariants, handleHotSwapVariant,
+    activeScenery, setActiveScenery, sceneryCounts, hasMorningGreeting, openDreamscapeRecap,
   ])
 
   return (
@@ -913,6 +977,15 @@ export default function App() {
             onJumpNextPeak={jumpNextPeak}
             onToggleChronicleTab={handleToggleChronicleTab}
             onToggleScriptTab={handleToggleScriptTab}
+            // 变体与夜钟、梦境
+            hasTrackVariants={hasTrackVariants}
+            currentTrackVariant={currentTrackVariant || currentVariantInfo}
+            siblingTrackVariants={siblingTrackVariants || activeSiblingVariants}
+            onOpenVariantCompare={openVariantCompareModal || openVariantModal}
+            onHotSwapVariant={handleHotSwapVariant}
+            onOpenBedsideClock={openBedsideClock}
+            hasMorningGreeting={hasMorningGreeting}
+            onOpenDreamscapeRecap={openDreamscapeRecap}
           />
         </div>
       )}
@@ -963,6 +1036,14 @@ export default function App() {
           onJumpNextPeak={jumpNextPeak}
           scriptLines={scriptLines}
           activeScriptLineIndex={activeScriptLineIndex}
+          hasTrackVariants={hasTrackVariants}
+          currentTrackVariant={currentTrackVariant || currentVariantInfo}
+          siblingTrackVariants={siblingTrackVariants || activeSiblingVariants}
+          onOpenVariantCompare={openVariantCompareModal || openVariantModal}
+          onHotSwapVariant={handleHotSwapVariant}
+          onOpenBedsideClock={openBedsideClock}
+          hasMorningGreeting={hasMorningGreeting}
+          onOpenDreamscapeRecap={openDreamscapeRecap}
         />
       )}
 
@@ -1077,6 +1158,56 @@ export default function App() {
         onStartRadio={handleStartSeiyuuRadio}
         onFilterThisCV={handleFilterThisCV}
         onSelectWork={handleSelectWork}
+      />
+
+      {/* 床头夜钟全屏模式 */}
+      <BedsideClockModal
+        isOpen={isBedsideClockOpen}
+        onClose={closeBedsideClock}
+        currentDate={bedsideCurrentDate}
+        moonPhase={bedsideMoonPhase}
+        pixelShift={bedsidePixelShift}
+        dimMode={bedsideDimMode}
+        onToggleDimMode={toggleBedsideDimMode}
+        currentAudio={currentAudio}
+        currentWork={playingWork || selectedWork}
+        playingWork={playingWork || selectedWork}
+        isPlaying={playerRef.current?.isPlaying?.()}
+        currentTime={currentTime}
+        duration={duration}
+        sleepTimerRemaining={sleepTimerRemaining}
+        sleepTimerActive={sleepTimerActive}
+        onPlayPause={() => playerRef.current?.togglePlay?.()}
+        onExtendTimer={extendBedsideTimer || handleBedsideExtend15Min}
+        onExtend15Min={extendBedsideTimer || handleBedsideExtend15Min}
+        onCancelTimer={handleCancelSleepTimer}
+      />
+
+      {/* 拂晓入眠画卷回溯 */}
+      <DreamscapeRecapModal
+        isOpen={isDreamscapeRecapOpen}
+        onClose={closeDreamscapeRecap}
+        record={currentDreamscapeRecord || latestDreamscapeRecord}
+        onToast={showToast}
+        onContinueFromSlumber={resumeFromSlumberMoment || handleContinueFromSlumber}
+        onResumePlayback={resumeFromSlumberMoment || handleContinueFromSlumber}
+      />
+
+      {/* 同态音轨变体声学对比与切换 */}
+      <VariantComparisonModal
+        isOpen={isVariantModalOpen || isVariantCompareOpen}
+        onClose={closeVariantModal || closeVariantCompareModal}
+        currentAudio={currentAudio}
+        currentTrack={currentAudio}
+        currentVariant={currentTrackVariant || currentVariantInfo}
+        targetVariant={variantCompareTarget}
+        variantGroup={variantAnalysis?.sceneGroupMap?.get(currentAudio?.path)}
+        onHotSwap={handleHotSwapVariant}
+        onSelectTrack={(track) => {
+          handleHotSwapVariant(track)
+          if (closeVariantModal) closeVariantModal()
+          if (closeVariantCompareModal) closeVariantCompareModal()
+        }}
       />
 
       {isDragOver && (
