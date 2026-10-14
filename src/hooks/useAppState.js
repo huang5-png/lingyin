@@ -28,6 +28,8 @@ import { useBulkSelection } from './useBulkSelection'
 import { useSystemIntegration } from './useSystemIntegration'
 import { useWorkGallery } from './useWorkGallery'
 import { useChapters } from './useChapters'
+import { useTingleHeatmap } from './useTingleHeatmap'
+import { useVoiceChronicle } from './useVoiceChronicle'
 
 export function useAppState() {
   const playerRef = useRef(null)
@@ -423,6 +425,54 @@ export function useAppState() {
     onToast: showToast,
   })
 
+  // ===== ASMR 酥麻声能热力流与高能峰值 Hook =====
+  const {
+    heatmapData,
+    peakMoments,
+    currentIntensity: currentTingleIntensity,
+    isAnalyzing: isAnalyzingHeatmap,
+    syncCurrentIntensity,
+    jumpNextPeak,
+    jumpPrevPeak,
+  } = useTingleHeatmap({
+    audioPath: currentAudio?.path,
+    duration,
+    playerRef,
+    onToast: showToast,
+  })
+
+  // 同步瞬时酥麻强度
+  useEffect(() => {
+    syncCurrentIntensity(currentTime)
+  }, [currentTime, syncCurrentIntensity])
+
+  // ===== 声之手账档案与感官心动印记 Hook =====
+  const {
+    chronicleData,
+    stamps,
+    currentAudioStamps,
+    updateChronicle,
+    addStamp,
+    deleteStamp,
+    seekToStamp,
+    isStampModalOpen,
+    openStampModal,
+    closeStampModal,
+    isPosterModalOpen,
+    openPosterModal,
+    closePosterModal,
+  } = useVoiceChronicle({
+    work: playingWork || selectedWork,
+    currentAudio,
+    currentTime,
+    playerRef,
+    onToast: showToast,
+  })
+
+  const handleToggleChronicleTab = useCallback(() => {
+    setRightTab((prev) => (prev === 'chronicle' ? 'details' : 'chronicle'))
+  }, [setRightTab])
+
   // ===== 上次播放状态保存（用于启动恢复） =====
   const lastPlaySaveTimerRef = useRef(null)
 
@@ -812,6 +862,9 @@ export function useAppState() {
     onPlaybackRateChange: handlePlaybackRateChange,
     onOpenSleepSanctuary: handleOpenSleepSanctuary,
     onToggleCompass: handleToggleCompassTab,
+    onToggleChronicle: handleToggleChronicleTab,
+    onJumpNextPeak: jumpNextPeak,
+    onOpenStampModal: openStampModal,
   })
 
   // ===== 字幕刷新 Hook =====
@@ -1194,5 +1247,29 @@ export function useAppState() {
     handleToggleSleepSanctuary,
     handleToggleCompassTab,
     currentAudioElement,
+
+    // 酥麻声能热力流与高能峰值
+    heatmapData,
+    peakMoments,
+    currentTingleIntensity,
+    isAnalyzingHeatmap,
+    jumpNextPeak,
+    jumpPrevPeak,
+
+    // 声之手账与感官心动印记
+    chronicleData,
+    stamps,
+    currentAudioStamps,
+    updateChronicle,
+    addStamp,
+    deleteStamp,
+    seekToStamp,
+    isStampModalOpen,
+    openStampModal,
+    closeStampModal,
+    isPosterModalOpen,
+    openPosterModal,
+    closePosterModal,
+    handleToggleChronicleTab,
   }
 }

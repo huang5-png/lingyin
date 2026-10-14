@@ -7,9 +7,9 @@
  * 分组未覆盖的动作会由 buildActionGroups 归入「其他」，不会丢失。
  */
 export const SHORTCUT_GROUPS = [
-  { id: 'playback', label: '播放控制', actions: ['playPause', 'prevTrack', 'nextTrack', 'seekBackward', 'seekForward', 'toggleAbLoop'] },
+  { id: 'playback', label: '播放控制', actions: ['playPause', 'prevTrack', 'nextTrack', 'seekBackward', 'seekForward', 'jumpNextPeak', 'toggleStampModal', 'toggleAbLoop'] },
   { id: 'volume', label: '音量与速度', actions: ['volumeUp', 'volumeDown', 'toggleMute', 'speedUp', 'speedDown'] },
-  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'openSleepSanctuary', 'toggleCompass', 'toggleQueue', 'openSettings'] },
+  { id: 'view', label: '界面与窗口', actions: ['toggleImmersive', 'exitImmersive', 'openSleepSanctuary', 'toggleCompass', 'toggleChronicle', 'toggleQueue', 'openSettings'] },
   { id: 'nav', label: '导航', actions: ['globalSearch'] },
 ]
 
@@ -19,6 +19,8 @@ export const DEFAULT_SHORTCUTS = {
   nextTrack: '',
   seekBackward: 'ArrowLeft',
   seekForward: 'ArrowRight',
+  jumpNextPeak: '',
+  toggleStampModal: 'H',
   toggleAbLoop: '',
   volumeUp: 'ArrowUp',
   volumeDown: 'ArrowDown',
@@ -29,6 +31,7 @@ export const DEFAULT_SHORTCUTS = {
   exitImmersive: 'Escape',
   openSleepSanctuary: '',
   toggleCompass: '',
+  toggleChronicle: '',
   toggleQueue: '',
   openSettings: '',
   globalSearch: 'Ctrl+K',
@@ -40,6 +43,8 @@ export const ACTION_LABELS = {
   nextTrack: '下一曲',
   seekBackward: '快退',
   seekForward: '快进',
+  jumpNextPeak: '跃迁下一高能点',
+  toggleStampModal: '心动瞬间打点',
   toggleAbLoop: 'A-B 循环',
   volumeUp: '音量增加',
   volumeDown: '音量减少',
@@ -50,6 +55,7 @@ export const ACTION_LABELS = {
   exitImmersive: '退出沉浸式',
   openSleepSanctuary: '深眠助眠座舱',
   toggleCompass: '双耳声场罗盘',
+  toggleChronicle: '音声手账面板',
   toggleQueue: '显示/隐藏队列',
   openSettings: '打开设置',
   globalSearch: '全局搜索',
@@ -61,6 +67,8 @@ export const ACTION_DESCS = {
   nextTrack: '跳转到下一首曲目',
   seekBackward: '向后快退指定秒数',
   seekForward: '向前快进指定秒数',
+  jumpNextPeak: '飞跃到音频的下一个 ASMR 酥麻高能峰值',
+  toggleStampModal: '记录当前播放时间的心动感官印记',
   toggleAbLoop: '标记 A 点 / 标记 B 点并循环 / 关闭循环',
   volumeUp: '增加播放音量',
   volumeDown: '减少播放音量',
@@ -71,6 +79,7 @@ export const ACTION_DESCS = {
   exitImmersive: '关闭沉浸式播放模式',
   openSleepSanctuary: '打开 4-7-8 呼吸导引与 OLED 极夜纯黑睡眠屏保',
   toggleCompass: '切换右侧面板双耳声场罗盘标签',
+  toggleChronicle: '切换右侧面板音声手账标签页',
   toggleQueue: '显示或隐藏播放队列浮层',
   openSettings: '打开设置面板',
   globalSearch: '打开/关闭全局搜索弹窗',

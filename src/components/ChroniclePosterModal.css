@@ -1,0 +1,351 @@
+.chronicle-poster-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: modal-fade-in 0.2s ease-out;
+}
+
+.chronicle-poster-modal {
+  width: 95%;
+  max-width: 580px;
+  max-height: 92vh;
+  background: var(--bg-card, #262624);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-zoom-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.poster-modal-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.poster-title-text {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #f5f5f4);
+}
+
+.poster-theme-toggle {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.theme-toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  color: var(--text-secondary, #a8a29e);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.theme-toggle-btn.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #f5f5f4);
+  font-weight: 600;
+}
+
+.poster-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #a8a29e);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.poster-card-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* 典藏手账卡片外观 */
+.chronicle-poster-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.chronicle-poster-card.dark {
+  background: linear-gradient(145deg, #1f1d1a, #2b2723);
+  color: #f5f5f4;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chronicle-poster-card.vintage {
+  background: linear-gradient(145deg, #fbf7ed, #eee6d3);
+  color: #292524;
+  border: 1px solid rgba(180, 140, 100, 0.3);
+}
+
+.poster-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.poster-work-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.poster-work-title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.poster-work-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.poster-rj {
+  font-family: monospace;
+  color: var(--accent-primary, #d97757);
+  font-weight: 600;
+}
+
+.poster-tier-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+
+.poster-cover-wrap {
+  width: 100%;
+  height: 170px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.poster-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.poster-middle-grid {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.chronicle-poster-card.vintage .poster-middle-grid {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.poster-radar-box {
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+}
+
+.poster-radar-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.poster-radar-grid {
+  fill: none;
+  stroke: rgba(120, 120, 120, 0.25);
+  stroke-width: 1;
+}
+
+.poster-radar-axis {
+  stroke: rgba(120, 120, 120, 0.2);
+  stroke-dasharray: 2 2;
+}
+
+.poster-radar-polygon {
+  fill: rgba(217, 119, 87, 0.4);
+  stroke: var(--accent-primary, #d97757);
+  stroke-width: 2;
+}
+
+.poster-radar-circle {
+  fill: #fff;
+  stroke: var(--accent-primary, #d97757);
+  stroke-width: 1.5;
+}
+
+.poster-radar-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.poster-radar-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.poster-equipment-tag {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.poster-radar-scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.score-badge {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chronicle-poster-card.vintage .score-badge {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.score-num {
+  font-weight: 600;
+  color: var(--accent-primary, #d97757);
+}
+
+.poster-notes-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notes-heading,
+.stamps-heading {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.notes-quote {
+  font-family: var(--font-body, 'Lora', serif);
+  font-size: 12.5px;
+  line-height: 1.6;
+  font-style: italic;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.stamps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.poster-stamp-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.chronicle-poster-card.vintage .poster-stamp-pill {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.pill-time {
+  font-family: monospace;
+  opacity: 0.8;
+}
+
+.pill-stars {
+  color: #f59e0b;
+}
+
+.pill-note {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+.poster-footer-seal {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px dashed rgba(120, 120, 120, 0.3);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.seal-brand {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-primary, #c96442);
+}
+
+.seal-date {
+  font-size: 10px;
+  font-family: monospace;
+  opacity: 0.65;
+}
+
+.poster-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}

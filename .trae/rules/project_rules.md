@@ -143,20 +143,15 @@
 | `hooks/useChapters.js` | 剧情章节 Hook：时间戳提取、波形图钉联动、当前章节追踪、自定义打点与持久化 |
 | `hooks/useSoundstage.js` | 双耳声场 Hook：只读监听左右声道能量、声相（Pan）、方位角度（Azimuth）与立体声分离度 |
 | `hooks/useBreathingGuide.js` | 深眠呼吸导引 Hook：4-7-8/箱式/心脑共振生理节律状态机、呼吸光环缓动、暗房屏保与定时休眠联动 |
-| `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、插画画廊轮播抽屉、浮动双耳声场罗盘微件、助眠座舱入口、鼠标闲置自动隐藏） |
-| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、章节时间戳图钉、播放控制、上一曲/下一曲、快进快退、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、画廊快捷键、双耳声场紧凑微标、深眠座舱快捷入口、集成 QueuePanel 浮层） |
-| `components/Sidebar.jsx` | 作品列表（卡片/列表双视图）、媒体库扫描、CV/社团筛选、视图切换、虚拟滚动、滚动位置记忆 |
-| `components/WorkCard.jsx` | 作品网格卡片组件（React.memo 优化，自定义比较函数，收听进度条与完成徽章） |
-| `components/WorkRow.jsx` | 作品列表行组件（React.memo 优化，自定义比较函数，收听进度条） |
-| `components/WorkDetail.jsx` | 作品详情展示（封面、标签、CV、曲目列表、元数据编辑、曲目行 hover 显示「下一首播放/加入队列/加入播放列表」按钮组、文件夹导航） |
-| `components/LyricView.jsx` | 歌词本视图（字幕滚动展示、点击跳转、字幕选择器、双语翻译） |
-| `components/BookmarksPanel.jsx` | 书签面板（当前音频书签列表、作品书签列表、添加/编辑/删除书签、点击跳转、双击重命名、空态展示） |
-| `components/ChapterList.jsx` | 剧情章节列表组件（章节分段展示、律动波纹当前章节指示、秒级跳转、手动标记与删除） |
-| `components/WorkGallery.jsx` | 作品画集瀑布流网格（按分类过滤、插画数量角标、悬浮放大、点击呼出全屏灯箱） |
-| `components/LightboxModal.jsx` | 高清全屏灯箱组件（滚轮连续缩放 0.5x~3.5x、90° 旋转、幻灯片轮播、全键盘快捷键） |
-| `components/SoundstageCompass.jsx` | 双耳声场全景罗盘组件（180° 半圆天文声学罗盘、灵动声源游走光斑、双耳声压电平表、低音/耳语/高频特征） |
-| `components/SleepSanctuaryModal.jsx` | 深眠微澜助眠座舱与暗房屏保组件（4-7-8呼吸光环、OLED 极夜纯黑屏保、诗意助眠提示、循环入眠联动） |
-| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Chapters/Compass/Gallery/Bookmarks/Related/Playlists 八个 Tab） |
+| `hooks/useTingleHeatmap.js` | 酥麻热力 Hook：ASMR 酥麻声能热力分布、瞬时强度提取与高能峰值片段跃迁 |
+| `hooks/useVoiceChronicle.js` | 声之手账 Hook：四维听感图谱、鉴赏笔记、耳机器材与感官心动印记持久化 |
+| `components/ImmersiveView.jsx` | 沉浸式播放视图组件（全屏封面、背景模糊、字幕滚动、播放控制栏、进度条、音量/速度/书签/睡眠定时器、插画画廊轮播抽屉、浮动双耳声场罗盘微件、助眠座舱入口、极夜梦境光晕画布、高能跃迁与心动打点、鼠标闲置自动隐藏） |
+| `components/AudioPlayer.jsx` | 音频播放器（wavesurfer.js 波形、酥麻声能高能光流带、感官心动图钉、章节时间戳图钉、播放控制、上一曲/下一曲、快进快退、高能跃迁按钮、心动打点按钮、播放速度、进度保存、沉浸式切换、队列控制按钮、睡眠定时器、书签按钮、画廊快捷键、双耳声场紧凑微标、深眠座舱快捷入口、集成 QueuePanel 浮层） |
+| `components/TingleHeatmapOverlay.jsx` | 波形酥麻热力流与心动图钉图层（半透明鎏金与极光高能带、高能峰值图钉、感官打点彩色微标） |
+| `components/SensoryStampModal.jsx` | 感官心动印记打点弹窗（耳边轻语/温柔心跳/微热吹气/极乐耳搔/深度催眠/治愈安抚六大类型、1-5星打分、听感台词速记） |
+| `components/VoiceChroniclePanel.jsx` | 音声鉴赏手账面板（四维听感风味图谱 SVG 雷达图、耳机器材、听后感长评、心动印记时间轴、导出海报入口） |
+| `components/ChroniclePosterModal.jsx` | 高清音声鉴赏手账海报导出弹窗（黄金比例海报、极夜/暖纸双主题、封面、RJ码、四维雷达图、心动印记流、一键保存PNG与复制到剪贴板） |
+| `components/RightTabBar.jsx` | 右侧标签栏（Details/Subtitles/Chapters/Compass/Gallery/Chronicle/Bookmarks/Related/Playlists 九个 Tab） |
 | `components/DiscoverView.jsx` | 在线发现视图（asmr.one 搜索、高级筛选、标签选择器、作品列表、重试机制） |
 | `components/RecentPlaysView.jsx` | 最近播放视图（按时间倒序展示最近播放过的作品，支持进度条显示、未听完标记、继续听按钮、全部/未听完/已听完筛选） |
 | `components/UsageReport.jsx` | 使用报告视图（年度/月度/日度切换、标签/CV/社团/作品排行） |
@@ -183,6 +178,8 @@
 | `utils/soundstageAnalyzer.js` | 双耳声学空间分析纯函数（PCM RMS 能量、声相 Pan、方位角 Azimuth、立体声分离度、频段特征） |
 | `utils/breathingGuide.js` | 深眠呼吸导引与助眠座舱状态机纯函数（4-7-8/箱式/心脑共振生理节律、缓动曲线、周期换算） |
 | `utils/audioAnalyzerManager.js` | 共享 Web Audio 只读分析管线管理器（规避多组件绑定冲突，直通 destination 输出原生音频） |
+| `utils/tingleAnalyzer.js` | ASMR 酥麻声能分析纯函数（微观动态方差、耳语高频灵敏特征、热力流计算与高能峰值自动嗅探） |
+| `utils/chronicleHelpers.js` | 声之手账纯函数工具库（六大感官印记规范、四维听感图谱 SVG/Canvas 雷达顶点解算、海报卡片数据结构组织） |
 | `utils/subtitleParser.js` | 字幕解析（lrc/srt/vtt/ass/ssa） |
 | `utils/sfw.js` | 全年龄（SFW）模式开关（`isSfwMode`）与「健全」标签常量（`SFW_TAG`） |
 | `utils/shortcuts.js` | 快捷键纯函数模块（动作定义/分组、按键解析匹配、冲突检测、默认值合并与历史迁移） |
@@ -1881,6 +1878,36 @@ const {
 
 #### 🛡️ 原汁原味声音哲学
 - 坚决杜绝任何 EQ 均衡器、虚拟立体声、变声处理、调音台混音及人造白噪音等 DSP 数字滤波污染，始终为听众呈现未经破坏的原生声音录音母带。
+
+### 29. 声纹织梦 · 酥麻声能热力流与声之手账鉴赏卡系统（v1.53.0）
+
+#### ASMR 酥麻声能热力流与高能峰值导航系统 (`tingleAnalyzer.js` + `TingleHeatmapOverlay`)
+- **核心算法纯函数**：`src/utils/tingleAnalyzer.js`
+  - 心理声学特征：高频耳语灵敏区（2.5kHz~7.5kHz）声能加权与局部微观动态变化率（Variance）综合评分，过滤过响失真，黄金耳语段评分最高。
+  - 分段热力映射：`generateHeatmapFromPeaks` 划分 100~150 个时间窗口，移动加权平滑（`smoothSeries`），输出 0.0 ~ 1.0 的归一化热力数组。
+  - 高能峰值自动嗅探：`detectPeakMoments` 自动寻找局部最大值且热力高于 0.52 的区间，确保峰值点间隔不小于安全距离，输出 3~6 个高能航标。
+  - 峰值寻址与跃迁：`getNextPeakMoment` / `getPrevPeakMoment` 支持向后飞跃并循环回到起点。
+- **波形图层与交互集成**：
+  - `TingleHeatmapOverlay` 叠加在 `AudioPlayer` 的波形上层，以半透明鎏金与极光高能带呈现；
+  - 播放控制栏新增「🔥 高能」跃迁按钮（快捷键 `Alt+N`），点击精准定位到下一酥麻高潮点。
+
+#### 声之手账档案与感官心动印记系统 (`VoiceChroniclePanel` + `SensoryStampModal` + `ChroniclePosterModal`)
+- **数据结构与纯函数**：`src/utils/chronicleHelpers.js`
+  - 6 大专属感官印记：耳边轻语 👂、温柔心跳 💓、微热吹气 💨、极乐耳搔 🪄、深度催眠 🌙、治愈安抚 🌸，附带 1~5 星心动评分与心得笔记；
+  - 四维听感图谱（Sensory Radar）：耳语亲密度、催眠助眠度、剧本情感度、空间沉浸感，`calculateRadarPoints` 计算几何顶点，驱动 SVG 与 Canvas 雷达图；
+  - 4 级殿堂勋章评级：王者殿堂 / 深度助眠 / 温暖治愈 / 循环精听；
+  - 手账持久化：作品维度键名 `lingyin_chronicle_${workId}` 与印记键名 `lingyin_stamps_${workId}`，实时自动落盘与恢复。
+- **右侧专属 Chronicle 标签页**：
+  - 包含四维雷达图滑块微调、耳机装备输入、听后感手账长评、全部心动瞬间列表（点击秒级跳转回放，支持单条移除）。
+- **精美音声鉴赏海报卡导出 (`ChroniclePosterModal`)**：
+  - 尺寸 640x940 黄金比例卡片，支持「极夜深空」与「典藏暖纸」双风格；
+  - 汇聚封面大图、社团/CV/RJ号、四维雷达图谱、耳机器材、鉴赏短评、精选心动印记与古典防伪印章；
+  - 支持一键导出下载高清 PNG 图片，以及通过 Clipboard API 复制为图片数据直接粘贴至社交平台。
+- **极夜梦境光晕氛围画布 (`ImmersiveView`)**：
+  - 沉浸模式背景融入 `.immersive-dreamscape-aura`，随左右声道能量与当前酥麻指数轻柔微漾流动，控制栏无缝打通高能跃迁与心动打点。
+
+#### 🛡️ 恪守纯粹声音哲学
+- 所有声学分析（PCM RMS、频段特征、动态方差）完全纯只读直通，播放链路始终为 100% 原生母带输出，坚决杜绝任何破坏原汁原味的数字音效失真。
 
 ## 已知约定
 

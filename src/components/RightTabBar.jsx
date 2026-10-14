@@ -4,6 +4,7 @@ import BookmarksPanel from './BookmarksPanel'
 import WorkGallery from './WorkGallery'
 import ChapterList from './ChapterList'
 import SoundstageCompass from './SoundstageCompass'
+import VoiceChroniclePanel from './VoiceChroniclePanel'
 import StateView from './StateView'
 import './RightTabBar.css'
 
@@ -479,6 +480,14 @@ const RightTabBar = memo(function RightTabBar({
   onDeleteCustomChapter,
   // 双耳声场相关
   audioElement = null,
+  // 音声手账与感官印记
+  chronicleData = {},
+  stamps = [],
+  onUpdateChronicle,
+  onOpenStampModal,
+  onOpenPosterModal,
+  onSeekToStamp,
+  onDeleteStamp,
 }) {
   const tabs = [
     { id: 'details', label: 'Details' },
@@ -486,6 +495,7 @@ const RightTabBar = memo(function RightTabBar({
     { id: 'chapters', label: `Chapters${chapters && chapters.length > 0 ? ` (${chapters.length})` : ''}` },
     { id: 'compass', label: 'Compass' },
     { id: 'gallery', label: `Gallery${galleryImages && galleryImages.length > 0 ? ` (${galleryImages.length})` : ''}` },
+    { id: 'chronicle', label: `Chronicle${stamps && stamps.length > 0 ? ` (${stamps.length})` : ''}` },
     { id: 'bookmarks', label: 'Bookmarks' },
     { id: 'related', label: 'Related' },
     { id: 'playlists', label: 'Playlists' },
@@ -607,6 +617,23 @@ const RightTabBar = memo(function RightTabBar({
               images={galleryImages}
               isLoading={loadingGallery}
               onImageClick={onOpenLightbox}
+            />
+          </div>
+        )}
+        {activeTab === 'chronicle' && (
+          <div className="chronicle-tab-panel" style={{ height: '100%', overflow: 'hidden' }}>
+            <VoiceChroniclePanel
+              work={work}
+              currentAudio={currentAudio}
+              currentTime={currentTime}
+              chronicleData={chronicleData}
+              stamps={stamps}
+              onUpdateChronicle={onUpdateChronicle}
+              onOpenStampModal={onOpenStampModal}
+              onOpenPosterModal={onOpenPosterModal}
+              onSeekToStamp={onSeekToStamp}
+              onDeleteStamp={onDeleteStamp}
+              onToast={onToast}
             />
           </div>
         )}

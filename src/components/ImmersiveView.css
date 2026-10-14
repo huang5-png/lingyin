@@ -877,3 +877,78 @@
   filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.45));
 }
 
+/* ===== 声光同频 · 极夜梦境光晕画布 ===== */
+.immersive-dreamscape-aura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+  transition: opacity 0.8s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.aura-blob {
+  position: absolute;
+  width: 55vw;
+  height: 55vw;
+  max-width: 650px;
+  max-height: 650px;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.aura-blob.aura-left {
+  top: 15%;
+  left: -15%;
+  background: radial-gradient(circle, rgba(201, 100, 66, 0.35) 0%, rgba(201, 100, 66, 0) 70%);
+  animation: float-left 12s infinite alternate ease-in-out;
+}
+
+.aura-blob.aura-right {
+  bottom: 15%;
+  right: -15%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, rgba(236, 72, 153, 0) 70%);
+  animation: float-right 14s infinite alternate ease-in-out;
+}
+
+@keyframes float-left {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(50px, 40px) scale(1.15);
+  }
+}
+
+@keyframes float-right {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(-40px, -50px) scale(1.1);
+  }
+}
+
+.immersive-ctrl-btn.immersive-peak-btn {
+  color: #f59e0b;
+}
+
+.immersive-ctrl-btn.immersive-peak-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+}
+
+.immersive-ctrl-btn.immersive-stamp-btn {
+  color: #ec4899;
+}
+
+.immersive-ctrl-btn.immersive-stamp-btn:hover {
+  background: rgba(236, 72, 153, 0.2);
+  filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.6));
+}
+
+

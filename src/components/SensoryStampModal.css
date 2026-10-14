@@ -1,0 +1,218 @@
+.sensory-stamp-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modal-fade-in 0.2s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sensory-stamp-modal {
+  width: 90%;
+  max-width: 440px;
+  background: var(--bg-card, #262624);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-lg, 14px);
+  padding: 22px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: modal-zoom-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modal-zoom-in {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.stamp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.stamp-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #f5f5f4);
+}
+
+.stamp-modal-icon {
+  font-size: 18px;
+}
+
+.stamp-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #a8a29e);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.stamp-modal-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #f5f5f4);
+}
+
+.stamp-modal-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #a8a29e);
+  margin-bottom: 18px;
+}
+
+.stamp-meta-time {
+  font-family: monospace;
+  color: var(--accent-primary, #d97757);
+  font-weight: 600;
+}
+
+.stamp-meta-audio {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stamp-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stamp-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stamp-form-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary, #a8a29e);
+}
+
+.stamp-types-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stamp-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stamp-type-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--card-color, #ec4899);
+  transform: translateY(-1px);
+}
+
+.stamp-type-card.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--card-color, #ec4899);
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.25);
+}
+
+.type-icon {
+  font-size: 18px;
+}
+
+.type-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary, #f5f5f4);
+}
+
+.stamp-rating-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stamp-star-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: all 0.15s;
+}
+
+.stamp-star-btn.active {
+  color: #f59e0b;
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  transform: scale(1.1);
+}
+
+.stamp-rating-text {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #f59e0b;
+}
+
+.stamp-note-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text-primary, #f5f5f4);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.stamp-note-input:focus {
+  border-color: var(--accent-primary, #d97757);
+}
+
+.stamp-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}

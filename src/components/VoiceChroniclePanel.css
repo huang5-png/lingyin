@@ -1,0 +1,367 @@
+.voice-chronicle-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 16px;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.chronicle-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md, 10px);
+  padding: 12px 14px;
+}
+
+.chronicle-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #f5f5f4);
+}
+
+.section-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  border-radius: 12px;
+}
+
+.chronicle-tier-selector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.chronicle-tier-btn {
+  padding: 6px 4px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: var(--text-secondary, #a8a29e);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chronicle-tier-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #f5f5f4);
+}
+
+.chronicle-tier-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--tier-color, #f59e0b);
+  color: var(--tier-color, #f59e0b);
+  font-weight: 600;
+}
+
+/* 雷达图布局 */
+.chronicle-radar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.chronicle-radar-svg {
+  width: 170px;
+  height: 170px;
+  overflow: visible;
+}
+
+.radar-grid-polygon {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+}
+
+.radar-axis-line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-dasharray: 2 2;
+  stroke-width: 1;
+}
+
+.radar-data-polygon {
+  fill: rgba(217, 119, 87, 0.35);
+  stroke: var(--accent-primary, #d97757);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(217, 119, 87, 0.4));
+  transition: all 0.2s ease;
+}
+
+.radar-data-circle {
+  fill: #fff;
+  stroke: var(--accent-primary, #d97757);
+  stroke-width: 2;
+}
+
+.radar-label-text {
+  font-size: 9.5px;
+  fill: var(--text-secondary, #a8a29e);
+  font-family: var(--font-heading);
+}
+
+.radar-sliders-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.radar-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.slider-label {
+  width: 65px;
+  color: var(--text-secondary, #a8a29e);
+}
+
+.radar-range-input {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--accent-primary, #d97757);
+  cursor: pointer;
+}
+
+.slider-val {
+  width: 20px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--accent-primary, #d97757);
+}
+
+/* 听风笔记输入 */
+.chronicle-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chronicle-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-label {
+  font-size: 11px;
+  color: var(--text-secondary, #a8a29e);
+}
+
+.chronicle-text-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-primary, #f5f5f4);
+  outline: none;
+}
+
+.chronicle-textarea {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-primary, #f5f5f4);
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.chronicle-text-input:focus,
+.chronicle-textarea:focus {
+  border-color: var(--accent-primary, #d97757);
+}
+
+/* 感官印记时间线 */
+.chronicle-add-stamp-btn {
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  color: #ec4899;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chronicle-add-stamp-btn:hover {
+  background: rgba(236, 72, 153, 0.25);
+  transform: translateY(-1px);
+}
+
+.chronicle-empty-stamps {
+  padding: 14px;
+  text-align: center;
+  color: var(--text-secondary, #a8a29e);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.chronicle-stamps-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.chronicle-stamp-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chronicle-stamp-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.stamp-item-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.stamp-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stamp-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stamp-item-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #f5f5f4);
+}
+
+.stamp-item-time {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--accent-primary, #d97757);
+}
+
+.stamp-item-stars {
+  font-size: 10px;
+  color: #f59e0b;
+}
+
+.stamp-item-note {
+  font-size: 11px;
+  color: var(--text-secondary, #d6d3d1);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stamp-item-audio {
+  font-size: 9.5px;
+  color: var(--text-secondary, #78716c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stamp-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #78716c);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.chronicle-stamp-item:hover .stamp-delete-btn {
+  opacity: 1;
+}
+
+.stamp-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* 底部海报导出大按钮 */
+.chronicle-footer {
+  margin-top: 4px;
+}
+
+.chronicle-export-poster-btn {
+  width: 100%;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--accent-primary, #c96442), #ec4899);
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(201, 100, 66, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chronicle-export-poster-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(201, 100, 66, 0.45);
+}
+
+.poster-sparkle {
+  font-size: 15px;
+  animation: sparkle-rotate 2.5s ease-in-out infinite;
+}
+
+@keyframes sparkle-rotate {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(15deg);
+  }
+}

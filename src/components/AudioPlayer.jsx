@@ -5,9 +5,8 @@ import { PLAYBACK_RATES } from '../utils/playback'
 import QueuePanel from './QueuePanel'
 import SpectrumVisualizer from './SpectrumVisualizer'
 import SoundstageCompass from './SoundstageCompass'
+import TingleHeatmapOverlay from './TingleHeatmapOverlay'
 import './AudioPlayer.css'
-
-
 
 function pathToFileURL(filePath) {
   if (!filePath) return ''
@@ -64,6 +63,16 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     // 双耳声场与深眠座舱
     onToggleCompassTab,
     onOpenSleepSanctuary,
+    // 酥麻热力与声之手账
+    heatmapData = [],
+    peakMoments = [],
+    stamps = [],
+    currentTingleIntensity = 0,
+    onSeekToPeak,
+    onSeekToStamp,
+    onOpenStampModal,
+    onJumpNextPeak,
+    onToggleChronicleTab,
   },
   ref,
 ) {
@@ -704,6 +713,18 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
                 {activeChapter.title}
               </span>
             )}
+            {currentTingleIntensity >= 0.35 && (
+              <span
+                className="player-tingle-badge"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleChronicleTab?.()
+                }}
+                title={`瞬时 ASMR 酥麻热力：${Math.round(currentTingleIntensity * 100)}%，点击打开音声手账`}
+              >
+                🔥 {Math.round(currentTingleIntensity * 100)}%
+              </span>
+            )}
           </div>
           <div className="time-display">
             <span>{formatTime(currentTime)}</span>
@@ -723,6 +744,15 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           >
             <div ref={waveformRef} className="waveform" />
             <div className="waveform-gradient-overlay" />
+            {/* 酥麻声能热力流与感官心动图钉 */}
+            <TingleHeatmapOverlay
+              heatmapData={heatmapData}
+              duration={duration}
+              peakMoments={peakMoments}
+              stamps={stamps}
+              onSeekToPeak={onSeekToPeak}
+              onSeekToStamp={onSeekToStamp}
+            />
             {/* 章节时间戳图钉 */}
             {chapters && chapters.length > 0 && duration > 0 && (
               <div className="waveform-chapters-layer">
@@ -955,6 +985,30 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             </button>
           </div>
         )}
+        {peakMoments && peakMoments.length > 0 && (
+          <div className="peak-jump-control">
+            <button
+              className="ctrl-btn peak-jump-btn"
+              onClick={onJumpNextPeak}
+              title={`ASMR 酥麻高能段跃迁（共 ${peakMoments.length} 处峰值）：点击飞跃到下一个心动高潮`}
+            >
+              <span className="peak-jump-icon">🔥</span>
+              <span className="peak-jump-badge">{peakMoments.length}</span>
+            </button>
+          </div>
+        )}
+        <div className="sensory-stamp-control">
+          <button
+            className="ctrl-btn sensory-stamp-btn"
+            onClick={onOpenStampModal}
+            title="记录心动瞬间 · 感官印记 (快捷键 H)"
+          >
+            <span className="stamp-ctrl-icon">💖</span>
+            {stamps && stamps.length > 0 && (
+              <span className="sensory-stamp-badge">{stamps.length}</span>
+            )}
+          </button>
+        </div>
         <div className="ab-loop-control">
           <button
             className={`ctrl-btn ab-loop-btn ${abLoop.enabled ? 'active' : ''} ${!abLoop.enabled && abLoop.a != null ? 'pending' : ''}`}

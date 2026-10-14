@@ -1451,4 +1451,82 @@
   filter: drop-shadow(0 0 6px rgba(201, 100, 66, 0.5));
 }
 
+/* ===== 酥麻热力微标与高能控制 ===== */
+.player-tingle-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 1px 7px;
+  margin-left: 8px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(236, 72, 153, 0.2));
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+  cursor: pointer;
+  vertical-align: middle;
+  animation: pulse-badge 2s infinite ease-in-out;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+  }
+}
+
+.peak-jump-control,
+.sensory-stamp-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ctrl-btn.peak-jump-btn {
+  color: #f59e0b;
+}
+
+.ctrl-btn.peak-jump-btn:hover {
+  background: rgba(245, 158, 11, 0.15);
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5));
+}
+
+.peak-jump-badge,
+.sensory-stamp-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.ctrl-btn.sensory-stamp-btn {
+  color: #ec4899;
+}
+
+.sensory-stamp-badge {
+  background: #ec4899;
+}
+
+.ctrl-btn.sensory-stamp-btn:hover {
+  background: rgba(236, 72, 153, 0.15);
+  filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.5));
+}
+
+
 

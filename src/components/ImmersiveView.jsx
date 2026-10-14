@@ -48,6 +48,13 @@ const ImmersiveView = memo(function ImmersiveView({
   galleryImages = [],
   // 深眠座舱相关
   onOpenSleepSanctuary,
+  // 酥麻热力与声之手账
+  heatmapData = [],
+  peakMoments = [],
+  stamps = [],
+  currentTingleIntensity = 0,
+  onOpenStampModal,
+  onJumpNextPeak,
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
@@ -268,6 +275,17 @@ const ImmersiveView = memo(function ImmersiveView({
       }}
     >
       <div className="immersive-bg" style={{ backgroundImage: `url(${activeCoverUrl})` }} />
+      {/* 声光同频 · 极夜梦境光晕氛围画布 */}
+      <div
+        className="immersive-dreamscape-aura"
+        style={{
+          opacity: isPlaying ? 0.35 + currentTingleIntensity * 0.45 : 0.15,
+          transform: `scale(${1 + currentTingleIntensity * 0.12})`,
+        }}
+      >
+        <div className="aura-blob aura-left" />
+        <div className="aura-blob aura-right" />
+      </div>
 
       <div className={`immersive-top-bar ${showControls ? 'visible' : 'hidden'}`}>
         <button className="immersive-close-btn" onClick={onClose} title="关闭 (ESC)">
@@ -556,6 +574,27 @@ const ImmersiveView = memo(function ImmersiveView({
                   <circle cx="12" cy="12" r="10" />
                   <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
                 </svg>
+              </button>
+
+              {peakMoments && peakMoments.length > 0 && (
+                <button
+                  className="immersive-ctrl-btn immersive-ctrl-small immersive-peak-btn"
+                  onClick={onJumpNextPeak}
+                  title={`ASMR 酥麻高能段跃迁（共 ${peakMoments.length} 处峰值）`}
+                >
+                  <span className="immersive-peak-icon">🔥</span>
+                </button>
+              )}
+
+              <button
+                className="immersive-ctrl-btn immersive-ctrl-small immersive-stamp-btn"
+                onClick={onOpenStampModal}
+                title="记录心动瞬间 · 感官印记"
+              >
+                <span className="immersive-stamp-icon">💖</span>
+                {stamps && stamps.length > 0 && (
+                  <span className="immersive-badge">{stamps.length}</span>
+                )}
               </button>
 
               <button

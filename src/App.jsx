@@ -18,6 +18,8 @@ import TagManagerModal from './components/TagManagerModal'
 import UpdateModal from './components/UpdateModal'
 import LightboxModal from './components/LightboxModal'
 import SleepSanctuaryModal from './components/SleepSanctuaryModal'
+import SensoryStampModal from './components/SensoryStampModal'
+import ChroniclePosterModal from './components/ChroniclePosterModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
 import './App.css'
@@ -261,6 +263,30 @@ export default function App() {
     handleToggleSleepSanctuary,
     handleToggleCompassTab,
     currentAudioElement,
+
+    // 酥麻声能热力流与高能峰值
+    heatmapData,
+    peakMoments,
+    currentTingleIntensity,
+    isAnalyzingHeatmap,
+    jumpNextPeak,
+    jumpPrevPeak,
+
+    // 声之手账与感官心动印记
+    chronicleData,
+    stamps,
+    currentAudioStamps,
+    updateChronicle,
+    addStamp,
+    deleteStamp,
+    seekToStamp,
+    isStampModalOpen,
+    openStampModal,
+    closeStampModal,
+    isPosterModalOpen,
+    openPosterModal,
+    closePosterModal,
+    handleToggleChronicleTab,
   } = useAppState()
 
   const [isDragOver, setIsDragOver] = useState(false)
@@ -529,6 +555,14 @@ export default function App() {
     onDeleteCustomChapter: deleteCustomChapter,
     // 双耳声场
     audioElement: currentAudioElement,
+    // 声之手账与感官印记
+    chronicleData,
+    stamps,
+    onUpdateChronicle: updateChronicle,
+    onOpenStampModal: openStampModal,
+    onOpenPosterModal: openPosterModal,
+    onSeekToStamp: seekToStamp,
+    onDeleteStamp: deleteStamp,
   }), [
     audioFiles, currentAudio, currentCues, currentTime, handleSeek,
     subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
@@ -546,6 +580,7 @@ export default function App() {
     galleryImages, loadingGallery, openLightbox,
     chapters, activeChapter, duration, seekToChapter, addCustomChapter, deleteCustomChapter,
     currentAudioElement,
+    chronicleData, stamps, updateChronicle, openStampModal, openPosterModal, seekToStamp, deleteStamp,
   ])
 
   return (
@@ -809,6 +844,15 @@ export default function App() {
             onToggleGalleryTab={() => setRightTab('gallery')}
             onToggleCompassTab={handleToggleCompassTab}
             onOpenSleepSanctuary={handleOpenSleepSanctuary}
+            heatmapData={heatmapData}
+            peakMoments={peakMoments}
+            stamps={currentAudioStamps}
+            currentTingleIntensity={currentTingleIntensity}
+            onSeekToPeak={(peak) => playerRef.current?.seekTo(peak.time)}
+            onSeekToStamp={seekToStamp}
+            onOpenStampModal={openStampModal}
+            onJumpNextPeak={jumpNextPeak}
+            onToggleChronicleTab={handleToggleChronicleTab}
           />
         </div>
       )}
@@ -851,6 +895,12 @@ export default function App() {
           spectrumMode={settings.spectrumMode || 'bars'}
           spectrumSensitivity={settings.spectrumSensitivity || 1.5}
           galleryImages={galleryImages}
+          heatmapData={heatmapData}
+          peakMoments={peakMoments}
+          stamps={currentAudioStamps}
+          currentTingleIntensity={currentTingleIntensity}
+          onOpenStampModal={openStampModal}
+          onJumpNextPeak={jumpNextPeak}
         />
       )}
 
@@ -939,6 +989,23 @@ export default function App() {
           }
         }}
         sleepTimerRemainingText={getSleepTimerStatusText()}
+      />
+
+      <SensoryStampModal
+        isOpen={isStampModalOpen}
+        currentTime={currentTime}
+        currentAudio={currentAudio}
+        onClose={closeStampModal}
+        onSaveStamp={addStamp}
+      />
+
+      <ChroniclePosterModal
+        isOpen={isPosterModalOpen}
+        work={playingWork || selectedWork}
+        chronicleData={chronicleData}
+        stamps={stamps}
+        onClose={closePosterModal}
+        onToast={showToast}
       />
 
       {isDragOver && (
