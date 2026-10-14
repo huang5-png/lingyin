@@ -17,12 +17,9 @@ import SettingsModal from './components/SettingsModal'
 import TagManagerModal from './components/TagManagerModal'
 import UpdateModal from './components/UpdateModal'
 import LightboxModal from './components/LightboxModal'
-import SleepSanctuaryModal from './components/SleepSanctuaryModal'
 import SensoryStampModal from './components/SensoryStampModal'
 import ChroniclePosterModal from './components/ChroniclePosterModal'
 import SeiyuuProfileModal from './components/SeiyuuProfileModal'
-import BedsideClockModal from './components/BedsideClockModal'
-import DreamscapeRecapModal from './components/DreamscapeRecapModal'
 import VariantComparisonModal from './components/VariantComparisonModal'
 import { useAppState } from './hooks/useAppState'
 import { useTags } from './hooks/useTags'
@@ -165,27 +162,6 @@ export default function App() {
     handleToggleShuffle,
     handleToggleQueuePanel,
 
-    // 睡眠定时器
-    sleepTimerMode,
-    sleepTimerActive,
-    sleepTimerFading,
-    sleepTimerRemaining,
-    sleepTimerFadeEnabled,
-    sleepTimerFadeSeconds,
-    setSleepTimerFadeEnabled,
-    setSleepTimerFadeSeconds,
-    handleSetCountdownTimer,
-    handleSetTrackEndTimer,
-    handleSetTimePointTimer,
-    handleCancelSleepTimer,
-    handleSleepTimerTrackFinish,
-    formatSleepTimerRemaining,
-    getSleepTimerStatusText,
-    SLEEP_TIMER_OPTIONS,
-    SLEEP_TIMER_MODES,
-    SLEEP_TIMER_PRESETS,
-    SLEEP_TIMER_FADE_OPTIONS,
-
     // 字幕
     subtitleOptions,
     selectedSubtitleIndex,
@@ -260,11 +236,7 @@ export default function App() {
     addCustomChapter,
     deleteCustomChapter,
 
-    // 双耳声场与深眠座舱
-    showSleepSanctuary,
-    handleOpenSleepSanctuary,
-    handleCloseSleepSanctuary,
-    handleToggleSleepSanctuary,
+    // 双耳声场
     handleToggleCompassTab,
     currentAudioElement,
 
@@ -340,29 +312,6 @@ export default function App() {
     closeVariantCompareModal,
     closeVariantModal,
     handleHotSwapVariant,
-
-    // 床头夜钟全屏模式
-    isBedsideClockOpen,
-    openBedsideClock,
-    closeBedsideClock,
-    toggleBedsideClock,
-    bedsideCurrentDate,
-    bedsideMoonPhase,
-    bedsidePixelShift,
-    bedsideDimMode,
-    toggleBedsideDimMode,
-    handleBedsideExtend15Min,
-    extendBedsideTimer,
-
-    // 梦境入眠回溯
-    latestDreamscapeRecord,
-    currentDreamscapeRecord,
-    isDreamscapeRecapOpen,
-    hasMorningGreeting,
-    openDreamscapeRecap,
-    closeDreamscapeRecap,
-    handleContinueFromSlumber,
-    resumeFromSlumberMoment,
 
     // 声景空间情境透镜
     activeScenery,
@@ -676,9 +625,6 @@ export default function App() {
     activeScenery,
     onSelectScenery: setActiveScenery,
     sceneryCounts,
-    // 晨光入眠画卷回溯
-    hasMorningGreeting,
-    onOpenDreamscape: openDreamscapeRecap,
   }), [
     audioFiles, currentAudio, currentCues, currentTime, handleSeek,
     subtitleOptions, selectedSubtitleIndex, handleSelectSubtitle, handleAddSubtitleFile,
@@ -703,7 +649,7 @@ export default function App() {
     handleImportScriptFile, handleQuoteToStamp, handleCopyScriptLine,
     openSeiyuuProfile,
     variantAnalysis, collapseVariants, toggleCollapseVariants, handleHotSwapVariant,
-    activeScenery, setActiveScenery, sceneryCounts, hasMorningGreeting, openDreamscapeRecap,
+    activeScenery, setActiveScenery, sceneryCounts,
   ])
 
   return (
@@ -931,25 +877,6 @@ export default function App() {
             onClearQueue={handleClearQueue}
             onReorderQueue={handleReorderQueue}
             onCloseQueuePanel={handleCloseQueuePanel}
-            sleepTimerMode={sleepTimerMode}
-            sleepTimerActive={sleepTimerActive}
-            sleepTimerFading={sleepTimerFading}
-            sleepTimerRemaining={sleepTimerRemaining}
-            sleepTimerFadeEnabled={sleepTimerFadeEnabled}
-            sleepTimerFadeSeconds={sleepTimerFadeSeconds}
-            onSetSleepTimerFadeEnabled={setSleepTimerFadeEnabled}
-            onSetSleepTimerFadeSeconds={setSleepTimerFadeSeconds}
-            onSetCountdownTimer={handleSetCountdownTimer}
-            onSetTrackEndTimer={handleSetTrackEndTimer}
-            onSetTimePointTimer={handleSetTimePointTimer}
-            onCancelSleepTimer={handleCancelSleepTimer}
-            onSleepTimerTrackFinish={handleSleepTimerTrackFinish}
-            formatSleepTimerRemaining={formatSleepTimerRemaining}
-            getSleepTimerStatusText={getSleepTimerStatusText}
-            sleepTimerOptions={SLEEP_TIMER_OPTIONS}
-            sleepTimerModes={SLEEP_TIMER_MODES}
-            sleepTimerPresets={SLEEP_TIMER_PRESETS}
-            sleepTimerFadeOptions={SLEEP_TIMER_FADE_OPTIONS}
             playbackRate={settings.playbackRate}
             onPlaybackRateChange={handlePlaybackRateChange}
             onAddBookmark={addBookmark}
@@ -966,7 +893,6 @@ export default function App() {
             onOpenLightbox={openLightbox}
             onToggleGalleryTab={() => setRightTab('gallery')}
             onToggleCompassTab={handleToggleCompassTab}
-            onOpenSleepSanctuary={handleOpenSleepSanctuary}
             heatmapData={heatmapData}
             peakMoments={peakMoments}
             stamps={currentAudioStamps}
@@ -977,15 +903,12 @@ export default function App() {
             onJumpNextPeak={jumpNextPeak}
             onToggleChronicleTab={handleToggleChronicleTab}
             onToggleScriptTab={handleToggleScriptTab}
-            // 变体与夜钟、梦境
+            // 变体
             hasTrackVariants={hasTrackVariants}
             currentTrackVariant={currentTrackVariant || currentVariantInfo}
             siblingTrackVariants={siblingTrackVariants || activeSiblingVariants}
             onOpenVariantCompare={openVariantCompareModal || openVariantModal}
             onHotSwapVariant={handleHotSwapVariant}
-            onOpenBedsideClock={openBedsideClock}
-            hasMorningGreeting={hasMorningGreeting}
-            onOpenDreamscapeRecap={openDreamscapeRecap}
           />
         </div>
       )}
@@ -1014,16 +937,6 @@ export default function App() {
           onAddBookmark={addBookmark}
           hasCurrentBookmark={playingWork && currentAudio ? hasBookmarkAtTime(playingWork.id, currentAudio.path, currentTime) : false}
           bookmarkCount={playingWork && currentAudio ? (bookmarks.filter(b => b.workId === playingWork.id && b.audioPath === currentAudio.path)).length : 0}
-          onOpenSleepSanctuary={handleOpenSleepSanctuary}
-          sleepTimerActive={sleepTimerActive}
-          sleepTimerStatusText={getSleepTimerStatusText()}
-          onToggleSleepTimer={() => {
-            if (sleepTimerActive) {
-              handleCancelSleepTimer({ notify: true })
-            } else {
-              handleSetCountdownTimer(30)
-            }
-          }}
           showSpectrum={settings.showSpectrum !== false}
           spectrumMode={settings.spectrumMode || 'bars'}
           spectrumSensitivity={settings.spectrumSensitivity || 1.5}
@@ -1041,9 +954,6 @@ export default function App() {
           siblingTrackVariants={siblingTrackVariants || activeSiblingVariants}
           onOpenVariantCompare={openVariantCompareModal || openVariantModal}
           onHotSwapVariant={handleHotSwapVariant}
-          onOpenBedsideClock={openBedsideClock}
-          hasMorningGreeting={hasMorningGreeting}
-          onOpenDreamscapeRecap={openDreamscapeRecap}
         />
       )}
 
@@ -1115,25 +1025,6 @@ export default function App() {
         onSelectIndex={setLightboxIndex}
       />
 
-      <SleepSanctuaryModal
-        isOpen={showSleepSanctuary}
-        onClose={handleCloseSleepSanctuary}
-        playerRef={playerRef}
-        currentWork={playingWork || selectedWork}
-        currentAudio={currentAudio}
-        isPlaying={playerRef.current?.isPlaying?.()}
-        onToast={showToast}
-        sleepTimerActive={sleepTimerActive}
-        onToggleSleepTimer={() => {
-          if (sleepTimerActive) {
-            handleCancelSleepTimer({ notify: true })
-          } else {
-            handleSetCountdownTimer(30)
-          }
-        }}
-        sleepTimerRemainingText={getSleepTimerStatusText()}
-      />
-
       <SensoryStampModal
         isOpen={isStampModalOpen}
         currentTime={currentTime}
@@ -1159,41 +1050,6 @@ export default function App() {
         onFilterThisCV={handleFilterThisCV}
         onSelectWork={handleSelectWork}
       />
-
-      {/* 床头夜钟全屏模式 */}
-      <BedsideClockModal
-        isOpen={isBedsideClockOpen}
-        onClose={closeBedsideClock}
-        currentDate={bedsideCurrentDate}
-        moonPhase={bedsideMoonPhase}
-        pixelShift={bedsidePixelShift}
-        dimMode={bedsideDimMode}
-        onToggleDimMode={toggleBedsideDimMode}
-        currentAudio={currentAudio}
-        currentWork={playingWork || selectedWork}
-        playingWork={playingWork || selectedWork}
-        isPlaying={playerRef.current?.isPlaying?.()}
-        currentTime={currentTime}
-        duration={duration}
-        sleepTimerRemaining={sleepTimerRemaining}
-        sleepTimerActive={sleepTimerActive}
-        onPlayPause={() => playerRef.current?.togglePlay?.()}
-        onExtendTimer={extendBedsideTimer || handleBedsideExtend15Min}
-        onExtend15Min={extendBedsideTimer || handleBedsideExtend15Min}
-        onCancelTimer={handleCancelSleepTimer}
-      />
-
-      {/* 拂晓入眠画卷回溯 */}
-      <DreamscapeRecapModal
-        isOpen={isDreamscapeRecapOpen}
-        onClose={closeDreamscapeRecap}
-        record={currentDreamscapeRecord || latestDreamscapeRecord}
-        onToast={showToast}
-        onContinueFromSlumber={resumeFromSlumberMoment || handleContinueFromSlumber}
-        onResumePlayback={resumeFromSlumberMoment || handleContinueFromSlumber}
-      />
-
-      {/* 同态音轨变体声学对比与切换 */}
       <VariantComparisonModal
         isOpen={isVariantModalOpen || isVariantCompareOpen}
         onClose={closeVariantModal || closeVariantCompareModal}

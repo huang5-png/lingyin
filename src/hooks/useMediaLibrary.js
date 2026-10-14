@@ -24,28 +24,66 @@ export function useMediaLibrary({ showToast, setSelectedWork, selectedWork }) {
     latestAudioFilesRef.current = audioFiles
   }, [audioFiles])
 
-  // 选中作品时扫描音频文件（在线作品直接跳过）
+  // 选中作品时加载音频文件（优先秒开展示缓存，后台增量刷新）
   useEffect(() => {
     let cancelled = false
     if (selectedWork) {
       if (selectedWork.isOnline) {
         return
       }
+
+      // 1. 极致秒开：若作品已有索引音频文件，立即同步呈现，消除骨架屏等待
+      if (Array.isArray(selectedWork.audioFiles) && selectedWork.audioFiles.length > 0) {
+        setAudioFiles(selectedWork.audioFiles)
+      }
+
+      // 建立已知时长缓存字典
+      const durationCache = new Map()
+      if (Array.isArray(selectedWork.audioFiles)) {
+        for (const item of selectedWork.audioFiles) {
+          if (item?.path && typeof item.duration === 'number' && item.duration > 0) {
+            durationCache.set(item.path, item.duration)
+          }
+        }
+      }
+
       scanFolder(selectedWork.folderPath).then(async (r) => {
         if (cancelled) return
-        const filesWithDuration = await Promise.all(
-          r.audioFiles.map(async (f) => {
+
+        // 2. 带并发限制的受限池（最大 4 并发），防止外置移动硬盘或机械盘卡死
+        const poolLimit = 4
+        const files = r.audioFiles || []
+        let poolIndex = 0
+
+        const filesWithDuration = new Array(files.length)
+        const workers = new Array(Math.min(poolLimit, files.length)).fill(0).map(async () => {
+          while (poolIndex < files.length && !cancelled) {
+            const curIdx = poolIndex++
+            const f = files[curIdx]
+            // 若缓存中已有合法时长，直接复用，免去磁盘 I/O
+            const cachedDur = durationCache.get(f.path)
+            if (typeof cachedDur === 'number' && cachedDur > 0) {
+              filesWithDuration[curIdx] = { ...f, duration: cachedDur }
+              continue
+            }
             try {
               const dur = await window.electronAPI.getAudioDuration(f.path)
-              return { ...f, duration: dur ? Math.round(dur) : null }
+              filesWithDuration[curIdx] = { ...f, duration: dur ? Math.round(dur) : null }
             } catch {
-              return f
+              filesWithDuration[curIdx] = f
             }
-          })
-        )
+          }
+        })
+
+        await Promise.all(workers)
+
         if (!cancelled) {
           setAudioFiles(filesWithDuration)
           setAllSubtitleFiles(r.subtitleFiles)
+        }
+      }).catch((err) => {
+        if (!cancelled) {
+          console.warn('scanFolder failed:', err)
         }
       })
     } else {

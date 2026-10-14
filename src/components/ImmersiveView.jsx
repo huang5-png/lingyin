@@ -38,17 +38,12 @@ const ImmersiveView = memo(function ImmersiveView({
   onAddBookmark,
   hasCurrentBookmark = false,
   bookmarkCount = 0,
-  sleepTimerActive = false,
-  sleepTimerStatusText = '',
-  onToggleSleepTimer,
   // 频谱可视化相关
   showSpectrum = true,
   spectrumMode = 'bars',
   spectrumSensitivity = 1.5,
   // 画集相关
   galleryImages = [],
-  // 深眠座舱相关
-  onOpenSleepSanctuary,
   // 酥麻热力与声之手账
   heatmapData = [],
   peakMoments = [],
@@ -65,8 +60,6 @@ const ImmersiveView = memo(function ImmersiveView({
   siblingTrackVariants = [],
   onHotSwapVariant = null,
   onOpenVariantCompare = null,
-  // 床头夜钟
-  onOpenBedsideClock = null,
 }) {
   const immersiveLyricRef = useRef(null)
   const seekThrottleRef = useRef(null)
@@ -327,15 +320,6 @@ const ImmersiveView = memo(function ImmersiveView({
               onHotSwap={onHotSwapVariant}
               onOpenCompare={onOpenVariantCompare}
             />
-          )}
-          {onOpenBedsideClock && (
-            <button
-              className="immersive-icon-btn"
-              onClick={onOpenBedsideClock}
-              title="极夜床头微光助眠夜钟 (快捷键 Alt+B)"
-            >
-              <span style={{ fontSize: '14px' }}>🛌</span>
-            </button>
           )}
           {currentCues.length > 0 && onToggleTranslate && (
             <button
@@ -644,30 +628,6 @@ const ImmersiveView = memo(function ImmersiveView({
                   <span className="immersive-script-icon">📜</span>
                 </button>
               )}
-
-              <button
-                className="immersive-ctrl-btn immersive-ctrl-small"
-                onClick={onOpenSleepSanctuary}
-                title="深眠微澜 · 助眠座舱 (4-7-8呼吸导引 / OLED纯黑睡眠屏保)"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.4" />
-                </svg>
-              </button>
-
-              <button
-                className={`immersive-ctrl-btn immersive-ctrl-small ${sleepTimerActive ? 'active' : ''}`}
-                onClick={onToggleSleepTimer}
-                title={sleepTimerActive ? `睡眠定时器：${sleepTimerStatusText}` : '睡眠定时器'}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-                {sleepTimerActive && sleepTimerStatusText && (
-                  <span className="immersive-sleep-text">{sleepTimerStatusText}</span>
-                )}
-              </button>
             </div>
           </div>
         </div>

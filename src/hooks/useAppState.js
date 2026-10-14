@@ -3,7 +3,6 @@ import { formatTime } from '../utils/subtitleParser'
 import { useTranslate } from './useTranslate'
 import { usePlayQueue } from './usePlayQueue'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
-import { useSleepTimer, SLEEP_TIMER_OPTIONS, SLEEP_TIMER_MODES, SLEEP_TIMER_PRESETS, SLEEP_TIMER_FADE_OPTIONS } from './useSleepTimer'
 import { useSubtitle } from './useSubtitle'
 import { useMediaLibrary } from './useMediaLibrary'
 import { useAudioIndex } from './useAudioIndex'
@@ -33,8 +32,6 @@ import { useVoiceChronicle } from './useVoiceChronicle'
 import { useVoiceScript } from './useVoiceScript'
 import { useSeiyuuProfile } from './useSeiyuuProfile'
 import { useTrackVariants } from './useTrackVariants'
-import { useBedsideSlumber } from './useBedsideSlumber'
-import { useDreamscape } from './useDreamscape'
 import { useSoundscape } from './useSoundscape'
 import { detectWorkScenery } from '../utils/soundscapeAnalyzer'
 
@@ -331,25 +328,6 @@ export function useAppState() {
     updateSettings,
   })
 
-  // ===== 睡眠定时器 Hook =====
-  const {
-    mode: sleepTimerMode,
-    isActive: sleepTimerActive,
-    isFading: sleepTimerFading,
-    remainingSeconds: sleepTimerRemaining,
-    fadeEnabled: sleepTimerFadeEnabled,
-    fadeSeconds: sleepTimerFadeSeconds,
-    setFadeEnabled: setSleepTimerFadeEnabled,
-    setFadeSeconds: setSleepTimerFadeSeconds,
-    setCountdownTimer: handleSetCountdownTimer,
-    setTrackEndTimer: handleSetTrackEndTimer,
-    setTimePointTimer: handleSetTimePointTimer,
-    cancelSleepTimer: handleCancelSleepTimer,
-    handleTrackFinish: handleSleepTimerTrackFinish,
-    formatRemaining: formatSleepTimerRemaining,
-    getStatusText: getSleepTimerStatusText,
-    SLEEP_TIMER_FADE_OPTIONS,
-  } = useSleepTimer({ playerRef, showToast, settings, updateSettings })
 
   // ===== 字幕管理 Hook =====
   const {
@@ -566,8 +544,7 @@ export function useAppState() {
     }
   }, [playingWork, currentAudio, saveLastPlayState])
 
-  // ===== 双耳声场与助眠座舱状态 =====
-  const [showSleepSanctuary, setShowSleepSanctuary] = useState(false)
+  // ===== 双耳声场状态 =====
   const [currentAudioElement, setCurrentAudioElement] = useState(null)
 
   useEffect(() => {
@@ -576,18 +553,6 @@ export function useAppState() {
       setCurrentAudioElement(el)
     }
   }, [currentAudio, currentTime, playerRef, currentAudioElement])
-
-  const handleOpenSleepSanctuary = useCallback(() => {
-    setShowSleepSanctuary(true)
-  }, [])
-
-  const handleCloseSleepSanctuary = useCallback(() => {
-    setShowSleepSanctuary(false)
-  }, [])
-
-  const handleToggleSleepSanctuary = useCallback(() => {
-    setShowSleepSanctuary((prev) => !prev)
-  }, [])
 
   const handleToggleCompassTab = useCallback(() => {
     if (selectedWork || playingWork) {
@@ -1002,82 +967,6 @@ export function useAppState() {
   }, [siblingTrackVariants, handleHotSwapVariant, showToast])
 
   // ===== 枕畔微光 · 床头夜钟助眠座舱 Hook =====
-  const {
-    isOpen: isBedsideClockOpen,
-    openBedsideClock,
-    closeBedsideClock,
-    currentDate: bedsideCurrentDate,
-    moonPhase: bedsideMoonPhase,
-    pixelShift: bedsidePixelShift,
-    dimMode: bedsideDimMode,
-    toggleDimMode: toggleBedsideDimMode,
-    handleExtend15Minutes: handleBedsideExtend15Min,
-  } = useBedsideSlumber({
-    playerRef,
-    onSetCountdownTimer: handleSetCountdownTimer,
-    sleepTimerRemaining,
-    onToast: showToast,
-  })
-
-  const handleToggleBedsideClock = useCallback(() => {
-    if (isBedsideClockOpen) {
-      closeBedsideClock()
-    } else {
-      openBedsideClock()
-    }
-  }, [isBedsideClockOpen, closeBedsideClock, openBedsideClock])
-
-  // ===== 枕畔心境 · 梦境声纹记忆画卷与晨光拂晓回溯 Hook =====
-  const {
-    latestRecord: latestDreamscapeRecord,
-    isRecapOpen: isDreamscapeRecapOpen,
-    openRecap: openDreamscapeRecap,
-    closeRecap: closeDreamscapeRecap,
-    hasMorningGreeting,
-    noteUserInteraction,
-    settleDreamscapeOnSleep,
-  } = useDreamscape({
-    playingWork,
-    currentAudio,
-    currentTime,
-    duration,
-    stamps,
-    sleepTimerActive,
-    onToast: showToast,
-  })
-
-  // 接续昨夜入眠点继续听
-  const handleContinueFromSlumber = useCallback((record) => {
-    if (!record) return
-    const targetWork = works.find(w => w.id === record.workId)
-    if (targetWork) {
-      handleSelectWork(targetWork)
-      const targetAudio = (targetWork.audioFiles || []).find(a => a.path === record.audioPath)
-      if (targetAudio) {
-        handleSelectAudio(targetAudio)
-        const seekTarget = record.estimatedTrackSeconds || 0
-        const timer = setInterval(() => {
-          if (playerRef.current && playerRef.current.getDuration() > 0) {
-            playerRef.current.seekTo(seekTarget)
-            clearInterval(timer)
-          }
-        }, 200)
-        setTimeout(() => clearInterval(timer), 8000)
-      }
-    }
-    showToast?.({
-      type: 'success',
-      message: `已接续昨夜梦境：从第 ${formatTime(record.estimatedTrackSeconds)} 开始播放`,
-    })
-  }, [works, handleSelectWork, handleSelectAudio, playerRef, showToast])
-
-  // 监听睡眠定时器结束时触发梦境结算
-  useEffect(() => {
-    if (sleepTimerFading) {
-      settleDreamscapeOnSleep(true)
-    }
-  }, [sleepTimerFading, settleDreamscapeOnSleep])
-
   // ===== 快捷键 Hook =====
   useKeyboardShortcuts({
     settings,
@@ -1096,15 +985,12 @@ export function useAppState() {
     handlePrevAudio,
     handleNextAudio,
     onPlaybackRateChange: handlePlaybackRateChange,
-    onOpenSleepSanctuary: handleOpenSleepSanctuary,
     onToggleCompass: handleToggleCompassTab,
     onToggleChronicle: handleToggleChronicleTab,
     onJumpNextPeak: jumpNextPeak,
     onOpenStampModal: openStampModal,
     onToggleScript: handleToggleScriptTab,
-    onToggleBedsideClock: handleToggleBedsideClock,
     onHotSwapVariant: handleCycleNextVariant,
-    onOpenDreamscape: openDreamscapeRecap,
   })
 
   // 发现页筛选回调
@@ -1335,27 +1221,6 @@ export function useAppState() {
     handleToggleShuffle,
     handleToggleQueuePanel,
 
-    // 睡眠定时器
-    sleepTimerMode,
-    sleepTimerActive,
-    sleepTimerFading,
-    sleepTimerRemaining,
-    sleepTimerFadeEnabled,
-    sleepTimerFadeSeconds,
-    setSleepTimerFadeEnabled,
-    setSleepTimerFadeSeconds,
-    handleSetCountdownTimer,
-    handleSetTrackEndTimer,
-    handleSetTimePointTimer,
-    handleCancelSleepTimer,
-    handleSleepTimerTrackFinish,
-    formatSleepTimerRemaining,
-    getSleepTimerStatusText,
-    SLEEP_TIMER_OPTIONS,
-    SLEEP_TIMER_MODES,
-    SLEEP_TIMER_PRESETS,
-    SLEEP_TIMER_FADE_OPTIONS,
-
     // 字幕
     subtitleOptions,
     selectedSubtitleIndex,
@@ -1437,11 +1302,7 @@ export function useAppState() {
     addCustomChapter,
     deleteCustomChapter,
 
-    // 双耳声场与深眠座舱
-    showSleepSanctuary,
-    handleOpenSleepSanctuary,
-    handleCloseSleepSanctuary,
-    handleToggleSleepSanctuary,
+    // 双耳声场
     handleToggleCompassTab,
     currentAudioElement,
 
@@ -1519,31 +1380,6 @@ export function useAppState() {
     openVariantModal: openVariantCompareModal,
     closeVariantCompareModal,
     closeVariantModal: closeVariantCompareModal,
-
-    // 枕畔微光 · 床头夜钟助眠座舱
-    isBedsideClockOpen,
-    openBedsideClock,
-    closeBedsideClock,
-    handleToggleBedsideClock,
-    toggleBedsideClock: handleToggleBedsideClock,
-    bedsideCurrentDate,
-    bedsideMoonPhase,
-    bedsidePixelShift,
-    bedsideDimMode,
-    toggleBedsideDimMode,
-    handleBedsideExtend15Min,
-    extendBedsideTimer: handleBedsideExtend15Min,
-
-    // 枕畔心境 · 梦境声纹记忆画卷与晨光回溯
-    latestDreamscapeRecord,
-    currentDreamscapeRecord: latestDreamscapeRecord,
-    isDreamscapeRecapOpen,
-    openDreamscapeRecap,
-    closeDreamscapeRecap,
-    hasMorningGreeting,
-    handleContinueFromSlumber,
-    resumeFromSlumberMoment: handleContinueFromSlumber,
-    noteUserInteraction,
 
     // 声景心境全景漫游透镜
     soundscapePresets,

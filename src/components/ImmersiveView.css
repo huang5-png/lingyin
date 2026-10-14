@@ -711,17 +711,6 @@
   font-weight: 600;
 }
 
-.immersive-sleep-text {
-  position: absolute;
-  bottom: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  font-family: var(--font-mono);
-  color: var(--accent-primary, #c96442);
-  white-space: nowrap;
-  font-weight: 600;
-}
 
 @media (min-resolution: 1.5dppx) {
   .immersive-close-btn {

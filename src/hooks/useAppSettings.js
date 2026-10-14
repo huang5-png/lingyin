@@ -43,8 +43,6 @@ export const DEFAULT_SETTINGS = {
   continuousPlay: false,
   restorePlayOnStart: false,
   persistPlayQueue: true,
-  sleepTimerFadeEnabled: true,
-  sleepTimerFadeSeconds: 30,
   librarySortBy: 'createdAt',
   librarySortOrder: 'desc',
   translateEngine: 'google',
@@ -56,7 +54,6 @@ export const DEFAULT_SETTINGS = {
   githubMirror: 'https://ghfast.top/',
   autoSyncLibraryOnStart: true,
   soundstageDefaultView: 'compass',
-  breathingDefaultPattern: '4-7-8',
 }
 
 function loadSettings() {

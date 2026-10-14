@@ -1951,18 +1951,20 @@ const {
   - `VariantComparisonModal.jsx`：多列平铺展示编码格式、声道、大小、时长与专属标签的声学对比面板；
   - `WorkDetail.jsx`：曲目列表变体智能折叠开闭控制（`collapseVariants`），折叠模式下显示兄弟变体一键切换药丸。
 
-#### 极夜床头夜钟与晨曦梦境回溯系统 (`dreamscapeTracker.js` + `useBedsideSlumber` + `useDreamscape`)
-- **床头夜钟全屏模式 (`BedsideClockModal.jsx`)**：
-  - 快捷键 `Alt+B` 或播放控制栏「🛌」唤起；
-  - 专为关灯睡眠场景设计：OLED 极夜纯黑背景，柔和琥珀微光数字时钟，朔望月公历真实月相推算微标；
-  - 睡眠定时器同心圆环与「+15 分钟」极简延时按钮；每 60 秒极细微位移，防止 OLED 屏幕物理烧屏。
-- **沉睡时刻智能推算与梦境记录持久化**：
-  - `estimateSlumberMoment`：依据渐弱睡眠定时器触发点、听众最后交互动作时间戳与声能衰减，智能解算最可能的人体沉睡时间点；
-  - `buildDreamscapeRecord`：构建梦境回忆画卷对象，持久化存储于 `lingyin_dreamscapes`；
-  - 晨光唤醒问候：次日早晨（05:00~12:00）初次唤醒软件时，自动点亮「🌅 昨夜梦境画卷」晨间小徽标。
-- **梦境画卷拂晓回溯 (`DreamscapeRecapModal.jsx`)**：
-  - 展现昨夜伴眠作品、沉睡时刻、入眠进度点与治愈签语；
-  - 支持「📋 复制梦境手签」到剪贴板，以及「⏮️ 从入眠点接续播放」一键找回昨夜断点。
+#### 磐石性能与底层架构规范 (v1.56.0)
+- **数据库原子写入与自动容灾 (`electron/db.js`)**：
+  - 弃用直接 `writeFileSync`，必须统一经由 `atomicWriteJSON`（临时文件写入 + `fs.renameSync` 原子替换）落盘，确保任何异常断电下主库绝不破损截断；
+  - 启动阶段自动调用 `backupDB()` 维护 `db.json.bak` 灾备，检测损坏自动恢复；
+  - 播放进度持久化采用 5 秒防抖（`saveDB(false)`），应用退出生命周期（`before-quit`）必须调用 `flushDB()` 强制刷新落盘。
+- **IPC 批量聚合接口设计**：
+  - 侧边栏作品进度计算必须使用 `db:getAllWorksProgress` 单次聚合 IPC，严禁在渲染循环中针对每个作品发起独立 IPC 查询。
+- **曲目秒开与受限扫描池 (`useMediaLibrary.js`)**：
+  - 切换作品时必须先借由 `selectedWork.audioFiles` 缓存即时呈现曲目列表；
+  - 长音频与多曲目时长探测必须经由并发调度器，限制最大并发数为 4，防止机械硬盘/移动硬盘磁头过载卡死。
+- **长音频波形内存防爆 (`AudioPlayer.jsx`)**：
+  - 本地音频体积超过 60MB 时，跳过 WaveSurfer 全量 fetch PCM 解码，以轻量流式模式播放，避免内存暴涨。
+- **专注于纯粹声音视听**：
+  - 软件聚焦于同人音声鉴赏，已彻底移除睡眠定时器、床头夜钟、助眠座舱等冗余模块，无需也不应再次引入睡眠向逻辑。
 
 #### 空间声景漫游情境透镜 (`soundscapeAnalyzer.js` + `useSoundscape` + `SoundscapeFilterBar.jsx`)
 - **8 大 ASMR 空间声景分类**：雨夜、和室、暖床、采耳、星空、日常、暖炉、汤泉；

@@ -103,9 +103,7 @@ const LibraryLayout = memo(function LibraryLayout({
   onDeleteCustomChapter,
   // 双耳声场相关
   audioElement = null,
-  // 梦境画卷与声景透镜
-  hasMorningGreeting = false,
-  onOpenDreamscape = null,
+  // 声景透镜
   activeScenery = null,
   onSelectScenery = null,
   sceneryCounts = null,
@@ -176,8 +174,6 @@ const LibraryLayout = memo(function LibraryLayout({
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortChange={onSortChange}
-          hasMorningGreeting={hasMorningGreeting}
-          onOpenDreamscape={onOpenDreamscape}
           activeScenery={activeScenery}
           onSelectScenery={onSelectScenery}
           sceneryCounts={sceneryCounts}

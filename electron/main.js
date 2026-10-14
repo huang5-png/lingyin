@@ -4,7 +4,7 @@ const fs = require('fs')
 const http = require('http')
 const https = require('https')
 const axios = require('axios')
-const { initDB, getAllWorks, addWork, updateWork, setWorksAudioFiles, deleteWork, getProgress, getWorkProgress, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState, getSmartPlaylists, getSmartPlaylistItems, getDataStats, exportData, importData, getAllTags, getTagMetadata, setTagColor, renameTag, mergeTags, deleteTag, addTagToWork, removeTagFromWork, batchAddTags, batchRemoveTags } = require('./db')
+const { initDB, getAllWorks, addWork, updateWork, setWorksAudioFiles, deleteWork, getProgress, getWorkProgress, getAllWorksProgress, flushDB, saveProgress, getSubtitle, saveSubtitle, getSettings, saveSettings, appendHistory, getUsageStats, getAllHistory, exportHistoryCSV, exportHistoryJSON, deleteHistoryByWorkId, clearAllHistory, getRecentWorks, getLastPlayedAudio, getAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist, addPlaylistItem, removePlaylistItem, reorderPlaylistItems, clearPlaylist, getTranslateCache, saveTranslateCache, clearTranslateCache, getAllFavorites, isFavorite, addFavorite, removeFavorite, toggleFavorite, getAllFolderGroups, createFolderGroup, renameFolderGroup, setFolderGroupColor, deleteFolderGroup, reorderFolderGroups, setWorkFolderGroup, getWorksByFolderGroup, getAllBookmarks, getBookmarksByWork, getBookmarksByAudio, addBookmark, updateBookmark, deleteBookmark, deleteBookmarksByWork, clearAllBookmarks, getPlayQueue, savePlayQueue, clearPlayQueue, getLastPlayState, saveLastPlayState, getSmartPlaylists, getSmartPlaylistItems, getDataStats, exportData, importData, getAllTags, getTagMetadata, setTagColor, renameTag, mergeTags, deleteTag, addTagToWork, removeTagFromWork, batchAddTags, batchRemoveTags } = require('./db')
 const { searchDLsite, getWorkDetail, extractRJCode, setProxyHelpers } = require('./dlsite')
 const { setProxyHelper: setTranslateProxyHelper, translateText, translateBatch } = require('./translate')
 const { checkForUpdates, downloadUpdate, cancelDownloadUpdate, showUpdateInFolder } = require('./updater')
@@ -511,6 +511,11 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', (e) => {
   logger.info('App before quit')
+  try {
+    flushDB()
+  } catch (err) {
+    logger.warn('flushDB on quit failed:', err.message)
+  }
   app.isQuiting = true
   unregisterGlobalShortcuts()
   if (tray) {
@@ -658,6 +663,10 @@ ipcMain.handle('db:getProgress', async (_, workId, audioFile) => {
 
 ipcMain.handle('db:getWorkProgress', async (_, workId) => {
   return getWorkProgress(workId)
+})
+
+ipcMain.handle('db:getAllWorksProgress', async () => {
+  return getAllWorksProgress()
 })
 
 ipcMain.handle('db:saveProgress', async (_, workId, audioFile, progress) => {

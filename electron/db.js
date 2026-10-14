@@ -4,6 +4,69 @@ const { app } = require('electron')
 
 let dbData = null
 let dbPath = ''
+let isDebounceSavePending = false
+let saveDebounceTimer = null
+
+function atomicWriteJSON(filePath, data) {
+  if (!filePath || !data) return
+  const tmpPath = `${filePath}.tmp.${Date.now()}`
+  try {
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8')
+    fs.renameSync(tmpPath, filePath)
+  } catch (e) {
+    console.error('Atomic write DB error:', e)
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
+    } catch (e2) {
+      console.error('Fallback write DB error:', e2)
+    }
+  } finally {
+    if (fs.existsSync(tmpPath)) {
+      try { fs.unlinkSync(tmpPath) } catch (_) {}
+    }
+  }
+}
+
+function backupDB() {
+  try {
+    if (fs.existsSync(dbPath)) {
+      const bakPath = `${dbPath}.bak`
+      fs.copyFileSync(dbPath, bakPath)
+    }
+  } catch (e) {
+    console.warn('Backup DB warning:', e)
+  }
+}
+
+function saveDB(immediate = true) {
+  if (immediate) {
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+      saveDebounceTimer = null
+    }
+    isDebounceSavePending = false
+    atomicWriteJSON(dbPath, dbData)
+  } else {
+    if (isDebounceSavePending) return
+    isDebounceSavePending = true
+    saveDebounceTimer = setTimeout(() => {
+      isDebounceSavePending = false
+      saveDebounceTimer = null
+      atomicWriteJSON(dbPath, dbData)
+    }, 5000)
+  }
+}
+
+function flushDB() {
+  if (isDebounceSavePending || saveDebounceTimer) {
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+      saveDebounceTimer = null
+    }
+    isDebounceSavePending = false
+    atomicWriteJSON(dbPath, dbData)
+  }
+}
 
 async function initDB() {
   dbPath = path.join(app.getPath('userData'), 'db.json')
@@ -28,24 +91,29 @@ async function initDB() {
     if (fs.existsSync(dbPath)) {
       const content = fs.readFileSync(dbPath, 'utf-8')
       dbData = JSON.parse(content)
+      backupDB()
     } else {
       dbData = defaultData
-      saveDB()
+      saveDB(true)
     }
   } catch (e) {
     console.error('Init DB error:', e)
-    dbData = defaultData
+    // 尝试从备份恢复
+    try {
+      const bakPath = `${dbPath}.bak`
+      if (fs.existsSync(bakPath)) {
+        const bakContent = fs.readFileSync(bakPath, 'utf-8')
+        dbData = JSON.parse(bakContent)
+        console.info('Successfully recovered db.json from backup')
+      } else {
+        dbData = defaultData
+      }
+    } catch (_) {
+      dbData = defaultData
+    }
   }
 
   return dbData
-}
-
-function saveDB() {
-  try {
-    fs.writeFileSync(dbPath, JSON.stringify(dbData, null, 2), 'utf-8')
-  } catch (e) {
-    console.error('Save DB error:', e)
-  }
 }
 
 function getDB() {
@@ -145,13 +213,50 @@ async function getWorkProgress(workId) {
   }
 }
 
+// 批量一次性获取所有作品的总播放进度（避免 N 次 IPC 循环）
+async function getAllWorksProgress() {
+  const progressMap = dbData.progress || {}
+  const result = {}
+
+  for (const [key, data] of Object.entries(progressMap)) {
+    const splitIndex = key.indexOf('::')
+    if (splitIndex === -1) continue
+    const workId = key.slice(0, splitIndex)
+
+    if (!result[workId]) {
+      result[workId] = {
+        totalPlayed: 0,
+        totalDuration: 0,
+        percentage: 0,
+        lastPlayed: 0,
+      }
+    }
+
+    const item = result[workId]
+    item.totalPlayed += data.currentTime || 0
+    item.totalDuration += data.duration || 0
+    if (data.lastPlayed && data.lastPlayed > item.lastPlayed) {
+      item.lastPlayed = data.lastPlayed
+    }
+  }
+
+  for (const item of Object.values(result)) {
+    item.percentage = item.totalDuration > 0
+      ? Math.min(100, Math.round((item.totalPlayed / item.totalDuration) * 100))
+      : 0
+  }
+
+  return result
+}
+
 async function saveProgress(workId, audioFile, progress) {
   const key = `${workId}::${audioFile}`
   dbData.progress[key] = {
     ...progress,
     lastPlayed: Date.now(),
   }
-  saveDB()
+  // 高频进度保存采用防抖落盘，避免每 5 秒在主线程同步写盘卡顿
+  saveDB(false)
   return true
 }
 
@@ -1786,4 +1891,6 @@ module.exports = {
   exportData,
   importData,
   getDataStats,
+  getAllWorksProgress,
+  flushDB,
 }

@@ -36,14 +36,6 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     queue = [], queueIndex = -1, loopMode = 'none', shuffle = false, showQueuePanel = false,
     onToggleQueue, onToggleLoop, onToggleShuffle,
     onPlayFromQueue, onRemoveFromQueue, onClearQueue, onReorderQueue, onCloseQueuePanel,
-    // 睡眠定时器相关
-    sleepTimerMode, sleepTimerActive = false, sleepTimerFading = false,
-    sleepTimerRemaining = 0, sleepTimerFadeEnabled = true, sleepTimerFadeSeconds = 30,
-    onSetSleepTimerFadeEnabled, onSetSleepTimerFadeSeconds,
-    onSetCountdownTimer, onSetTrackEndTimer, onSetTimePointTimer,
-    onCancelSleepTimer, onSleepTimerTrackFinish,
-    formatSleepTimerRemaining, getSleepTimerStatusText,
-    sleepTimerOptions, sleepTimerModes, sleepTimerPresets, sleepTimerFadeOptions,
     // 播放速度相关
     playbackRate = 1, onPlaybackRateChange,
     // 书签相关
@@ -61,9 +53,8 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     galleryImages = [],
     onOpenLightbox,
     onToggleGalleryTab,
-    // 双耳声场与深眠座舱
+    // 双耳声场
     onToggleCompassTab,
-    onOpenSleepSanctuary,
     // 酥麻热力与声之手账
     heatmapData = [],
     peakMoments = [],
@@ -81,10 +72,6 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
     siblingTrackVariants = [],
     onHotSwapVariant,
     onOpenVariantCompare,
-    // 床头夜钟与梦境回溯
-    onOpenBedsideClock,
-    onOpenDreamscapeRecap,
-    hasMorningGreeting = false,
   },
   ref,
 ) {
@@ -107,11 +94,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
   const [tooltipTime, setTooltipTime] = useState(0)
   const [tooltipPosition, setTooltipPosition] = useState(0)
   const volumeSliderRef = useRef(null)
-  const [showSleepTimer, setShowSleepTimer] = useState(false)
   const [showPlaybackRate, setShowPlaybackRate] = useState(false)
-  const [sleepTab, setSleepTab] = useState('countdown')
-  const [customMinutes, setCustomMinutes] = useState('30')
-  const [timePointInput, setTimePointInput] = useState('23:00')
   // A-B 片段循环：a/b 为秒数，enabled 表示已开始循环；按曲目维度使用，换曲自动清空
   const [abLoop, setAbLoop] = useState({ a: null, b: null, enabled: false })
   const abLoopRef = useRef(abLoop)
@@ -478,50 +461,60 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
         audio.load()
 
         // 异步初始化 WaveSurfer 生成波形（不阻塞播放）
-        // 复用同一个 audio 元素，不重新加载文件
+        // 复用同一个 audio 元素；对超过 60MB 的大文件跳过后台解码，避免爆内存与卡死
         if (waveformRef.current && !cancelled) {
-          // 用 setTimeout 确保不阻塞当前播放启动
-          setTimeout(() => {
-            if (cancelled || !simpleAudioRef.current) return
+          const tryInitWaveSurfer = async () => {
             try {
-              const ws = WaveSurfer.create({
-                container: waveformRef.current,
-                waveColor: 'rgba(201, 100, 66, 0.4)',
-                progressColor: '#ec4899',
-                cursorColor: 'rgba(255, 255, 255, 0.9)',
-                cursorWidth: 2,
-                barWidth: 2,
-                barGap: 1,
-                barRadius: 2,
-                height: waveformHeight,
-                normalize: true,
-                hideScrollbar: true,
-                barAlign: 'center',
-                backend: 'MediaElement',
-                media: audio, // 复用同一 audio 元素
-              })
+              if (window.electronAPI?.stat && !audioPath.startsWith('http')) {
+                const stats = await window.electronAPI.stat(audioPath)
+                const sizeMB = (stats?.size || 0) / (1024 * 1024)
+                if (sizeMB > 60) return
+              }
+            } catch (_) {}
 
-              wavesurferRef.current = ws
+            setTimeout(() => {
+              if (cancelled || !simpleAudioRef.current || !waveformRef.current) return
+              try {
+                const ws = WaveSurfer.create({
+                  container: waveformRef.current,
+                  waveColor: 'rgba(201, 100, 66, 0.4)',
+                  progressColor: '#ec4899',
+                  cursorColor: 'rgba(255, 255, 255, 0.9)',
+                  cursorWidth: 2,
+                  barWidth: 2,
+                  barGap: 1,
+                  barRadius: 2,
+                  height: waveformHeight,
+                  normalize: true,
+                  hideScrollbar: true,
+                  barAlign: 'center',
+                  backend: 'MediaElement',
+                  media: audio, // 复用同一 audio 元素
+                })
 
-              ws.on('ready', () => {
-                if (cancelled) return
-                // 波形生成完，切换到波形模式（隐藏简单进度条）
-                setUseSimpleMode(false)
-                setIsLoading(false)
-              })
+                wavesurferRef.current = ws
 
-              ws.on('error', (err) => {
-                const errMsg = err?.message || err || ''
-                if (errMsg.includes('AbortError') || errMsg.includes('signal is aborted')) return
-                console.warn('WaveSurfer 波形生成失败（不影响播放）:', errMsg, audioPath)
-              })
+                ws.on('ready', () => {
+                  if (cancelled) return
+                  // 波形生成完，切换到波形模式（隐藏简单进度条）
+                  setUseSimpleMode(false)
+                  setIsLoading(false)
+                })
 
-              // 用已有的 media 元素加载（不会重新 fetch 文件）
-              ws.load(fileUrl)
-            } catch (e) {
-              console.warn('WaveSurfer 初始化失败（不影响播放）:', e, audioPath)
-            }
-          }, 100)
+                ws.on('error', (err) => {
+                  const errMsg = err?.message || err || ''
+                  if (errMsg.includes('AbortError') || errMsg.includes('signal is aborted')) return
+                  console.warn('WaveSurfer 波形生成失败（不影响播放）:', errMsg, audioPath)
+                })
+
+                // 用已有的 media 元素加载（不会重新 fetch 文件）
+                ws.load(fileUrl)
+              } catch (e) {
+                console.warn('WaveSurfer 初始化失败（不影响播放）:', e, audioPath)
+              }
+            }, 100)
+          }
+          tryInitWaveSurfer()
         }
       }
 
@@ -632,10 +625,6 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
           ws.on('finish', () => {
             if (cancelled) return
             setIsPlaying(false)
-            if (onSleepTimerTrackFinish) {
-              const handled = onSleepTimerTrackFinish()
-              if (handled) return
-            }
             if (onFinish) onFinish()
           })
         } catch (e) {
@@ -1082,201 +1071,7 @@ const AudioPlayer = memo(forwardRef(function AudioPlayer(
             </div>
           )}
         </div>
-        <div className="sleep-timer-control">
-          <button
-            className={`ctrl-btn sleep-timer-btn ${sleepTimerActive ? 'active' : ''} ${sleepTimerFading ? 'fading' : ''}`}
-            onClick={() => setShowSleepTimer(!showSleepTimer)}
-            title={sleepTimerActive ? `睡眠定时器：${getSleepTimerStatusText ? getSleepTimerStatusText() : formatSleepTimerRemaining?.(sleepTimerRemaining) || ''}` : '睡眠定时器'}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-            {sleepTimerActive && (
-              <span className="sleep-timer-badge">{getSleepTimerStatusText ? getSleepTimerStatusText() : formatSleepTimerRemaining?.(sleepTimerRemaining)}</span>
-            )}
-          </button>
-          {showSleepTimer && (
-            <div className="sleep-timer-dropdown sleep-timer-dropdown-enhanced">
-              <div className="sleep-timer-header">
-                <span>睡眠定时器</span>
-                {sleepTimerActive && (
-                  <button
-                    className="sleep-timer-cancel-btn"
-                    onClick={() => { onCancelSleepTimer?.({ notify: true }); setShowSleepTimer(false) }}
-                  >
-                    关闭
-                  </button>
-                )}
-              </div>
 
-              <div className="sleep-timer-tabs">
-                <button
-                  className={`sleep-timer-tab ${sleepTab === 'countdown' ? 'active' : ''}`}
-                  onClick={() => setSleepTab('countdown')}
-                >
-                  倒计时
-                </button>
-                <button
-                  className={`sleep-timer-tab ${sleepTab === 'trackEnd' ? 'active' : ''}`}
-                  onClick={() => setSleepTab('trackEnd')}
-                >
-                  曲目结束
-                </button>
-                <button
-                  className={`sleep-timer-tab ${sleepTab === 'timePoint' ? 'active' : ''}`}
-                  onClick={() => setSleepTab('timePoint')}
-                >
-                  指定时间
-                </button>
-              </div>
-
-              {sleepTab === 'countdown' && (
-                <>
-                  <div className="sleep-timer-preset-grid">
-                    {sleepTimerPresets?.map((min) => (
-                      <button
-                        key={min}
-                        className={`sleep-timer-preset ${sleepTimerMode === sleepTimerModes?.COUNTDOWN && Math.floor(sleepTimerRemaining / 60) === min ? 'active' : ''}`}
-                        onClick={() => { onSetCountdownTimer?.(min); setShowSleepTimer(false) }}
-                      >
-                        {min} 分
-                      </button>
-                    ))}
-                  </div>
-                  <div className="sleep-timer-custom">
-                    <input
-                      type="number"
-                      min="1"
-                      max="300"
-                      value={customMinutes}
-                      onChange={(e) => setCustomMinutes(e.target.value)}
-                      className="sleep-timer-custom-input"
-                      placeholder="自定义分钟数"
-                    />
-                    <button
-                      className="sleep-timer-custom-btn"
-                      onClick={() => {
-                        const mins = parseInt(customMinutes)
-                        if (mins > 0 && mins <= 300) {
-                          onSetCountdownTimer?.(mins)
-                          setShowSleepTimer(false)
-                        }
-                      }}
-                    >
-                      设定
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {sleepTab === 'trackEnd' && (
-                <div className="sleep-timer-track-end">
-                  <div className="sleep-timer-track-end-desc">
-                    当前曲目播放完毕后自动停止播放
-                  </div>
-                  <button
-                    className={`sleep-timer-track-end-btn ${sleepTimerMode === sleepTimerModes?.TRACK_END ? 'active' : ''}`}
-                    onClick={() => { onSetTrackEndTimer?.(true); setShowSleepTimer(false) }}
-                  >
-                    {sleepTimerMode === sleepTimerModes?.TRACK_END ? '已启用' : '启用曲目结束停止'}
-                  </button>
-                </div>
-              )}
-
-              {sleepTab === 'timePoint' && (
-                <div className="sleep-timer-time-point">
-                  <div className="sleep-timer-time-point-input-row">
-                    <input
-                      type="time"
-                      value={timePointInput}
-                      onChange={(e) => setTimePointInput(e.target.value)}
-                      className="sleep-timer-time-input"
-                    />
-                    <button
-                      className="sleep-timer-time-set-btn"
-                      onClick={() => {
-                        if (timePointInput) {
-                          onSetTimePointTimer?.(timePointInput)
-                          setShowSleepTimer(false)
-                        }
-                      }}
-                    >
-                      设定
-                    </button>
-                  </div>
-                  <div className="sleep-timer-time-point-desc">
-                    在设定的时间点自动停止播放
-                  </div>
-                </div>
-              )}
-
-              <div className="sleep-timer-fade-toggle">
-                <label className="sleep-timer-fade-label">
-                  <input
-                    type="checkbox"
-                    checked={sleepTimerFadeEnabled}
-                    onChange={(e) => onSetSleepTimerFadeEnabled?.(e.target.checked)}
-                  />
-                  <span className="sleep-timer-fade-text">
-                    渐弱音量
-                    <span className="sleep-timer-fade-desc">
-                      {sleepTimerFadeEnabled
-                        ? `停止前 ${sleepTimerFadeSeconds} 秒逐渐降低音量`
-                        : '到点后直接暂停播放'}
-                    </span>
-                  </span>
-                </label>
-                {sleepTimerFadeEnabled && (
-                  <div className="sleep-timer-fade-options">
-                    {sleepTimerFadeOptions?.map((opt) => (
-                      <button
-                        key={opt.value}
-                        className={`sleep-timer-fade-option ${sleepTimerFadeSeconds === opt.value ? 'active' : ''}`}
-                        onClick={() => onSetSleepTimerFadeSeconds?.(opt.value)}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="sleep-sanctuary-control">
-          <button
-            className="ctrl-btn sleep-sanctuary-btn"
-            onClick={onOpenSleepSanctuary}
-            title="深眠微澜 · 助眠座舱 (4-7-8呼吸导引 / OLED纯黑睡眠屏保)"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.4" />
-            </svg>
-          </button>
-        </div>
-        {onOpenBedsideClock && (
-          <div className="bedside-clock-control">
-            <button
-              className="ctrl-btn bedside-clock-btn"
-              onClick={onOpenBedsideClock}
-              title="极夜床头微光助眠夜钟 (快捷键 Alt+B)"
-            >
-              <span className="bedside-clock-ctrl-icon">🛌</span>
-            </button>
-          </div>
-        )}
-        {hasMorningGreeting && onOpenDreamscapeRecap && (
-          <div className="dreamscape-recap-control">
-            <button
-              className="ctrl-btn dreamscape-recap-btn"
-              onClick={onOpenDreamscapeRecap}
-              title="🌅 晨光拂晓 · 昨夜入眠画卷已生成 (快捷键 Alt+D)"
-            >
-              <span className="dreamscape-recap-ctrl-icon">🌅</span>
-            </button>
-          </div>
-        )}
         <div className="mini-player-control">
           <button
             className="ctrl-btn mini-player-btn"

@@ -19,15 +19,12 @@ export function useKeyboardShortcuts({
   handlePrevAudio,
   handleNextAudio,
   onPlaybackRateChange,
-  onOpenSleepSanctuary,
   onToggleCompass,
   onToggleChronicle,
   onJumpNextPeak,
   onOpenStampModal,
   onToggleScript,
-  onToggleBedsideClock,
   onHotSwapVariant,
-  onOpenDreamscape,
 }) {
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
@@ -181,12 +178,6 @@ export function useKeyboardShortcuts({
       return
     }
 
-    if (matchShortcut(e, shortcuts.openSleepSanctuary)) {
-      e.preventDefault()
-      onOpenSleepSanctuary?.()
-      return
-    }
-
     if (matchShortcut(e, shortcuts.toggleCompass)) {
       e.preventDefault()
       onToggleCompass?.()
@@ -217,21 +208,9 @@ export function useKeyboardShortcuts({
       return
     }
 
-    if (matchShortcut(e, shortcuts.toggleBedsideClock)) {
-      e.preventDefault()
-      onToggleBedsideClock?.()
-      return
-    }
-
     if (matchShortcut(e, shortcuts.hotSwapVariant)) {
       e.preventDefault()
       onHotSwapVariant?.()
-      return
-    }
-
-    if (matchShortcut(e, shortcuts.openDreamscape)) {
-      e.preventDefault()
-      onOpenDreamscape?.()
       return
     }
 
@@ -257,15 +236,12 @@ export function useKeyboardShortcuts({
     handlePrevAudio,
     handleNextAudio,
     onPlaybackRateChange,
-    onOpenSleepSanctuary,
     onToggleCompass,
     onToggleChronicle,
     onJumpNextPeak,
     onOpenStampModal,
     onToggleScript,
-    onToggleBedsideClock,
     onHotSwapVariant,
-    onOpenDreamscape,
   ])
 
   useEffect(() => {

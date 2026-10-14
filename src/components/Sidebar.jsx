@@ -62,9 +62,7 @@ function Sidebar({
   sortBy,
   sortOrder,
   onSortChange,
-  // 梦境画卷与声景透镜
-  hasMorningGreeting = false,
-  onOpenDreamscape = null,
+  // 声景透镜
   activeScenery = null,
   onSelectScenery = null,
   sceneryCounts = null,
@@ -89,24 +87,29 @@ function Sidebar({
     }
     setProgressLoading(true)
     try {
-      const progressEntries = await Promise.all(
-        works.map(async (work) => {
-          if (work.isOnline) return { id: work.id, progress: null }
-          try {
-            const progress = await window.electronAPI.dbGetWorkProgress(work.id)
-            return { id: work.id, progress }
-          } catch {
-            return { id: work.id, progress: null }
+      if (window.electronAPI?.dbGetAllWorksProgress) {
+        const allProgress = await window.electronAPI.dbGetAllWorksProgress()
+        setWorkProgressMap(allProgress || {})
+      } else {
+        const progressEntries = await Promise.all(
+          works.map(async (work) => {
+            if (work.isOnline) return { id: work.id, progress: null }
+            try {
+              const progress = await window.electronAPI.dbGetWorkProgress(work.id)
+              return { id: work.id, progress }
+            } catch {
+              return { id: work.id, progress: null }
+            }
+          })
+        )
+        const map = {}
+        for (const entry of progressEntries) {
+          if (entry.progress) {
+            map[entry.id] = entry.progress
           }
-        })
-      )
-      const map = {}
-      for (const entry of progressEntries) {
-        if (entry.progress) {
-          map[entry.id] = entry.progress
         }
+        setWorkProgressMap(map)
       }
-      setWorkProgressMap(map)
     } catch (e) {
       console.error('Failed to load work progress:', e)
     } finally {
@@ -514,13 +517,6 @@ function Sidebar({
               ))}
             </div>
           )}
-          </div>
-        )}
-        {hasMorningGreeting && onOpenDreamscape && (
-          <div className="morning-greeting-pill" onClick={onOpenDreamscape} title="查看昨夜入眠记录与心境画卷">
-            <span className="greeting-icon">🌅</span>
-            <span className="greeting-text">昨夜梦境画卷已备好 · 点击回溯</span>
-            <span className="greeting-arrow">→</span>
           </div>
         )}
         <div className="sidebar-filters">
